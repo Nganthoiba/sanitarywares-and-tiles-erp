@@ -1,0 +1,149 @@
+app/Domains/Master/Models/TaxProfile.php:10: protected $fillable = ['organization_id', 'name', 'rate', 'is_active'];
+app/Domains/Master/Models/Supplier.php:10: protected $fillable = ['organization_id', 'name', 'code', 'email', 'phone', 'gstin', 'address', 'is_active'];
+app/Domains/Master/Models/Category.php:11: protected $fillable = ['organization_id', 'parent_id', 'name', 'slug'];
+app/Domains/Master/Models/Brand.php:10: protected $fillable = ['organization_id', 'name', 'slug'];
+app/Domains/Master/Models/Warehouse.php:11: protected $fillable = ['organization_id', 'branch_id', 'name', 'code', 'address'];
+app/Domains/Master/Models/Customer.php:10: protected $fillable = ['organization_id', 'name', 'code', 'email', 'phone', 'gstin', 'address', 'is_active'];
+app/Domains/Master/Models/Manufacturer.php:10: protected $fillable = ['organization_id', 'name'];
+app/Domains/Master/Models/Unit.php:10: protected $fillable = ['organization_id', 'name', 'code', 'decimal_places'];
+app/Domains/Master/Models/Branch.php:11: protected $fillable = ['organization_id', 'name', 'code', 'email', 'phone', 'address'];
+app/Domains/Security/Models/PermissionGroup.php:12: protected $fillable = ['organization_id', 'name'];
+app/Domains/Security/Models/Role.php:13: protected $fillable = ['organization_id', 'name', 'slug', 'is_system'];
+app/Domains/Security/Models/Permission.php:12: protected $fillable = ['organization_id', 'permission_group_id', 'name', 'slug'];
+app/Domains/Product/Models/ProductFamily.php:15: protected $fillable = ['organization_id', 'category_id', 'brand_id', 'tax_profile_id', 'name', 'code', 'description'];
+app/Domains/Product/Models/ProductAttribute.php:11: protected $fillable = ['organization_id', 'name', 'slug', 'type'];
+app/Domains/Product/Models/ProductVariant.php:14: 'organization_id', 'product_family_id', 'unit_id', 'name', 'sku',
+app/Domains/Workflow/Models/WorkflowCondition.php:12: 'name',
+app/Domains/Workflow/Models/WorkflowDefinition.php:16: 'name',
+app/Domains/Workflow/Models/WorkflowStep.php:12: 'name',
+app/Domains/Accounting/Models/JournalBatch.php:12: 'name',
+app/Domains/Accounting/Models/FinancialYear.php:11: 'name',
+app/Domains/Accounting/Models/Account.php:14: protected $fillable = ['organization_id', 'account_group_id', 'name', 'code', 'currency', 'is_active'];
+app/Domains/Accounting/Models/AccountGroup.php:12: protected $fillable = ['organization_id', 'parent_id', 'name', 'code', 'type'];
+app/Domains/Accounting/Services/PostingService.php:215: 'name' => 'FY 2026-27',
+app/Domains/Accounting/Services/ReportService.php:58: 'account_name' => $account->name,
+app/Domains/Accounting/Services/ReportService.php:87: ->orWhere('name', 'like', '%income%')
+app/Domains/Accounting/Services/ReportService.php:88: ->orWhere('name', 'like', '%revenue%')
+app/Domains/Accounting/Services/ReportService.php:89: ->orWhere('name', 'like', '%sales%')
+app/Domains/Accounting/Services/ReportService.php:90: ->orWhere('name', 'like', '%INCOME%')
+app/Domains/Accounting/Services/ReportService.php:91: ->orWhere('name', 'like', '%REVENUE%')
+app/Domains/Accounting/Services/ReportService.php:92: ->orWhere('name', 'like', '%SALES%');
+app/Domains/Accounting/Services/ReportService.php:106: 'account_name' => $account->name,
+app/Domains/Accounting/Services/ReportService.php:116: ->orWhere('name', 'like', '%expense%')
+app/Domains/Accounting/Services/ReportService.php:117: ->orWhere('name', 'like', '%purchase%')
+app/Domains/Accounting/Services/ReportService.php:118: ->orWhere('name', 'like', '%EXPENSE%')
+app/Domains/Accounting/Services/ReportService.php:119: ->orWhere('name', 'like', '%PURCHASE%');
+app/Domains/Accounting/Services/ReportService.php:133: 'account_name' => $account->name,
+app/Domains/Accounting/Services/ReportService.php:163: ->orWhere('name', 'like', '%asset%')
+app/Domains/Accounting/Services/ReportService.php:164: ->orWhere('name', 'like', '%cash%')
+app/Domains/Accounting/Services/ReportService.php:165: ->orWhere('name', 'like', '%bank%')
+app/Domains/Accounting/Services/ReportService.php:166: ->orWhere('name', 'like', '%inventory%')
+app/Domains/Accounting/Services/ReportService.php:167: ->orWhere('name', 'like', '%ASSET%')
+app/Domains/Accounting/Services/ReportService.php:168: ->orWhere('name', 'like', '%CASH%')
+app/Domains/Accounting/Services/ReportService.php:169: ->orWhere('name', 'like', '%BANK%')
+app/Domains/Accounting/Services/ReportService.php:170: ->orWhere('name', 'like', '%INVENTORY%');
+app/Domains/Accounting/Services/ReportService.php:188: 'account_name' => $account->name,
+app/Domains/Accounting/Services/ReportService.php:198: ->orWhere('name', 'like', '%liability%')
+app/Domains/Accounting/Services/ReportService.php:199: ->orWhere('name', 'like', '%payable%')
+app/Domains/Accounting/Services/ReportService.php:200: ->orWhere('name', 'like', '%tax%')
+app/Domains/Accounting/Services/ReportService.php:201: ->orWhere('name', 'like', '%LIABILITY%')
+app/Domains/Accounting/Services/ReportService.php:202: ->orWhere('name', 'like', '%PAYABLE%')
+app/Domains/Accounting/Services/ReportService.php:203: ->orWhere('name', 'like', '%TAX%');
+app/Domains/Accounting/Services/ReportService.php:221: 'account_name' => $account->name,
+app/Domains/Accounting/Services/ReportService.php:231: ->orWhere('name', 'like', '%equity%')
+app/Domains/Accounting/Services/ReportService.php:232: ->orWhere('name', 'like', '%capital%')
+app/Domains/Accounting/Services/ReportService.php:233: ->orWhere('name', 'like', '%EQUITY%')
+app/Domains/Accounting/Services/ReportService.php:234: ->orWhere('name', 'like', '%CAPITAL%');
+app/Domains/Accounting/Services/ReportService.php:252: 'account_name' => $account->name,
+app/Http/Resources/InventoryObjectResource.php:16: 'variant_name' => $this->variant->name ?? null,
+app/Http/Resources/InventoryObjectResource.php:18: 'warehouse_name' => $this->warehouse->name ?? null,
+app/Models/User.php:22: 'name',
+database/factories/UserFactory.php:28: 'name' => fake()->name(),
+database/seeders/DatabaseSeeder.php:37: 'name' => 'Acme Building Materials Ltd',
+database/seeders/DatabaseSeeder.php:50: ['name' => 'Admin User', 'password' => bcrypt('password')]
+database/seeders/DatabaseSeeder.php:55: ['name' => 'Sales Officer', 'password' => bcrypt('password')]
+database/seeders/DatabaseSeeder.php:61: 'name' => 'Mumbai Main Branch',
+database/seeders/DatabaseSeeder.php:71: 'name' => 'Central Warehouse',
+database/seeders/DatabaseSeeder.php:88: 'name' => 'GST 18%',
+database/seeders/DatabaseSeeder.php:95: 'name' => 'Box',
+database/seeders/DatabaseSeeder.php:102: 'name' => 'Square Feet',
+database/seeders/DatabaseSeeder.php:109: 'name' => 'Piece',
+database/seeders/DatabaseSeeder.php:116: 'name' => 'Ceramic Tiles',
+database/seeders/DatabaseSeeder.php:122: 'name' => 'Granite Slabs',
+database/seeders/DatabaseSeeder.php:128: 'name' => 'Kajaria',
+database/seeders/DatabaseSeeder.php:134: 'name' => 'Morbi Tile Industries',
+database/seeders/DatabaseSeeder.php:139: 'name' => 'Stone & Tile Wholesalers',
+database/seeders/DatabaseSeeder.php:148: 'name' => 'Apex Constructions',
+database/seeders/DatabaseSeeder.php:158: 'name' => 'Inventory Management',
+database/seeders/DatabaseSeeder.php:164: 'name' => 'View Stock',
+database/seeders/DatabaseSeeder.php:170: 'name' => 'Warehouse Manager',
+database/seeders/DatabaseSeeder.php:188: 'name' => 'Current Assets',
+database/seeders/DatabaseSeeder.php:196: 'name' => 'HDFC Bank A/c',
+database/seeders/DatabaseSeeder.php:203: 'name' => 'Sales Revenue',
+database/seeders/DatabaseSeeder.php:211: 'name' => 'Product Sales',
+database/seeders/DatabaseSeeder.php:223: 'name' => 'Kajaria Royal Series',
+database/seeders/DatabaseSeeder.php:231: 'name' => 'Kajaria Royal Gold 600x600 mm',
+database/seeders/DatabaseSeeder.php:239: $lenAttr = ProductAttribute::create(['organization_id' => $org->id, 'name' => 'Length (mm)', 'slug' => 'length-mm', 'type' => 'number']);
+database/seeders/DatabaseSeeder.php:240: $widAttr = ProductAttribute::create(['organization_id' => $org->id, 'name' => 'Width (mm)', 'slug' => 'width-mm', 'type' => 'number']);
+database/seeders/DatabaseSeeder.php:260: 'name' => 'Black Galaxy Slabs',
+database/seeders/DatabaseSeeder.php:268: 'name' => 'Black Galaxy Granite Slab Premium',
+database/migrations/2026_07_01_000202_create_journal_batches_table.php:15: $table->string('name');
+database/migrations/2026_07_01_000103_create_workflow_steps_table.php:14: $table->string('name');
+database/migrations/2026_06_30_000501_create_account_groups_table.php:12: $table->string('name');
+database/migrations/2026_06_30_000007_create_warehouses_table.php:12: $table->string('name');
+database/migrations/2026_06_30_000009_create_permission_groups_table.php:11: $table->string('name');
+database/migrations/2026_06_30_000009_create_permission_groups_table.php:14: $table->unique(['organization_id', 'name']);
+database/migrations/2026_06_30_000004_create_brands_table.php:11: $table->string('name');
+database/migrations/2026_06_30_000011_create_roles_table.php:11: $table->string('name');
+database/migrations/2026_07_01_000201_create_financial_years_table.php:14: $table->string('name');
+database/migrations/2026_07_01_000105_create_workflow_actions_table.php:14: $table->string('name');
+database/migrations/2026_06_30_000001_create_tax_profiles_table.php:11: $table->string('name');
+database/migrations/2026_06_30_000103_create_product_attributes_table.php:11: $table->string('name');
+database/migrations/0001_01_01_000000_create_users_table.php:16: $table->string('name');
+database/migrations/2026_07_01_000104_create_workflow_conditions_table.php:14: $table->string('name');
+database/migrations/2026_06_30_000005_create_manufacturers_table.php:11: $table->string('name');
+database/migrations/2026_06_30_000022_create_customers_table.php:11: $table->string('name');
+database/migrations/2026_06_30_000502_create_accounts_table.php:12: $table->string('name');
+database/migrations/2026_06_30_000101_create_product_families_table.php:14: $table->string('name');
+database/migrations/2026_06_30_000002_create_units_table.php:11: $table->string('name');
+database/migrations/2026_06_30_000010_create_permissions_table.php:12: $table->string('name');
+database/migrations/2026_06_28_112838_create_organizations_table.php:17: $table->string('name');
+database/migrations/2026_06_30_000003_create_categories_table.php:12: $table->string('name');
+database/migrations/2026_07_01_000101_create_workflow_definitions_table.php:15: $table->string('name');
+database/migrations/2026_06_30_000102_create_product_variants_table.php:13: $table->string('name');
+database/migrations/0001_01_01_000002_create_jobs_table.php:26: $table->string('name');
+database/migrations/2026_06_30_000021_create_suppliers_table.php:11: $table->string('name');
+database/migrations/2026_06_30_000006_create_branches_table.php:11: $table->string('name');
+test_inventory.php:33: 'name' => 'Inventory System Test Branch'
+test_inventory.php:39: 'name' => 'Main Slab Depot'
+test_inventory.php:45: 'name' => 'Sanitary & Tiles Loft'
+test_inventory.php:50: 'name' => 'Granite & Natural Stone Slabs',
+test_inventory.php:58: 'name' => 'Square Feet',
+test_inventory.php:65: 'name' => 'Italian Onyx',
+test_inventory.php:73: 'name' => 'Premium Italian Onyx Marble Slab',
+test_inventory.php:190: echo " - Transfer checked-in. Status: " . $trf->status . " | Active Warehouse Location: " . $testObj->warehouse->name . "\n";
+test_accounting.php:25: 'name' => 'Branch Two'
+test_accounting.php:33: 'name' => 'Trial FY 2026-27',
+test_accounting.php:45: 'name' => 'ASSETS',
+test_accounting.php:52: 'name' => 'LIABILITIES',
+test_accounting.php:59: 'name' => 'INCOME/SALES',
+test_accounting.php:66: 'name' => 'EXPENSE/PURCHASES',
+test_accounting.php:78: 'name' => 'Inventory Asset A/c',
+test_accounting.php:88: 'name' => 'GST Input Credit A/c',
+test_accounting.php:98: 'name' => 'GST Output Payables A/c',
+test_accounting.php:108: 'name' => 'Material Supplier Payable',
+test_accounting.php:118: 'name' => 'Retail Customer Receivable',
+test_accounting.php:128: 'name' => 'Sales Revenue Account',
+test_reporting.php:32: 'name' => 'Reporting Test Branch'
+test_reporting.php:38: 'name' => 'Reporting Central Whse'
+test_reporting.php:43: 'name' => 'Vitreous China Sanitaryware',
+test_reporting.php:51: 'name' => 'Pieces',
+test_reporting.php:58: 'name' => 'Closets Family',
+test_reporting.php:66: 'name' => 'Premium Wall Hung Water Closet',
+test_workflow.php:29: 'name' => 'Test Branch'
+test_workflow.php:34: 'name' => 'Demo Supplier'
+test_workflow.php:43: 'name' => 'PO Multi-approval Flow',
+test_workflow.php:54: 'name' => 'Start Flow',
+test_workflow.php:62: 'name' => 'Manager Sign-Off',
+test_workflow.php:74: 'name' => 'Approved State',
+test_workflow.php:122: echo "Current trace node step ID: {$instance->current_step_id} ({$instance->currentStep->name})\n";

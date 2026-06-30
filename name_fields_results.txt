@@ -1,0 +1,27 @@
+Found 26 tables with 'name' fields:
+FILE: 0001_01_01_000000_create_users_table.php:16 | TABLE: users (singular: user) | LINE: $table->string('name');
+FILE: 0001_01_01_000002_create_jobs_table.php:26 | TABLE: jobs (singular: job) | LINE: $table->string('name');
+FILE: 2026_06_28_112838_create_organizations_table.php:17 | TABLE: organizations (singular: organization) | LINE: $table->string('name');
+FILE: 2026_06_30_000001_create_tax_profiles_table.php:11 | TABLE: tax_profiles (singular: tax_profile) | LINE: $table->string('name');
+FILE: 2026_06_30_000002_create_units_table.php:11 | TABLE: units (singular: unit) | LINE: $table->string('name');
+FILE: 2026_06_30_000003_create_categories_table.php:12 | TABLE: categories (singular: category) | LINE: $table->string('name');
+FILE: 2026_06_30_000004_create_brands_table.php:11 | TABLE: brands (singular: brand) | LINE: $table->string('name');
+FILE: 2026_06_30_000005_create_manufacturers_table.php:11 | TABLE: manufacturers (singular: manufacturer) | LINE: $table->string('name');
+FILE: 2026_06_30_000006_create_branches_table.php:11 | TABLE: branches (singular: branche) | LINE: $table->string('name');
+FILE: 2026_06_30_000007_create_warehouses_table.php:12 | TABLE: warehouses (singular: warehouse) | LINE: $table->string('name');
+FILE: 2026_06_30_000009_create_permission_groups_table.php:11 | TABLE: permission_groups (singular: permission_group) | LINE: $table->string('name');
+FILE: 2026_06_30_000010_create_permissions_table.php:12 | TABLE: permissions (singular: permission) | LINE: $table->string('name');
+FILE: 2026_06_30_000011_create_roles_table.php:11 | TABLE: roles (singular: role) | LINE: $table->string('name');
+FILE: 2026_06_30_000021_create_suppliers_table.php:11 | TABLE: suppliers (singular: supplier) | LINE: $table->string('name');
+FILE: 2026_06_30_000022_create_customers_table.php:11 | TABLE: customers (singular: customer) | LINE: $table->string('name');
+FILE: 2026_06_30_000101_create_product_families_table.php:14 | TABLE: product_families (singular: product_family) | LINE: $table->string('name');
+FILE: 2026_06_30_000102_create_product_variants_table.php:13 | TABLE: product_variants (singular: product_variant) | LINE: $table->string('name');
+FILE: 2026_06_30_000103_create_product_attributes_table.php:11 | TABLE: product_attributes (singular: product_attribute) | LINE: $table->string('name');
+FILE: 2026_06_30_000501_create_account_groups_table.php:12 | TABLE: account_groups (singular: account_group) | LINE: $table->string('name');
+FILE: 2026_06_30_000502_create_accounts_table.php:12 | TABLE: accounts (singular: account) | LINE: $table->string('name');
+FILE: 2026_07_01_000101_create_workflow_definitions_table.php:15 | TABLE: workflow_definitions (singular: workflow_definition) | LINE: $table->string('name');
+FILE: 2026_07_01_000103_create_workflow_steps_table.php:14 | TABLE: workflow_steps (singular: workflow_step) | LINE: $table->string('name');
+FILE: 2026_07_01_000104_create_workflow_conditions_table.php:14 | TABLE: workflow_conditions (singular: workflow_condition) | LINE: $table->string('name');
+FILE: 2026_07_01_000105_create_workflow_actions_table.php:14 | TABLE: workflow_actions (singular: workflow_action) | LINE: $table->string('name');
+FILE: 2026_07_01_000201_create_financial_years_table.php:14 | TABLE: financial_years (singular: financial_year) | LINE: $table->string('name');
+FILE: 2026_07_01_000202_create_journal_batches_table.php:15 | TABLE: journal_batches (singular: journal_batche) | LINE: $table->string('name');
