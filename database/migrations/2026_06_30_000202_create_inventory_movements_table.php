@@ -36,14 +36,16 @@ return new class extends Migration {
         });
 
         // Set auto_increment for primary key column and apply partition by range columns on created_at
-        \Illuminate\Support\Facades\DB::statement('ALTER TABLE inventory_movements MODIFY id BIGINT NOT NULL AUTO_INCREMENT');
-        \Illuminate\Support\Facades\DB::statement("ALTER TABLE inventory_movements PARTITION BY RANGE (UNIX_TIMESTAMP(created_at)) (
-            PARTITION p_2026_06 VALUES LESS THAN (UNIX_TIMESTAMP('2026-07-01 00:00:00')),
-            PARTITION p_2026_07 VALUES LESS THAN (UNIX_TIMESTAMP('2026-08-01 00:00:00')),
-            PARTITION p_2026_08 VALUES LESS THAN (UNIX_TIMESTAMP('2026-09-01 00:00:00')),
-            PARTITION p_2026_09 VALUES LESS THAN (UNIX_TIMESTAMP('2026-10-01 00:00:00')),
-            PARTITION p_max VALUES LESS THAN MAXVALUE
-        )");
+        if (config('database.default') !== 'sqlite') {
+            \Illuminate\Support\Facades\DB::statement('ALTER TABLE inventory_movements MODIFY id BIGINT NOT NULL AUTO_INCREMENT');
+            \Illuminate\Support\Facades\DB::statement("ALTER TABLE inventory_movements PARTITION BY RANGE (UNIX_TIMESTAMP(created_at)) (
+                PARTITION p_2026_06 VALUES LESS THAN (UNIX_TIMESTAMP('2026-07-01 00:00:00')),
+                PARTITION p_2026_07 VALUES LESS THAN (UNIX_TIMESTAMP('2026-08-01 00:00:00')),
+                PARTITION p_2026_08 VALUES LESS THAN (UNIX_TIMESTAMP('2026-09-01 00:00:00')),
+                PARTITION p_2026_09 VALUES LESS THAN (UNIX_TIMESTAMP('2026-10-01 00:00:00')),
+                PARTITION p_max VALUES LESS THAN MAXVALUE
+            )");
+        }
     }
     public function down(): void
     {

@@ -51,12 +51,12 @@ class DatabaseSeeder extends Seeder
         // Create Default Users
         $adminUser = User::firstOrCreate(
             ['email' => 'admin@acme.com'],
-            ['name' => 'Admin User', 'password' => bcrypt('password')]
+            ['organization_id' => $org->id, 'name' => 'Admin User', 'password' => bcrypt('password')]
         );
 
         $staffUser = User::firstOrCreate(
             ['email' => 'sales@acme.com'],
-            ['name' => 'Sales Officer', 'password' => bcrypt('password')]
+            ['organization_id' => $org->id, 'name' => 'Sales Officer', 'password' => bcrypt('password')]
         );
 
         // 2. Master Domain Entities

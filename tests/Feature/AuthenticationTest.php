@@ -1,0 +1,92 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\User;
+use App\Domains\Master\Models\Organization;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
+
+class AuthenticationTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected Organization $org;
+    protected User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->org = Organization::create([
+            'name' => 'Test Org',
+            'code' => 'TEST01',
+            'is_active' => true
+        ]);
+
+        $this->user = User::create([
+            'organization_id' => $this->org->id,
+            'name' => 'Test User',
+            'email' => 'test@org.com',
+            'password' => Hash::make('password123')
+        ]);
+    }
+
+    public function test_user_can_login_with_valid_credentials()
+    {
+        $response = $this->postJson('/api/login', [
+            'email' => 'test@org.com',
+            'password' => 'password123'
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'access_token',
+                'token_type',
+                'user' => [
+                    'id',
+                    'name',
+                    'email',
+                    'organization' => ['id', 'name'],
+                    'branches',
+                    'permissions'
+                ]
+            ]);
+    }
+
+    public function test_user_cannot_login_with_invalid_credentials()
+    {
+        $response = $this->postJson('/api/login', [
+            'email' => 'test@org.com',
+            'password' => 'wrongpassword'
+        ]);
+
+        $response->assertStatus(401);
+    }
+
+    public function test_user_cannot_login_when_organization_inactive()
+    {
+        $this->org->is_active = false;
+        $this->org->save();
+
+        $response = $this->postJson('/api/login', [
+            'email' => 'test@org.com',
+            'password' => 'password123'
+        ]);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_user_can_logout()
+    {
+        $token = $this->user->createToken('test_token')->plainTextToken;
+
+        $response = $this->postJson('/api/logout', [], [
+            'Authorization' => 'Bearer ' . $token
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEmpty($this->user->tokens);
+    }
+}

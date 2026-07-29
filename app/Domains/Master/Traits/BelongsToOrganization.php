@@ -16,6 +16,17 @@ trait BelongsToOrganization
 
         static::creating(function ($model) {
             if (!$model->organization_id) {
+                if (\Illuminate\Support\Facades\App::bound(\App\Shared\Context\TenantContext::class)) {
+                    $orgId = \Illuminate\Support\Facades\App::make(\App\Shared\Context\TenantContext::class)->getOrganizationId();
+                    if ($orgId) {
+                        $model->organization_id = $orgId;
+                        return;
+                    }
+                }
+                if (auth()->check()) {
+                    $model->organization_id = auth()->user()->organization_id;
+                    return;
+                }
                 $model->organization_id = request()->header('X-Organization-Id') ?? 1;
             }
         });

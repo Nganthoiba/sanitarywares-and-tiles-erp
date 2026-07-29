@@ -1,0 +1,165 @@
+<?php
+
+namespace App\Domains\Security\Services;
+
+use App\Domains\Master\Models\Organization;
+use App\Domains\Master\Models\Branch;
+use App\Domains\Master\Models\Warehouse;
+use App\Models\User;
+use App\Domains\Security\Models\PermissionGroup;
+use App\Domains\Security\Models\Permission;
+use App\Domains\Security\Models\Role;
+use App\Domains\Security\Models\UserScope;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+
+class OrganizationRegistrationService
+{
+    /**
+     * Provision a complete new organization and owner account.
+     */
+    public function register(array $orgData, array $userData): array
+    {
+        return DB::transaction(function () use ($orgData, $userData) {
+            // 1. Create Organization
+            $org = Organization::create([
+                'code' => $orgData['code'] ?? 'ORG-' . strtoupper(Str::random(6)),
+                'name' => $orgData['name'],
+                'legal_name' => $orgData['legal_name'] ?? $orgData['name'],
+                'business_type' => $orgData['business_type'] ?? 'Proprietorship',
+                'country' => $orgData['country'] ?? 'India',
+                'state' => $orgData['state'] ?? 'Maharashtra',
+                'city' => $orgData['city'] ?? 'Mumbai',
+                'address' => $orgData['address'] ?? null,
+                'email' => $orgData['email'] ?? null,
+                'phone' => $orgData['phone'] ?? null,
+                'website' => $orgData['website'] ?? null,
+                'gstin' => $orgData['gstin'] ?? null,
+                'pan' => $orgData['pan'] ?? null,
+                'business_registration_number' => $orgData['business_registration_number'] ?? null,
+                'subscription_plan' => $orgData['subscription_plan'] ?? 'FREE_TRIAL',
+                'subscription_start' => now()->toDateString(),
+                'subscription_expiry' => now()->addDays(30)->toDateString(),
+                'is_active' => true,
+                'settings' => [
+                    'allow_negative_stock' => false,
+                    'tax_inclusive_pricing' => false,
+                ],
+                'preferences' => [
+                    'currency' => 'INR',
+                    'timezone' => 'Asia/Kolkata',
+                    'date_format' => 'Y-m-d',
+                ]
+            ]);
+
+            // 2. Create Owner User
+            $user = User::create([
+                'organization_id' => $org->id,
+                'name' => $userData['name'],
+                'email' => $userData['email'],
+                'password' => Hash::make($userData['password']),
+            ]);
+
+            // 3. Create Default Permission Groups and Permissions
+            $defaultPermissions = [
+                'Master Data' => [
+                    'master.organizations.view' => 'View Organization details',
+                    'master.organizations.update' => 'Update Organization details',
+                    'master.branches.manage' => 'Manage Branches',
+                    'master.warehouses.manage' => 'Manage Warehouses',
+                    'master.users.manage' => 'Manage Users and Roles',
+                ],
+                'Inventory Management' => [
+                    'inventory.stock.view' => 'View Stock Levels',
+                    'inventory.transfer.execute' => 'Execute Inventory Transfers',
+                    'inventory.adjustment.approve' => 'Approve Stock Adjustments',
+                    'inventory.count.manage' => 'Manage Inventory Counts',
+                ],
+                'Purchase Domain' => [
+                    'purchase.requisitions.manage' => 'Manage Purchase Requisitions',
+                    'purchase.orders.create' => 'Create Purchase Orders',
+                    'purchase.orders.approve' => 'Approve Purchase Orders',
+                ],
+                'Sales Domain' => [
+                    'sales.orders.manage' => 'Manage Sales Orders',
+                    'sales.invoice.cancel' => 'Cancel Sales Invoices',
+                ],
+                'Accounting Domain' => [
+                    'accounting.accounts.manage' => 'Manage Accounts & Ledgers',
+                    'accounting.journal.post' => 'Post Journal Entries',
+                ],
+                'Workflow Management' => [
+                    'workflow.definition.manage' => 'Manage Workflows Definitions',
+                ]
+            ];
+
+            $permissionIds = [];
+            foreach ($defaultPermissions as $groupName => $perms) {
+                $group = PermissionGroup::create([
+                    'organization_id' => $org->id,
+                    'name' => $groupName
+                ]);
+
+                foreach ($perms as $slug => $name) {
+                    $p = Permission::create([
+                        'organization_id' => $org->id,
+                        'permission_group_id' => $group->id,
+                        'name' => $name,
+                        'slug' => $slug
+                    ]);
+                    $permissionIds[] = $p->id;
+                }
+            }
+
+            // 4. Create Default Administrator Role & Assign Permissions
+            $adminRole = Role::create([
+                'organization_id' => $org->id,
+                'name' => 'Administrator',
+                'slug' => 'administrator',
+                'is_system' => true
+            ]);
+
+            $adminRole->permissions()->attach($permissionIds, ['organization_id' => $org->id]);
+
+            // 5. Assign Administrator Role to the Owner User
+            $user->roles()->attach($adminRole->id, ['organization_id' => $org->id]);
+
+            // 6. Create Default Branch
+            $branch = Branch::create([
+                'organization_id' => $org->id,
+                'name' => $org->name . ' Main Branch',
+                'code' => 'HQ-01',
+                'email' => $org->email,
+                'phone' => $org->phone,
+                'address' => $org->address
+            ]);
+
+            // 7. Create Default Warehouse
+            $warehouse = Warehouse::create([
+                'organization_id' => $org->id,
+                'branch_id' => $branch->id,
+                'name' => 'Central Warehouse',
+                'code' => 'WH-01',
+                'type' => 'MAIN',
+                'is_active' => true,
+                'address' => $branch->address
+            ]);
+
+            // 8. Create Default UserScope for the Owner
+            UserScope::create([
+                'organization_id' => $org->id,
+                'user_id' => $user->id,
+                'branch_id' => $branch->id,
+                'warehouse_id' => $warehouse->id
+            ]);
+
+            return [
+                'organization' => $org,
+                'user' => $user,
+                'branch' => $branch,
+                'warehouse' => $warehouse
+            ];
+        });
+    }
+}

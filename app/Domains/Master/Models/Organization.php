@@ -10,8 +10,13 @@ class Organization extends Model
         'code',
         'name',
         'legal_name',
+        'business_type',
+        'country',
+        'state',
+        'city',
         'gstin',
         'pan',
+        'business_registration_number',
         'email',
         'phone',
         'website',
@@ -19,6 +24,14 @@ class Organization extends Model
         'subscription_start',
         'subscription_expiry',
         'is_active',
-        'address'
+        'address',
+        'settings',
+        'preferences'
+    ];
+
+    protected $casts = [
+        'settings' => 'array',
+        'preferences' => 'array',
+        'is_active' => 'boolean',
     ];
 }
