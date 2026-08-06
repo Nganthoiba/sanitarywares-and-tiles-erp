@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Api\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Domains\Security\Models\Role;
+use App\Domains\Security\Models\Permission;
 use App\Domains\Master\Models\Branch;
 use App\Domains\Master\Models\Warehouse;
 use App\Domains\Security\Models\UserScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class UserManagementController extends Controller
 {
@@ -29,7 +32,7 @@ class UserManagementController extends Controller
      */
     public function roles(Request $request)
     {
-        $roles = Role::all();
+        $roles = Role::with('permissions')->get();
         return response()->json($roles);
     }
 
@@ -56,16 +59,25 @@ class UserManagementController extends Controller
      */
     public function store(Request $request)
     {
+        $orgId = $request->user()->organization_id;
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:8',
-            'role_id' => 'required|exists:roles,id',
-            'branch_id' => 'required|exists:branches,id',
-            'warehouse_id' => 'required|exists:warehouses,id',
+            'role_id' => [
+                'required',
+                Rule::exists('roles', 'id')->where('organization_id', $orgId)
+            ],
+            'branch_id' => [
+                'required',
+                Rule::exists('branches', 'id')->where('organization_id', $orgId)
+            ],
+            'warehouse_id' => [
+                'required',
+                Rule::exists('warehouses', 'id')->where('organization_id', $orgId)->where('branch_id', $request->input('branch_id'))
+            ],
         ]);
-
-        $orgId = $request->user()->organization_id;
 
         $user = DB::transaction(function () use ($request, $orgId) {
             $user = User::create([
@@ -99,12 +111,25 @@ class UserManagementController extends Controller
     public function update(Request $request, $id)
     {
         $user = User::findOrFail($id);
+        $orgId = $request->user()->organization_id;
 
         $request->validate([
             'name' => 'sometimes|required|string|max:255',
-            'role_id' => 'sometimes|required|exists:roles,id',
-            'branch_id' => 'sometimes|required|exists:branches,id',
-            'warehouse_id' => 'sometimes|required|exists:warehouses,id',
+            'role_id' => [
+                'sometimes',
+                'required',
+                Rule::exists('roles', 'id')->where('organization_id', $orgId)
+            ],
+            'branch_id' => [
+                'sometimes',
+                'required',
+                Rule::exists('branches', 'id')->where('organization_id', $orgId)
+            ],
+            'warehouse_id' => [
+                'sometimes',
+                'required',
+                Rule::exists('warehouses', 'id')->where('organization_id', $orgId)
+            ],
         ]);
 
         DB::transaction(function () use ($request, $user) {
@@ -173,5 +198,139 @@ class UserManagementController extends Controller
         return response()->json([
             'message' => 'Employee deleted successfully.'
         ]);
+    }
+
+    /**
+     * Create a new role for the organization.
+     */
+    public function storeRole(Request $request)
+    {
+        $orgId = $request->user()->organization_id;
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'permissions' => 'nullable|array',
+            'permissions.*' => [
+                'integer',
+                Rule::exists('permissions', 'id')->where('organization_id', $orgId)
+            ],
+        ]);
+
+        $slug = Str::slug($request->input('name'));
+
+        // Check uniqueness of slug within organization
+        $exists = Role::where('slug', $slug)->exists();
+        if ($exists) {
+            return response()->json([
+                'message' => 'The validation failed.',
+                'errors' => [
+                    'name' => ['A role with a similar name already exists in your organization.']
+                ]
+            ], 422);
+        }
+
+        $role = DB::transaction(function () use ($request, $orgId, $slug) {
+            $role = Role::create([
+                'organization_id' => $orgId,
+                'name' => $request->input('name'),
+                'slug' => $slug,
+                'is_system' => false,
+            ]);
+
+            if ($request->has('permissions')) {
+                $role->permissions()->syncWithPivotValues($request->input('permissions') ?? [], ['organization_id' => $orgId]);
+            }
+
+            return $role;
+        });
+
+        return response()->json($role->load('permissions'), 201);
+    }
+
+    /**
+     * Update an existing role for the organization.
+     */
+    public function updateRole(Request $request, $id)
+    {
+        $role = Role::findOrFail($id);
+
+        if ($role->is_system) {
+            return response()->json([
+                'message' => 'System roles cannot be modified.'
+            ], 403);
+        }
+
+        $orgId = $request->user()->organization_id;
+
+        $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'permissions' => 'sometimes|nullable|array',
+            'permissions.*' => [
+                'integer',
+                Rule::exists('permissions', 'id')->where('organization_id', $orgId)
+            ],
+        ]);
+
+        if ($request->has('name')) {
+            $slug = Str::slug($request->input('name'));
+            $exists = Role::where('slug', $slug)->where('id', '!=', $role->id)->exists();
+            if ($exists) {
+                return response()->json([
+                    'message' => 'The validation failed.',
+                    'errors' => [
+                        'name' => ['A role with a similar name already exists in your organization.']
+                    ]
+                ], 422);
+            }
+        }
+
+        DB::transaction(function () use ($request, $role, $orgId) {
+            if ($request->has('name')) {
+                $role->name = $request->input('name');
+                $role->slug = Str::slug($request->input('name'));
+                $role->save();
+            }
+
+            if ($request->has('permissions')) {
+                $role->permissions()->syncWithPivotValues($request->input('permissions') ?? [], ['organization_id' => $orgId]);
+            }
+        });
+
+        return response()->json($role->load('permissions'));
+    }
+
+    /**
+     * Delete a role from the organization.
+     */
+    public function destroyRole(Request $request, $id)
+    {
+        $role = Role::findOrFail($id);
+
+        if ($role->is_system) {
+            return response()->json([
+                'message' => 'System roles cannot be deleted.'
+            ], 403);
+        }
+
+        if ($role->users()->exists()) {
+            return response()->json([
+                'message' => 'Cannot delete role because it is currently assigned to one or more staff members.'
+            ], 400);
+        }
+
+        $role->delete();
+
+        return response()->json([
+            'message' => 'Role deleted successfully.'
+        ]);
+    }
+
+    /**
+     * List all permissions in the organization.
+     */
+    public function permissions(Request $request)
+    {
+        $permissions = Permission::with('group')->get();
+        return response()->json($permissions);
     }
 }

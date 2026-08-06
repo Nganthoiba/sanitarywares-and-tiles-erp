@@ -89,4 +89,60 @@ class AuthenticationTest extends TestCase
         $response->assertStatus(200);
         $this->assertEmpty($this->user->tokens);
     }
+
+    public function test_user_can_update_profile_info()
+    {
+        $token = $this->user->createToken('test_token')->plainTextToken;
+
+        $response = $this->putJson('/api/profile', [
+            'name' => 'Updated Name',
+            'email' => 'updated@org.com'
+        ], [
+            'Authorization' => 'Bearer ' . $token
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('user.name', 'Updated Name')
+            ->assertJsonPath('user.email', 'updated@org.com');
+
+        $this->user->refresh();
+        $this->assertEquals('Updated Name', $this->user->name);
+        $this->assertEquals('updated@org.com', $this->user->email);
+    }
+
+    public function test_user_can_change_password()
+    {
+        $token = $this->user->createToken('test_token')->plainTextToken;
+
+        $response = $this->putJson('/api/profile', [
+            'name' => 'Test User',
+            'email' => 'test@org.com',
+            'current_password' => 'password123',
+            'new_password' => 'newpassword123'
+        ], [
+            'Authorization' => 'Bearer ' . $token
+        ]);
+
+        $response->assertStatus(200);
+
+        $this->user->refresh();
+        $this->assertTrue(Hash::check('newpassword123', $this->user->password));
+    }
+
+    public function test_user_cannot_change_password_with_incorrect_current_password()
+    {
+        $token = $this->user->createToken('test_token')->plainTextToken;
+
+        $response = $this->putJson('/api/profile', [
+            'name' => 'Test User',
+            'email' => 'test@org.com',
+            'current_password' => 'wrongpassword',
+            'new_password' => 'newpassword123'
+        ], [
+            'Authorization' => 'Bearer ' . $token
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('message', 'The current password you entered is incorrect.');
+    }
 }

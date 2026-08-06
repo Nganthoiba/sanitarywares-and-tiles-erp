@@ -11,6 +11,13 @@ use App\Http\Controllers\Api\Auth\OrganizationRegistrationController;
 use App\Http\Controllers\Api\Auth\UserInvitationController;
 use App\Http\Controllers\Api\Auth\UserManagementController;
 
+// A simple api route to test whether the api route is working or not
+Route::get('/test', function () {
+    return response()->json([
+        'message' => 'API is working successfully',
+    ]);
+});
+
 // Public Auth / Registration Routes
 Route::post('/register-organization', [OrganizationRegistrationController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -20,6 +27,7 @@ Route::post('/accept-invitation', [UserInvitationController::class, 'accept']);
 Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+    Route::put('/profile', [AuthController::class, 'updateProfile']);
 
     // User Management (restricted to users with 'master.users.manage' permission)
     Route::middleware(['permission:master.users.manage'])->group(function () {
@@ -28,8 +36,12 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::put('/users/{id}', [UserManagementController::class, 'update']);
         Route::delete('/users/{id}', [UserManagementController::class, 'destroy']);
         Route::post('/users/invite', [UserInvitationController::class, 'invite']);
-        
+
         Route::get('/roles', [UserManagementController::class, 'roles']);
+        Route::post('/roles', [UserManagementController::class, 'storeRole']);
+        Route::put('/roles/{id}', [UserManagementController::class, 'updateRole']);
+        Route::delete('/roles/{id}', [UserManagementController::class, 'destroyRole']);
+        Route::get('/permissions', [UserManagementController::class, 'permissions']);
         Route::get('/branches', [UserManagementController::class, 'branches']);
         Route::get('/warehouses', [UserManagementController::class, 'warehouses']);
     });

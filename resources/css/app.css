@@ -1,3 +1,329 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap');
+
+/* CSS Variables for AppDashboard Theme */
+:root {
+    --app-font-size: 13.5px;
+    --default-font: "Geist", system-ui, -apple-system, sans-serif;
+    --heading-font: "Geist", system-ui, -apple-system, sans-serif;
+    --mono-font: "Geist Mono", monospace;
+
+    /* Spacing & Radii Scales */
+    --spacing-xs: 0.3125rem;
+    --spacing-sm: 0.625rem;
+    --spacing-md: 1rem;
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.625rem;
+    --radius-xl: 0.75rem;
+
+    /* Spacing transition speed */
+    --transition-base: 220ms ease;
+
+    /* Shadows */
+    --shadow-md: 0 12px 28px -18px rgba(22, 34, 81, 0.2), 0 2px 8px -4px rgba(22, 34, 81, 0.08);
+    --shadow-lg: 0 22px 45px -24px rgba(22, 34, 81, 0.28), 0 8px 18px -12px rgba(22, 34, 81, 0.12);
+
+    /* Light Theme (AppDashboard Default) */
+    --background-color: #f4f7fb;
+    --default-color: #273447;
+    --heading-color: #111827;
+    --accent-color: #315cf6; /* Distinct Indigo-Blue Accent */
+    --surface-color: #ffffff;
+    --contrast-color: #ffffff;
+    --muted-color: #687789;
+    --light-color: #9aa8b8;
+    
+    /* Borders */
+    --border-color: #dbe4ef;
+    --border-color-light: #eaf0f7;
+    
+    /* Status indicators */
+    --success-color: #0f9b7a;
+    --success-color-light: #dff8f0;
+    --warning-color: #c87914;
+    --warning-color-light: #fff0d7;
+    --danger-color: #e05264;
+    --danger-color-light: #fde5ea;
+    --info-color: #0c9dc8;
+    --info-color-light: #ddf4fb;
+    
+    /* Navigation Components */
+    --header-bg: #ffffff;
+    --header-border: var(--border-color);
+    --sidebar-bg: #ffffff;
+    --sidebar-border: #d9e2ec;
+    --sidebar-color: #324152;
+    --sidebar-muted-color: #8190a2;
+    --sidebar-hover-bg: #edf3ff;
+    --sidebar-active-bg: #315cf6;
+    --sidebar-active-color: var(--contrast-color);
+    
+    /* Cards & tables */
+    --card-bg: #ffffff;
+    --card-shadow: var(--shadow-md);
+    --card-border: #e2e9f2;
+    --table-header-bg: #f7f9fc;
+    --table-hover-bg: #eef4ff;
+    
+    /* Form inputs */
+    --input-bg: #ffffff;
+    --input-border: var(--border-color);
+}
+
+[data-theme="dark"] {
+    /* Dark Theme (AppDashboard Dark Mode) */
+    --background-color: #0e1524;
+    --default-color: #d8e0e7;
+    --heading-color: #f3f6f9;
+    --accent-color: #6d88ff; /* Softer Blue Accent for dark mode contrast */
+    --surface-color: #182235;
+    --contrast-color: #ffffff;
+    --muted-color: #9aa8b9;
+    --light-color: #728196;
+    
+    /* Borders */
+    --border-color: #2b3a50;
+    --border-color-light: #202b3d;
+    
+    /* Status indicators */
+    --success-color: #34d399;
+    --success-color-light: rgba(52, 211, 153, 0.14);
+    --warning-color: #f4b95b;
+    --warning-color-light: rgba(244, 185, 91, 0.15);
+    --danger-color: #fb7185;
+    --danger-color-light: rgba(251, 113, 133, 0.15);
+    --info-color: #22d3ee;
+    --info-color-light: rgba(34, 211, 238, 0.14);
+    
+    /* Navigation Components */
+    --header-bg: #141d2d;
+    --header-border: var(--border-color);
+    --sidebar-bg: #0d1119;
+    --sidebar-border: var(--border-color);
+    --sidebar-color: var(--default-color);
+    --sidebar-muted-color: var(--muted-color);
+    --sidebar-hover-bg: #1c2940;
+    --sidebar-active-bg: var(--accent-color);
+    --sidebar-active-color: var(--contrast-color);
+    
+    /* Cards & tables */
+    --card-bg: #182235;
+    --card-shadow: 0 18px 45px -30px rgb(0 0 0 / 0.85);
+    --card-border: var(--border-color);
+    --table-header-bg: #151b26;
+    --table-hover-bg: #202a3a;
+    
+    /* Form inputs */
+    --input-bg: #151b26;
+    --input-border: var(--border-color);
+}
+
+body, button, input, select, textarea, .table, .card, .dropdown-menu, .nav-link, .modal, .form-control, .form-select, .btn {
+    font-size: var(--app-font-size) !important;
+}
+
 body {
-    background: #f8f9fa;
+    background-color: var(--background-color);
+    color: var(--default-color);
+    font-family: var(--default-font);
+    transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+h1, h2, h3, h4, h5, h6, .navbar-brand {
+    font-family: var(--heading-font);
+    font-weight: 600;
+    color: var(--heading-color);
+}
+
+.sidebar-title {
+    color: var(--heading-color);
+    transition: color var(--transition-base);
+}
+
+[data-theme="dark"] .sidebar-title {
+    color: #ffffff !important;
+}
+
+/* Sidebar Custom Styling - AppDashboard White Sidebar look */
+.sidebar {
+    background-color: var(--sidebar-bg) !important;
+    border-right: 1px solid var(--sidebar-border);
+    transition: background-color var(--transition-base), border-color var(--transition-base);
+}
+
+.sidebar .nav-link {
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    color: var(--sidebar-color) !important;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 3px;
+    transition: all 150ms ease-in-out;
+}
+
+.sidebar .nav-link:hover {
+    background-color: var(--sidebar-hover-bg);
+    color: var(--accent-color) !important;
+}
+
+.sidebar .nav-link.active {
+    background-color: var(--sidebar-active-bg) !important;
+    color: var(--sidebar-active-color) !important;
+    font-weight: 600;
+    box-shadow: 0 4px 12px -2px rgba(49, 92, 246, 0.15);
+}
+
+.sidebar hr {
+    opacity: 0.1;
+    color: var(--border-color);
+}
+
+.sidebar .text-muted {
+    color: var(--sidebar-text-muted) !important;
+}
+
+/* Card Styling */
+.card {
+    background-color: var(--card-bg) !important;
+    border-radius: var(--radius-lg) !important;
+    border: 1px solid var(--card-border) !important;
+    box-shadow: var(--card-shadow) !important;
+    color: var(--default-color) !important;
+    transition: background-color var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.card-header {
+    background-color: var(--card-bg) !important;
+    border-bottom: 1px solid var(--card-border) !important;
+    color: var(--heading-color) !important;
+    font-weight: 600;
+}
+
+/* Table styling */
+.table {
+    color: var(--default-color) !important;
+}
+
+.table thead th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.76rem !important;
+    letter-spacing: 0.5px;
+    color: var(--muted-color);
+    background-color: var(--table-header-bg);
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--table-hover-bg) !important;
+}
+
+/* Form Controls */
+.form-control, .form-select {
+    background-color: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--default-color) !important;
+    border-radius: var(--radius-sm);
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--input-focus-border) !important;
+    box-shadow: 0 0 0 0.18rem rgba(49, 92, 246, 0.16) !important;
+}
+
+/* Custom premium buttons */
+.btn-primary {
+    background: var(--accent-color) !important;
+    border: none !important;
+    color: var(--contrast-color) !important;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+    transition: all 150ms ease;
+}
+
+.btn-primary:hover {
+    filter: brightness(1.1);
+}
+
+/* Overwrite Bootstrap colors for dark mode & template consistency */
+[data-theme="dark"] .bg-white {
+    background-color: var(--surface-color) !important;
+}
+
+[data-theme="dark"] .bg-light {
+    background-color: var(--background-color) !important;
+}
+
+[data-theme="dark"] .text-dark,
+[data-theme="dark"] .navbar-brand {
+    color: var(--heading-color) !important;
+}
+
+[data-theme="dark"] .text-secondary,
+[data-theme="dark"] .text-muted {
+    color: var(--muted-color) !important;
+}
+
+[data-theme="dark"] .border-bottom,
+[data-theme="dark"] .border-top,
+[data-theme="dark"] .border {
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .modal-content {
+    background-color: var(--card-bg) !important;
+    color: var(--default-color) !important;
+    border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-footer {
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .btn-close {
+    filter: invert(1) grayscale(1) brightness(2);
+}
+
+[data-theme="dark"] .navbar {
+    background-color: var(--surface-color) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Alert Boxes custom styles */
+.alert-danger {
+    background-color: var(--danger-color-light) !important;
+    border-color: var(--danger-color-light) !important;
+    color: var(--danger-color) !important;
+}
+
+.alert-success {
+    background-color: var(--success-color-light) !important;
+    border-color: var(--success-color-light) !important;
+    color: var(--success-color) !important;
+}
+
+.alert-info {
+    background-color: var(--info-color-light) !important;
+    border-color: var(--info-color-light) !important;
+    color: var(--info-color) !important;
+}
+
+/* Badges custom styles */
+.badge.bg-primary-subtle {
+    background-color: rgba(49, 92, 246, 0.1) !important;
+    color: var(--accent-color) !important;
+    border: 1px solid rgba(49, 92, 246, 0.15) !important;
+}
+
+.badge.bg-warning-subtle {
+    background-color: var(--warning-color-light) !important;
+    color: var(--warning-color) !important;
+    border: 1px solid rgba(200, 121, 20, 0.15) !important;
+}
+
+.badge.bg-success-subtle {
+    background-color: var(--success-color-light) !important;
+    color: var(--success-color) !important;
+    border: 1px solid rgba(15, 155, 122, 0.15) !important;
 }

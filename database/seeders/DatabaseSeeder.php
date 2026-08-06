@@ -163,31 +163,97 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 3. Security Roles & Scopes
-        $permGroup = PermissionGroup::create([
-            'organization_id' => $org->id,
-            'name' => 'Inventory Management',
-        ]);
+        $defaultPermissions = [
+            'Master Data' => [
+                'master.organizations.view' => 'View Organization details',
+                'master.organizations.update' => 'Update Organization details',
+                'master.branches.manage' => 'Manage Branches',
+                'master.warehouses.manage' => 'Manage Warehouses',
+                'master.users.manage' => 'Manage Users and Roles',
+            ],
+            'Inventory Management' => [
+                'inventory.stock.view' => 'View Stock Levels',
+                'inventory.transfer.execute' => 'Execute Inventory Transfers',
+                'inventory.adjustment.approve' => 'Approve Stock Adjustments',
+                'inventory.count.manage' => 'Manage Inventory Counts',
+            ],
+            'Purchase Domain' => [
+                'purchase.requisitions.manage' => 'Manage Purchase Requisitions',
+                'purchase.orders.create' => 'Create Purchase Orders',
+                'purchase.orders.approve' => 'Approve Purchase Orders',
+            ],
+            'Sales Domain' => [
+                'sales.orders.manage' => 'Manage Sales Orders',
+                'sales.invoice.cancel' => 'Cancel Sales Invoices',
+            ],
+            'Accounting Domain' => [
+                'accounting.accounts.manage' => 'Manage Accounts & Ledgers',
+                'accounting.journal.post' => 'Post Journal Entries',
+            ],
+            'Workflow Management' => [
+                'workflow.definition.manage' => 'Manage Workflows Definitions',
+            ]
+        ];
 
-        $perm = Permission::create([
-            'organization_id' => $org->id,
-            'permission_group_id' => $permGroup->id,
-            'name' => 'View Stock',
-            'slug' => 'view-stock',
-        ]);
+        $permissionIds = [];
+        $viewStockPermId = null;
 
-        $role = Role::create([
+        foreach ($defaultPermissions as $groupName => $perms) {
+            $group = PermissionGroup::create([
+                'organization_id' => $org->id,
+                'name' => $groupName
+            ]);
+
+            foreach ($perms as $slug => $name) {
+                $p = Permission::create([
+                    'organization_id' => $org->id,
+                    'permission_group_id' => $group->id,
+                    'name' => $name,
+                    'slug' => $slug
+                ]);
+                $permissionIds[] = $p->id;
+
+                if ($slug === 'inventory.stock.view') {
+                    $viewStockPermId = $p->id;
+                }
+            }
+        }
+
+        // Create Administrator Role & Assign Permissions
+        $adminRole = Role::create([
+            'organization_id' => $org->id,
+            'name' => 'Administrator',
+            'slug' => 'administrator',
+            'is_system' => true
+        ]);
+        $adminRole->permissions()->attach($permissionIds, ['organization_id' => $org->id]);
+
+        // Assign Administrator Role to the Admin User
+        $adminUser->roles()->attach($adminRole->id, ['organization_id' => $org->id]);
+
+        // Create Warehouse Manager Role & Assign to Staff User
+        $warehouseRole = Role::create([
             'organization_id' => $org->id,
             'name' => 'Warehouse Manager',
             'slug' => 'warehouse-manager',
             'is_system' => false,
         ]);
+        if ($viewStockPermId) {
+            $warehouseRole->permissions()->attach($viewStockPermId, ['organization_id' => $org->id]);
+        }
+        $staffUser->roles()->attach($warehouseRole->id, ['organization_id' => $org->id]);
 
-        $role->permissions()->attach($perm->id, ['organization_id' => $org->id]);
-        $adminUser->roles()->attach($role->id, ['organization_id' => $org->id]);
-
+        // Assign scopes
         UserScope::create([
             'organization_id' => $org->id,
             'user_id' => $adminUser->id,
+            'branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+        ]);
+
+        UserScope::create([
+            'organization_id' => $org->id,
+            'user_id' => $staffUser->id,
             'branch_id' => $branch->id,
             'warehouse_id' => $warehouse->id,
         ]);

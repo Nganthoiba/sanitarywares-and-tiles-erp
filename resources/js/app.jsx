@@ -18,6 +18,101 @@ function App() {
     const [activeTab, setActiveTab] = useState('slabs');
     const [user, setUser] = useState(null);
 
+    // Font size state
+    const [fontSize, setFontSize] = useState(() => {
+        return parseFloat(localStorage.getItem('app_font_size') || '13.5');
+    });
+
+    // Theme state
+    const [theme, setTheme] = useState(() => {
+        return localStorage.getItem('app_theme') || 'light';
+    });
+
+    useEffect(() => {
+        document.documentElement.style.setProperty('--app-font-size', `${fontSize}px`);
+        localStorage.setItem('app_font_size', fontSize.toString());
+    }, [fontSize]);
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('app_theme', theme);
+    }, [theme]);
+
+    const toggleTheme = () => {
+        setTheme(prev => prev === 'light' ? 'dark' : 'light');
+    };
+
+    // Settings modal states
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const [profileName, setProfileName] = useState('');
+    const [profileEmail, setProfileEmail] = useState('');
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [settingsSuccess, setSettingsSuccess] = useState('');
+    const [settingsError, setSettingsError] = useState('');
+    const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+
+    useEffect(() => {
+        if (showSettingsModal && user) {
+            setProfileName(user.name || '');
+            setProfileEmail(user.email || '');
+            setCurrentPassword('');
+            setNewPassword('');
+            setSettingsSuccess('');
+            setSettingsError('');
+        }
+    }, [showSettingsModal, user]);
+
+    const handleUpdateProfile = async (e) => {
+        e.preventDefault();
+        setSettingsError('');
+        setSettingsSuccess('');
+        setIsUpdatingProfile(true);
+
+        try {
+            const response = await fetch('/api/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                },
+                body: JSON.stringify({
+                    name: profileName,
+                    email: profileEmail,
+                    current_password: currentPassword || undefined,
+                    new_password: newPassword || undefined
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to update profile.');
+            }
+
+            // Profile updated successfully
+            // Update React state
+            setUser(prev => ({
+                ...prev,
+                name: data.user.name,
+                email: data.user.email
+            }));
+
+            // Update localStorage
+            localStorage.setItem('user_name', data.user.name);
+            localStorage.setItem('user_email', data.user.email);
+
+            setSettingsSuccess(data.message || 'Profile updated successfully!');
+            setCurrentPassword('');
+            setNewPassword('');
+        } catch (err) {
+            setSettingsError(err.message);
+        } finally {
+            setIsUpdatingProfile(false);
+        }
+    };
+
     useEffect(() => {
         // 1. Detect if invitation route is requested in URL
         if (window.location.pathname === '/accept-invitation' || window.location.search.includes('token=')) {
@@ -47,6 +142,11 @@ function App() {
             organizationName: data.user.organization.name,
             permissions: data.user.permissions
         });
+        localStorage.setItem('auth_token', data.access_token);
+        localStorage.setItem('user_name', data.user.name);
+        localStorage.setItem('user_email', data.user.email);
+        localStorage.setItem('organization_name', data.user.organization.name);
+        localStorage.setItem('user_permissions', JSON.stringify(data.user.permissions));
         setView('dashboard');
     };
 
@@ -73,57 +173,57 @@ function App() {
     }
 
     return (
-        <div className="d-flex" style={{ minHeight: '100vh', backgroundColor: '#f8f9fc' }}>
+        <div className="d-flex" style={{ minHeight: '100vh' }}>
             {/* Elegant Sidebar Navigation */}
-            <div className="bg-dark text-white p-3 d-flex flex-column shadow-sm" style={{ width: '280px' }}>
+            <div className="p-3 d-flex flex-column sidebar" style={{ width: '280px' }}>
                 <div className="d-flex align-items-center mb-4 px-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="me-2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                    <span className="fs-5 fw-bold tracking-tight">Antigravity ERP</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="me-2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                    <span className="fs-5 fw-bold tracking-tight sidebar-title">Tiles & Sanitary ERP</span>
                 </div>
                 
                 <small className="text-muted text-uppercase fw-bold px-2 mb-2 font-monospace" style={{ fontSize: '0.7rem' }}>Commercial Monolith</small>
                 
                 <ul className="nav nav-pills flex-column mb-auto">
                     <li className="nav-item mb-1">
-                        <button className={`nav-link w-100 text-start d-flex align-items-center py-2 ${activeTab === 'slabs' ? 'active bg-primary' : 'text-white opacity-75'}`} onClick={() => setActiveTab('slabs')}>
-                            <span className="me-3">📐</span>
+                        <button className={`nav-link w-100 text-start d-flex align-items-center py-2 ${activeTab === 'slabs' ? 'active' : ''}`} onClick={() => setActiveTab('slabs')}>
+                            <i className="fa-solid fa-boxes-stacked me-3"></i>
                             Inventory Engine
                         </button>
                     </li>
                     <li className="nav-item mb-1">
-                        <button className={`nav-link w-100 text-start d-flex align-items-center py-2 ${activeTab === 'workflows' ? 'active bg-primary' : 'text-white opacity-75'}`} onClick={() => setActiveTab('workflows')}>
-                            <span className="me-3">⛓️</span>
+                        <button className={`nav-link w-100 text-start d-flex align-items-center py-2 ${activeTab === 'workflows' ? 'active' : ''}`} onClick={() => setActiveTab('workflows')}>
+                            <i className="fa-solid fa-diagram-project me-3"></i>
                             BPM Workflows
                         </button>
                     </li>
                     <li className="nav-item mb-1">
-                        <button className={`nav-link w-100 text-start d-flex align-items-center py-2 ${activeTab === 'bookkeeping' ? 'active bg-primary' : 'text-white opacity-75'}`} onClick={() => setActiveTab('bookkeeping')}>
-                            <span className="me-3">📊</span>
+                        <button className={`nav-link w-100 text-start d-flex align-items-center py-2 ${activeTab === 'bookkeeping' ? 'active' : ''}`} onClick={() => setActiveTab('bookkeeping')}>
+                            <i className="fa-solid fa-calculator me-3"></i>
                             General Bookkeeping
                         </button>
                     </li>
                     <li className="nav-item mb-1">
-                        <button className={`nav-link w-100 text-start d-flex align-items-center py-2 ${activeTab === 'reporting' ? 'active bg-primary' : 'text-white opacity-75'}`} onClick={() => setActiveTab('reporting')}>
-                            <span className="me-3">🏢</span>
+                        <button className={`nav-link w-100 text-start d-flex align-items-center py-2 ${activeTab === 'reporting' ? 'active' : ''}`} onClick={() => setActiveTab('reporting')}>
+                            <i className="fa-solid fa-chart-line me-3"></i>
                             Reporting & BI Hub
                         </button>
                     </li>
                     {hasPermission('master.users.manage') && (
                         <li className="nav-item mb-1">
-                            <button className={`nav-link w-100 text-start d-flex align-items-center py-2 ${activeTab === 'users' ? 'active bg-primary' : 'text-white opacity-75'}`} onClick={() => setActiveTab('users')}>
-                                <span className="me-3">👥</span>
+                            <button className={`nav-link w-100 text-start d-flex align-items-center py-2 ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>
+                                <i className="fa-solid fa-users-gear me-3"></i>
                                 User & Role Manager
                             </button>
                         </li>
                     )}
                 </ul>
 
-                <hr className="text-secondary" />
+                <hr />
 
                 <div className="dropdown px-2">
-                    <div className="d-flex align-items-center text-white text-decoration-none justify-content-between">
+                    <div className="d-flex align-items-center text-decoration-none justify-content-between">
                         <div className="d-flex align-items-center">
-                            <div className="rounded-circle bg-secondary d-flex justify-content-center align-items-center me-2 text-white font-monospace fw-bold" style={{ width: '32px', height: '32px', fontSize: '0.85rem' }}>
+                            <div className="rounded-circle d-flex justify-content-center align-items-center me-2 font-monospace fw-bold" style={{ width: '32px', height: '32px', fontSize: '0.85rem', backgroundColor: 'var(--border-color)', color: 'var(--accent-color)' }}>
                                 {user?.name?.substring(0, 2).toUpperCase() || 'US'}
                             </div>
                             <div>
@@ -131,9 +231,14 @@ function App() {
                                 <span className="text-muted font-monospace" style={{ fontSize: '0.75rem' }}>{user?.organizationName || 'Acme'}</span>
                             </div>
                         </div>
-                        <button className="btn btn-sm btn-outline-danger px-2 py-1 font-monospace" style={{ fontSize: '0.7rem' }} onClick={handleLogout}>
-                            Exit
-                        </button>
+                        <div className="d-flex align-items-center gap-1">
+                            <button className="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center" style={{ width: '30px', height: '30px', borderRadius: '50%', padding: 0 }} onClick={() => setShowSettingsModal(true)} title="Profile Settings">
+                                <i className="fa-solid fa-gear"></i>
+                            </button>
+                            <button className="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center" style={{ width: '30px', height: '30px', borderRadius: '50%', padding: 0 }} onClick={handleLogout} title="Logout">
+                                <i className="fa-solid fa-right-from-bracket"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -143,7 +248,29 @@ function App() {
                 {/* Navbar */}
                 <nav className="navbar navbar-expand navbar-light bg-white py-3 px-4 border-bottom shadow-sm">
                     <span className="navbar-brand mb-0 h1 fs-5 fw-bold text-dark">Building Materials Core Manager</span>
-                    <ul className="navbar-nav ms-auto">
+                    <ul className="navbar-nav ms-auto align-items-center">
+                        <li className="nav-item d-flex align-items-center me-4">
+                            <span className="text-muted small me-2" style={{ fontSize: '0.8rem' }}>Aa:</span>
+                            <div className="btn-group btn-group-sm" role="group" aria-label="Font size selector">
+                                <button type="button" className={`btn btn-outline-secondary py-0.5 px-2 ${fontSize === 12 ? 'active' : ''}`} onClick={() => setFontSize(12)} style={{ fontSize: '11px' }}>XS</button>
+                                <button type="button" className={`btn btn-outline-secondary py-0.5 px-2 ${fontSize === 13.5 ? 'active' : ''}`} onClick={() => setFontSize(13.5)} style={{ fontSize: '11px' }}>S</button>
+                                <button type="button" className={`btn btn-outline-secondary py-0.5 px-2 ${fontSize === 15 ? 'active' : ''}`} onClick={() => setFontSize(15)} style={{ fontSize: '11px' }}>M</button>
+                                <button type="button" className={`btn btn-outline-secondary py-0.5 px-2 ${fontSize === 16.5 ? 'active' : ''}`} onClick={() => setFontSize(16.5)} style={{ fontSize: '11px' }}>L</button>
+                            </div>
+                        </li>
+                        <li className="nav-item d-flex align-items-center me-4">
+                            <button 
+                                className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 py-1 px-3" 
+                                onClick={toggleTheme}
+                                style={{ fontSize: '0.8rem', borderRadius: '20px' }}
+                            >
+                                {theme === 'light' ? (
+                                    <><i className="fa-solid fa-moon me-1"></i> Dark</>
+                                ) : (
+                                    <><i className="fa-solid fa-sun me-1"></i> Light</>
+                                )}
+                            </button>
+                        </li>
                         <li className="nav-item">
                             <span className="nav-link font-monospace text-muted" style={{ fontSize: '0.85rem' }}>Status: Production API Connected</span>
                         </li>
@@ -163,6 +290,108 @@ function App() {
                     )}
                 </div>
             </div>
+
+            {/* User Profile & Settings Modal */}
+            {showSettingsModal && (
+                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1050 }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content shadow-lg border-0" style={{ borderRadius: '12px' }}>
+                            <div className="modal-header border-bottom-0 pt-4 px-4">
+                                <h5 className="modal-title fw-bold fs-5">Account Settings</h5>
+                                <button type="button" className="btn-close" onClick={() => setShowSettingsModal(false)} aria-label="Close"></button>
+                            </div>
+                            <form onSubmit={handleUpdateProfile}>
+                                <div className="modal-body px-4">
+                                    {settingsSuccess && (
+                                        <div className="alert alert-success d-flex align-items-center py-2 animate__animated animate__fadeIn" role="alert">
+                                            <i className="fa-solid fa-circle-check me-2"></i>
+                                            <div>{settingsSuccess}</div>
+                                        </div>
+                                    )}
+                                    {settingsError && (
+                                        <div className="alert alert-danger d-flex align-items-center py-2 animate__animated animate__fadeIn" role="alert">
+                                            <i className="fa-solid fa-circle-exclamation me-2"></i>
+                                            <div>{settingsError}</div>
+                                        </div>
+                                    )}
+
+                                    {/* User Details Read-only Context */}
+                                    <div className="mb-4 p-3 bg-light rounded-3" style={{ fontSize: '0.85rem' }}>
+                                        <div className="row g-2">
+                                            <div className="col-6">
+                                                <span className="text-muted d-block small uppercase font-monospace">Organization</span>
+                                                <strong className="text-dark">{user?.organizationName || 'N/A'}</strong>
+                                            </div>
+                                            <div className="col-6">
+                                                <span className="text-muted d-block small uppercase font-monospace">User Role</span>
+                                                <strong className="text-dark">{user?.permissions?.includes('administrator') ? 'Administrator' : 'Staff Member'}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Edit Details */}
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold small">Full Name</label>
+                                        <input 
+                                            type="text" 
+                                            className="form-control" 
+                                            value={profileName} 
+                                            onChange={(e) => setProfileName(e.target.value)} 
+                                            required 
+                                        />
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold small">Email Address</label>
+                                        <input 
+                                            type="email" 
+                                            className="form-control" 
+                                            value={profileEmail} 
+                                            onChange={(e) => setProfileEmail(e.target.value)} 
+                                            required 
+                                        />
+                                    </div>
+
+                                    <hr className="my-4 text-muted opacity-25" />
+
+                                    <h6 className="fw-bold mb-3" style={{ fontSize: '0.9rem' }}>
+                                        <i className="fa-solid fa-key me-2 text-muted"></i>Change Password
+                                    </h6>
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold small">Current Password</label>
+                                        <input 
+                                            type="password" 
+                                            className="form-control" 
+                                            placeholder="Verify current password"
+                                            value={currentPassword} 
+                                            onChange={(e) => setCurrentPassword(e.target.value)} 
+                                            required={!!newPassword}
+                                        />
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold small">New Password</label>
+                                        <input 
+                                            type="password" 
+                                            className="form-control" 
+                                            placeholder="Min. 8 characters"
+                                            value={newPassword} 
+                                            onChange={(e) => setNewPassword(e.target.value)} 
+                                        />
+                                    </div>
+                                </div>
+                                <div className="modal-footer border-top-0 pb-4 px-4">
+                                    <button type="button" className="btn btn-secondary px-3" onClick={() => setShowSettingsModal(false)}>Close</button>
+                                    <button type="submit" className="btn btn-primary px-4" disabled={isUpdatingProfile}>
+                                        {isUpdatingProfile ? (
+                                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                        ) : null}
+                                        Save Changes
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

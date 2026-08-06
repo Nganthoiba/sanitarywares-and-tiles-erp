@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class UserInvitationController extends Controller
 {
@@ -17,16 +18,25 @@ class UserInvitationController extends Controller
      */
     public function invite(Request $request)
     {
+        $admin = $request->user();
+        $orgId = $admin->organization_id;
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
-            'role_id' => 'required|exists:roles,id',
-            'branch_id' => 'required|exists:branches,id',
-            'warehouse_id' => 'required|exists:warehouses,id',
+            'role_id' => [
+                'required',
+                Rule::exists('roles', 'id')->where('organization_id', $orgId)
+            ],
+            'branch_id' => [
+                'required',
+                Rule::exists('branches', 'id')->where('organization_id', $orgId)
+            ],
+            'warehouse_id' => [
+                'required',
+                Rule::exists('warehouses', 'id')->where('organization_id', $orgId)->where('branch_id', $request->input('branch_id'))
+            ],
         ]);
-
-        $admin = $request->user();
-        $orgId = $admin->organization_id;
 
         // Perform transactional setup
         $inviteResult = DB::transaction(function () use ($request, $orgId) {

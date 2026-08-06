@@ -111,4 +111,46 @@ class AuthController extends Controller
             'permissions' => $permissions
         ]);
     }
+
+    /**
+     * Update the authenticated user's profile.
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $rules = [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+        ];
+
+        if ($request->filled('new_password')) {
+            $rules['current_password'] = 'required|string';
+            $rules['new_password'] = 'required|string|min:8';
+        }
+
+        $request->validate($rules);
+
+        if ($request->filled('new_password')) {
+            if (!Hash::check($request->input('current_password'), $user->password)) {
+                return response()->json([
+                    'message' => 'The current password you entered is incorrect.'
+                ], 422);
+            }
+            $user->password = Hash::make($request->input('new_password'));
+        }
+
+        $user->name = $request->input('name');
+        $user->email = $request->input('email');
+        $user->save();
+
+        return response()->json([
+            'message' => 'Profile updated successfully.',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ]
+        ]);
+    }
 }
