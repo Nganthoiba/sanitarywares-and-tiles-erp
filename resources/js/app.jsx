@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import SlabInventoryView from './components/SlabInventoryView';
-import InventoryManager from './components/InventoryManager';
-import WorkflowMonitor from './components/WorkflowMonitor';
-import LedgerReports from './components/LedgerReports';
-import ReportingHub from './components/ReportingHub';
-import Login from './components/Login';
-import RegisterOrganization from './components/RegisterOrganization';
-import AcceptInvitation from './components/AcceptInvitation';
-import UserManagement from './components/UserManagement';
+import SlabInventoryView from './components/inventory/SlabInventoryView';
+import InventoryManager from './components/inventory/InventoryManager';
+import WorkflowMonitor from './components/workflow/WorkflowMonitor';
+import LedgerReports from './components/accounting/LedgerReports';
+import ReportingHub from './components/reporting/ReportingHub';
+import Login from './components/auth/Login';
+import RegisterOrganization from './components/auth/RegisterOrganization';
+import AcceptInvitation from './components/auth/AcceptInvitation';
+import UserManagement from './components/auth/UserManagement';
+import ProductEntry from './components/product/ProductEntry';
+import LandingPage from './components/auth/LandingPage';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 function App() {
-    const [view, setView] = useState('login'); // login, register, accept, dashboard
+    const [view, setView] = useState('landing'); // landing, login, register, accept, dashboard
     const [activeTab, setActiveTab] = useState('slabs');
     const [user, setUser] = useState(null);
 
@@ -131,11 +133,12 @@ function App() {
             });
             setView('dashboard');
         } else {
-            setView('login');
+            setView('landing');
         }
     }, []);
 
     const handleLoginSuccess = (data) => {
+        console.log(data);
         setUser({
             name: data.user.name,
             email: data.user.email,
@@ -160,6 +163,10 @@ function App() {
         return user?.permissions?.includes(perm) || user?.permissions?.includes('administrator');
     };
 
+    if (view === 'landing') {
+        return <LandingPage onNavigateToLogin={() => setView('login')} onNavigateToRegister={() => setView('register')} />;
+    }
+
     if (view === 'login') {
         return <Login onLoginSuccess={handleLoginSuccess} onNavigateToRegister={() => setView('register')} />;
     }
@@ -175,44 +182,48 @@ function App() {
     return (
         <div className="d-flex" style={{ minHeight: '100vh' }}>
             {/* Elegant Sidebar Navigation */}
-            <div className="p-3 d-flex flex-column sidebar" style={{ width: '280px' }}>
-                <div className="d-flex align-items-center mb-4 px-2">
+            <div className="sidebar-wrapper">
+                <div className="sidebar-brand">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="me-2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                    <span className="fs-5 fw-bold tracking-tight sidebar-title">Tiles & Sanitary ERP</span>
+                    <span className="fs-6 text-uppercase fw-bold ls-tight sidebar-title">Tiles <span style={{color: 'var(--accent-color)'}}>ERP</span></span>
                 </div>
                 
-                <small className="text-muted text-uppercase fw-bold px-2 mb-2 font-monospace" style={{ fontSize: '0.7rem' }}>Commercial Monolith</small>
-                
-                <ul className="nav nav-pills flex-column mb-auto">
-                    <li className="nav-item mb-1">
-                        <button className={`nav-link w-100 text-start d-flex align-items-center py-2 ${activeTab === 'slabs' ? 'active' : ''}`} onClick={() => setActiveTab('slabs')}>
+                <ul className="sidebar-menu">
+                    <li className="sidebar-menu-item">
+                        <button className={`sidebar-link ${activeTab === 'slabs' ? 'active' : ''}`} onClick={() => setActiveTab('slabs')}>
                             <i className="fa-solid fa-boxes-stacked me-3"></i>
-                            Inventory Engine
+                            <span className="sidebar-text">Inventory Engine</span>
                         </button>
                     </li>
-                    <li className="nav-item mb-1">
-                        <button className={`nav-link w-100 text-start d-flex align-items-center py-2 ${activeTab === 'workflows' ? 'active' : ''}`} onClick={() => setActiveTab('workflows')}>
+                    <li className="sidebar-menu-item">
+                        <button className={`sidebar-link ${activeTab === 'products' ? 'active' : ''}`} onClick={() => setActiveTab('products')}>
+                            <i className="fa-solid fa-cube me-3"></i>
+                            <span className="sidebar-text">Product Entry</span>
+                        </button>
+                    </li>
+                    <li className="sidebar-menu-item">
+                        <button className={`sidebar-link ${activeTab === 'workflows' ? 'active' : ''}`} onClick={() => setActiveTab('workflows')}>
                             <i className="fa-solid fa-diagram-project me-3"></i>
-                            BPM Workflows
+                            <span className="sidebar-text">BPM Workflows</span>
                         </button>
                     </li>
-                    <li className="nav-item mb-1">
-                        <button className={`nav-link w-100 text-start d-flex align-items-center py-2 ${activeTab === 'bookkeeping' ? 'active' : ''}`} onClick={() => setActiveTab('bookkeeping')}>
+                    <li className="sidebar-menu-item">
+                        <button className={`sidebar-link ${activeTab === 'bookkeeping' ? 'active' : ''}`} onClick={() => setActiveTab('bookkeeping')}>
                             <i className="fa-solid fa-calculator me-3"></i>
-                            General Bookkeeping
+                            <span className="sidebar-text">General Bookkeeping</span>
                         </button>
                     </li>
-                    <li className="nav-item mb-1">
-                        <button className={`nav-link w-100 text-start d-flex align-items-center py-2 ${activeTab === 'reporting' ? 'active' : ''}`} onClick={() => setActiveTab('reporting')}>
+                    <li className="sidebar-menu-item">
+                        <button className={`sidebar-link ${activeTab === 'reporting' ? 'active' : ''}`} onClick={() => setActiveTab('reporting')}>
                             <i className="fa-solid fa-chart-line me-3"></i>
-                            Reporting & BI Hub
+                            <span className="sidebar-text">Reporting & BI Hub</span>
                         </button>
                     </li>
                     {hasPermission('master.users.manage') && (
-                        <li className="nav-item mb-1">
-                            <button className={`nav-link w-100 text-start d-flex align-items-center py-2 ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>
+                        <li className="sidebar-menu-item">
+                            <button className={`sidebar-link ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>
                                 <i className="fa-solid fa-users-gear me-3"></i>
-                                User & Role Manager
+                                <span className="sidebar-text">User & Role Manager</span>
                             </button>
                         </li>
                     )}
@@ -220,22 +231,22 @@ function App() {
 
                 <hr />
 
-                <div className="dropdown px-2">
-                    <div className="d-flex align-items-center text-decoration-none justify-content-between">
+                <div className="sidebar-footer border-top p-3 mt-auto">
+                    <div className="d-flex align-items-center justify-content-between">
                         <div className="d-flex align-items-center">
                             <div className="rounded-circle d-flex justify-content-center align-items-center me-2 font-monospace fw-bold" style={{ width: '32px', height: '32px', fontSize: '0.85rem', backgroundColor: 'var(--border-color)', color: 'var(--accent-color)' }}>
                                 {user?.name?.substring(0, 2).toUpperCase() || 'US'}
                             </div>
-                            <div>
+                            <div style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 <div className="fw-bold" style={{ fontSize: '0.85rem' }}>{user?.name || 'Operator'}</div>
                                 <span className="text-muted font-monospace" style={{ fontSize: '0.75rem' }}>{user?.organizationName || 'Acme'}</span>
                             </div>
                         </div>
-                        <div className="d-flex align-items-center gap-1">
-                            <button className="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center" style={{ width: '30px', height: '30px', borderRadius: '50%', padding: 0 }} onClick={() => setShowSettingsModal(true)} title="Profile Settings">
+                        <div className="d-flex gap-1">
+                            <button className="btn btn-xs btn-link text-secondary p-1 shadow-none border-0 bg-transparent" onClick={() => setShowSettingsModal(true)} title="Profile Settings">
                                 <i className="fa-solid fa-gear"></i>
                             </button>
-                            <button className="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center" style={{ width: '30px', height: '30px', borderRadius: '50%', padding: 0 }} onClick={handleLogout} title="Logout">
+                            <button className="btn btn-xs btn-link text-danger p-1 shadow-none border-0 bg-transparent" onClick={handleLogout} title="Logout">
                                 <i className="fa-solid fa-right-from-bracket"></i>
                             </button>
                         </div>
@@ -280,6 +291,7 @@ function App() {
                 {/* Dashboard Main Content */}
                 <div className="container-fluid p-4">
                     {activeTab === 'slabs' ? <InventoryManager /> : 
+                     activeTab === 'products' ? <ProductEntry /> :
                      activeTab === 'workflows' ? <WorkflowMonitor /> : 
                      activeTab === 'bookkeeping' ? <LedgerReports /> : 
                      activeTab === 'reporting' ? <ReportingHub /> : 

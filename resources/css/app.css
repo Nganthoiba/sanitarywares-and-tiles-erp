@@ -1,11 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Outfit:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 
 /* CSS Variables for AppDashboard Theme */
 :root {
     --app-font-size: 13.5px;
-    --default-font: "Geist", system-ui, -apple-system, sans-serif;
-    --heading-font: "Geist", system-ui, -apple-system, sans-serif;
-    --mono-font: "Geist Mono", monospace;
+    --default-font: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+    --heading-font: "Outfit", system-ui, -apple-system, sans-serif;
+    --mono-font: "JetBrains Mono", monospace;
 
     /* Spacing & Radii Scales */
     --spacing-xs: 0.3125rem;
@@ -326,4 +326,80 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
     background-color: var(--success-color-light) !important;
     color: var(--success-color) !important;
     border: 1px solid rgba(15, 155, 122, 0.15) !important;
+}
+
+/* --- Added matching styles from tiles-erp --- */
+.ls-tight { letter-spacing: -0.5px; }
+.ls-wide { letter-spacing: 0.5px; }
+
+.sidebar-wrapper {
+    width: 280px;
+    min-width: 280px;
+    flex-shrink: 0;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--sidebar-border);
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    transition: all 0.2s ease;
+    z-index: 1030;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-brand {
+    height: 70px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--heading-color);
+}
+
+.sidebar-menu { 
+    list-style: none; 
+    padding: 15px 0; 
+    margin: 0; 
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sidebar-menu-item { 
+    margin: 0 12px; 
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    color: var(--default-color) !important;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    border: none;
+    background: transparent;
+    width: calc(100% - 24px);
+    margin: 0 12px;
+    text-align: left;
+}
+
+.sidebar-link:hover {
+    background-color: var(--sidebar-hover-bg);
+    color: var(--accent-color) !important;
+}
+
+.sidebar-link.active {
+    background-color: var(--sidebar-hover-bg);
+    color: var(--accent-color) !important;
+    font-weight: 600;
+}
+
+[data-theme="dark"] .sidebar-link:hover,
+[data-theme="dark"] .sidebar-link.active {
+    background-color: rgba(255,255,255,0.05);
+    color: var(--accent-color) !important;
 }

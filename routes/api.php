@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\OrganizationRegistrationController;
 use App\Http\Controllers\Api\Auth\UserInvitationController;
 use App\Http\Controllers\Api\Auth\UserManagementController;
+use App\Http\Controllers\Api\Product\ProductApiController;
 
 // A simple api route to test whether the api route is working or not
 Route::get('/test', function () {
@@ -86,4 +87,12 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::get('/reports/management', [ReportingApiController::class, 'getManagementReports']);
     Route::get('/reports/audit', [ReportingApiController::class, 'getAuditReports']);
     Route::get('/reports/dashboard', [ReportingApiController::class, 'getDashboardSummary']);
+
+    // Core Product Catalog & Entry Routes
+    Route::get('/product/form-data', [ProductApiController::class, 'getFormData']);
+    Route::get('/product/families', [ProductApiController::class, 'listFamilies']);
+    Route::post('/product/families', [ProductApiController::class, 'storeFamily']);
+    Route::get('/product/variants', [ProductApiController::class, 'listVariants']);
+    Route::post('/product/variants', [ProductApiController::class, 'storeVariant']);
+    Route::post('/product/attributes', [ProductApiController::class, 'storeAttribute']);
 });
