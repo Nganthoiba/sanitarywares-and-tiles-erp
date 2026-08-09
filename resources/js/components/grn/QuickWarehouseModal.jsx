@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import QuickBranchModal from './QuickBranchModal';
 
 export default function QuickWarehouseModal({ show, onClose, onSave }) {
     const [branches, setBranches] = useState([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
+    const [showQuickBranchModal, setShowQuickBranchModal] = useState(false);
 
     const [form, setForm] = useState({
         name: '',
@@ -93,7 +95,17 @@ export default function QuickWarehouseModal({ show, onClose, onSave }) {
                             )}
 
                             <div className="mb-3">
-                                <label className="form-label small fw-semibold">Branch Location</label>
+                                <div className="d-flex justify-content-between align-items-center mb-1">
+                                    <label className="form-label small fw-semibold mb-0">Branch Location</label>
+                                    <button
+                                        type="button"
+                                        className="btn btn-link p-0 text-primary small text-decoration-none fw-semibold"
+                                        onClick={() => setShowQuickBranchModal(true)}
+                                        style={{ fontSize: '0.75rem' }}
+                                    >
+                                        <i className="fa-solid fa-plus me-1"></i> Add New
+                                    </button>
+                                </div>
                                 <select
                                     className="form-select form-select-sm"
                                     value={form.branch_id}
@@ -183,6 +195,15 @@ export default function QuickWarehouseModal({ show, onClose, onSave }) {
                     </form>
                 </div>
             </div>
+
+            <QuickBranchModal
+                show={showQuickBranchModal}
+                onClose={() => setShowQuickBranchModal(false)}
+                onSave={(newBranch) => {
+                    setBranches(prev => [...prev, newBranch]);
+                    handleChange('branch_id', newBranch.id);
+                }}
+            />
         </div>
     );
 }

@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Branch extends Model {
     use BelongsToOrganization;
     use SoftDeletes;
-    protected $fillable = ['organization_id', 'name', 'code', 'email', 'phone', 'address'];
+    protected $fillable = ['organization_id', 'name', 'code', 'email', 'phone', 'address', 'is_active'];
 
     public function organization(): BelongsTo {
         return $this->belongsTo(Organization::class);

@@ -12,6 +12,7 @@ import UserManagement from './components/auth/UserManagement';
 import ProductEntry from './components/product/ProductEntry';
 import GRNList from './components/grn/GRNList';
 import WarehouseManager from './components/inventory/WarehouseManager';
+import BranchManager from './components/inventory/BranchManager';
 import LandingPage from './components/auth/LandingPage';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -204,6 +205,12 @@ function App() {
                         </button>
                     </li>
                     <li className="sidebar-menu-item">
+                        <button className={`sidebar-link ${activeTab === 'branches' ? 'active' : ''}`} onClick={() => setActiveTab('branches')}>
+                            <i className="fa-solid fa-code-branch me-3"></i>
+                            <span className="sidebar-text">Branch Locations</span>
+                        </button>
+                    </li>
+                    <li className="sidebar-menu-item">
                         <button className={`sidebar-link ${activeTab === 'warehouses' ? 'active' : ''}`} onClick={() => setActiveTab('warehouses')}>
                             <i className="fa-solid fa-warehouse me-3"></i>
                             <span className="sidebar-text">Warehouses</span>
@@ -306,6 +313,7 @@ function App() {
                 <div className="container-fluid p-4">
                     {activeTab === 'slabs' ? <InventoryManager /> : 
                      activeTab === 'grn' ? <GRNList /> :
+                     activeTab === 'branches' ? <BranchManager /> :
                      activeTab === 'warehouses' ? <WarehouseManager /> :
                      activeTab === 'products' ? <ProductEntry /> :
                      activeTab === 'workflows' ? <WorkflowMonitor /> : 

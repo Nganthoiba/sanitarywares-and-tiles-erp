@@ -1,0 +1,118 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+export default function QuickBranchModal({ show, onClose, onSave }) {
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState(null);
+
+    const [form, setForm] = useState({
+        name: '',
+        code: '',
+        is_active: true
+    });
+
+    useEffect(() => {
+        if (show) {
+            setForm({
+                name: '',
+                code: '',
+                is_active: true
+            });
+            setError(null);
+        }
+    }, [show]);
+
+    if (!show) return null;
+
+    const handleChange = (field, value) => {
+        setForm(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+        setError(null);
+
+        try {
+            const token = localStorage.getItem('auth_token');
+            const res = await axios.post('/api/branches-crud', form, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            onSave(res.data.branch);
+            onClose();
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to create branch location.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1080 }}>
+            <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '16px' }}>
+                    <div className="modal-header border-bottom-0 pb-0 pt-4 px-4">
+                        <h5 className="modal-title fw-bold text-dark">
+                            <i className="fa-solid fa-code-branch text-primary me-2"></i>Quick Add Branch Location
+                        </h5>
+                        <button type="button" className="btn-close" onClick={onClose} aria-label="Close"></button>
+                    </div>
+                    <form onSubmit={handleSubmit}>
+                        <div className="modal-body px-4 py-3">
+                            {error && (
+                                <div className="alert alert-danger py-2 small" role="alert">
+                                    {error}
+                                </div>
+                            )}
+
+                            <div className="mb-3">
+                                <label className="form-label small fw-semibold">Branch Location Name</label>
+                                <input
+                                    type="text"
+                                    className="form-control form-control-sm"
+                                    value={form.name}
+                                    onChange={(e) => handleChange('name', e.target.value)}
+                                    placeholder="e.g. Gujarat Morbi Location"
+                                    required
+                                />
+                            </div>
+
+                            <div className="mb-3">
+                                <label className="form-label small fw-semibold">Branch Location Code</label>
+                                <input
+                                    type="text"
+                                    className="form-control form-control-sm font-monospace"
+                                    value={form.code}
+                                    onChange={(e) => handleChange('code', e.target.value.toUpperCase())}
+                                    placeholder="e.g. BR-GUJ-MRB"
+                                    required
+                                />
+                            </div>
+
+                            <div className="form-check form-switch">
+                                <input
+                                    className="form-check-input"
+                                    type="checkbox"
+                                    id="quickBranchIsActive"
+                                    checked={form.is_active}
+                                    onChange={(e) => handleChange('is_active', e.target.checked)}
+                                />
+                                <label className="form-check-label small text-muted" htmlFor="quickBranchIsActive">
+                                    Branch location is active for transactions
+                                </label>
+                            </div>
+                        </div>
+                        <div className="modal-footer border-top-0 pb-4 px-4">
+                            <button type="button" className="btn btn-outline-secondary me-2 px-3 btn-sm" onClick={onClose} disabled={saving}>
+                                Cancel
+                            </button>
+                            <button type="submit" className="btn btn-primary px-4 btn-sm" disabled={saving}>
+                                {saving ? 'Adding...' : 'Add Branch Location'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    );
+}

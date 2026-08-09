@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\Auth\UserManagementController;
 use App\Http\Controllers\Api\Product\ProductApiController;
 use App\Http\Controllers\Api\Purchase\GRNApiController;
 use App\Http\Controllers\Api\Master\WarehouseApiController;
+use App\Http\Controllers\Api\Master\BranchApiController;
 
 // A simple api route to test whether the api route is working or not
 Route::get('/test', function () {
@@ -107,5 +108,6 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::post('/grn/{id}/approve', [GRNApiController::class, 'approve']);
 
     // Warehouse CRUD Routes
+    Route::apiResource('branches-crud', BranchApiController::class);
     Route::apiResource('warehouses-crud', WarehouseApiController::class);
 });

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import QuickBranchModal from '../grn/QuickBranchModal';
 
 export default function WarehouseManager() {
     const [warehouses, setWarehouses] = useState([]);
@@ -12,6 +13,7 @@ export default function WarehouseManager() {
     const [showModal, setShowModal] = useState(false);
     const [modalMode, setModalMode] = useState('create'); // create, edit
     const [selectedWH, setSelectedWH] = useState(null);
+    const [showQuickBranchModal, setShowQuickBranchModal] = useState(false);
 
     const [form, setForm] = useState({
         branch_id: '',
@@ -251,7 +253,17 @@ export default function WarehouseManager() {
                             <form onSubmit={handleSubmit}>
                                 <div className="modal-body px-4 py-3">
                                     <div className="mb-3">
-                                        <label className="form-label small fw-semibold">Branch Location</label>
+                                        <div className="d-flex justify-content-between align-items-center mb-1">
+                                            <label className="form-label small fw-semibold mb-0">Branch Location</label>
+                                            <button
+                                                type="button"
+                                                className="btn btn-link p-0 text-primary small text-decoration-none fw-semibold"
+                                                onClick={() => setShowQuickBranchModal(true)}
+                                                style={{ fontSize: '0.75rem' }}
+                                            >
+                                                <i className="fa-solid fa-plus me-1"></i> Add New
+                                            </button>
+                                        </div>
                                         <select
                                             className="form-select form-select-sm"
                                             value={form.branch_id}
@@ -342,6 +354,15 @@ export default function WarehouseManager() {
                     </div>
                 </div>
             )}
+
+            <QuickBranchModal
+                show={showQuickBranchModal}
+                onClose={() => setShowQuickBranchModal(false)}
+                onSave={(newBranch) => {
+                    setBranches(prev => [...prev, newBranch]);
+                    handleChange('branch_id', newBranch.id);
+                }}
+            />
         </div>
     );
 }
