@@ -6,6 +6,7 @@ use App\Domains\Master\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Domains\Master\Models\Organization;
 use App\Domains\Product\Models\ProductVariant;
 use App\Domains\Inventory\Models\InventoryObject;
@@ -13,7 +14,7 @@ use App\Domains\Inventory\Models\InventoryObject;
 class GoodsReceiptItem extends Model {
     use BelongsToOrganization;
     use SoftDeletes;
-    protected $fillable = ['organization_id', 'goods_receipt_note_id', 'purchase_order_item_id', 'product_variant_id', 'inventory_object_id', 'quantity_received', 'quantity_accepted', 'quantity_rejected'];
+    protected $fillable = ['organization_id', 'goods_receipt_note_id', 'purchase_order_item_id', 'product_variant_id', 'unit_id', 'inventory_object_id', 'quantity_received', 'quantity_accepted', 'quantity_rejected'];
     protected $casts = [
         'quantity_received' => 'decimal:4',
         'quantity_accepted' => 'decimal:4',
@@ -31,6 +32,12 @@ class GoodsReceiptItem extends Model {
     }
     public function variant(): BelongsTo {
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+    }
+    public function unit(): BelongsTo {
+        return $this->belongsTo(\App\Domains\Master\Models\Unit::class, 'unit_id');
+    }
+    public function slabs(): HasMany {
+        return $this->hasMany(GoodsReceiptItemSlab::class, 'goods_receipt_item_id');
     }
     public function inventoryObject(): BelongsTo {
         return $this->belongsTo(InventoryObject::class);

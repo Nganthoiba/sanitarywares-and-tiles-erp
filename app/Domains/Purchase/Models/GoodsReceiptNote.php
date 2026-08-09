@@ -13,7 +13,7 @@ use App\Domains\Master\Models\Warehouse;
 class GoodsReceiptNote extends Model {
     use BelongsToOrganization;
     use SoftDeletes;
-    protected $fillable = ['organization_id', 'warehouse_id', 'purchase_order_id', 'grn_number', 'received_date', 'status', 'remarks'];
+    protected $fillable = ['organization_id', 'warehouse_id', 'storage_location_id', 'purchase_order_id', 'supplier_id', 'grn_number', 'received_date', 'status', 'remarks'];
     protected $casts = ['received_date' => 'date'];
 
     public function organization(): BelongsTo {
@@ -21,6 +21,12 @@ class GoodsReceiptNote extends Model {
     }
     public function warehouse(): BelongsTo {
         return $this->belongsTo(Warehouse::class);
+    }
+    public function storageLocation(): BelongsTo {
+        return $this->belongsTo(\App\Domains\Master\Models\StorageLocation::class, 'storage_location_id');
+    }
+    public function supplier(): BelongsTo {
+        return $this->belongsTo(\App\Domains\Master\Models\Supplier::class, 'supplier_id');
     }
     public function order(): BelongsTo {
         return $this->belongsTo(PurchaseOrder::class, 'purchase_order_id');

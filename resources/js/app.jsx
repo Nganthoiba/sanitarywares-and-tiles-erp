@@ -10,6 +10,8 @@ import RegisterOrganization from './components/auth/RegisterOrganization';
 import AcceptInvitation from './components/auth/AcceptInvitation';
 import UserManagement from './components/auth/UserManagement';
 import ProductEntry from './components/product/ProductEntry';
+import GRNList from './components/grn/GRNList';
+import WarehouseManager from './components/inventory/WarehouseManager';
 import LandingPage from './components/auth/LandingPage';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -196,6 +198,18 @@ function App() {
                         </button>
                     </li>
                     <li className="sidebar-menu-item">
+                        <button className={`sidebar-link ${activeTab === 'grn' ? 'active' : ''}`} onClick={() => setActiveTab('grn')}>
+                            <i className="fa-solid fa-file-invoice me-3"></i>
+                            <span className="sidebar-text">Goods Receipt (GRN)</span>
+                        </button>
+                    </li>
+                    <li className="sidebar-menu-item">
+                        <button className={`sidebar-link ${activeTab === 'warehouses' ? 'active' : ''}`} onClick={() => setActiveTab('warehouses')}>
+                            <i className="fa-solid fa-warehouse me-3"></i>
+                            <span className="sidebar-text">Warehouses</span>
+                        </button>
+                    </li>
+                    <li className="sidebar-menu-item">
                         <button className={`sidebar-link ${activeTab === 'products' ? 'active' : ''}`} onClick={() => setActiveTab('products')}>
                             <i className="fa-solid fa-cube me-3"></i>
                             <span className="sidebar-text">Product Entry</span>
@@ -291,6 +305,8 @@ function App() {
                 {/* Dashboard Main Content */}
                 <div className="container-fluid p-4">
                     {activeTab === 'slabs' ? <InventoryManager /> : 
+                     activeTab === 'grn' ? <GRNList /> :
+                     activeTab === 'warehouses' ? <WarehouseManager /> :
                      activeTab === 'products' ? <ProductEntry /> :
                      activeTab === 'workflows' ? <WorkflowMonitor /> : 
                      activeTab === 'bookkeeping' ? <LedgerReports /> : 

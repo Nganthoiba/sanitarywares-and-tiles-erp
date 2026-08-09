@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\Auth\OrganizationRegistrationController;
 use App\Http\Controllers\Api\Auth\UserInvitationController;
 use App\Http\Controllers\Api\Auth\UserManagementController;
 use App\Http\Controllers\Api\Product\ProductApiController;
+use App\Http\Controllers\Api\Purchase\GRNApiController;
+use App\Http\Controllers\Api\Master\WarehouseApiController;
 
 // A simple api route to test whether the api route is working or not
 Route::get('/test', function () {
@@ -95,4 +97,15 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::get('/product/variants', [ProductApiController::class, 'listVariants']);
     Route::post('/product/variants', [ProductApiController::class, 'storeVariant']);
     Route::post('/product/attributes', [ProductApiController::class, 'storeAttribute']);
+
+    // Core GRN Routes
+    Route::get('/grn/form-data', [GRNApiController::class, 'getFormData']);
+    Route::get('/grn', [GRNApiController::class, 'index']);
+    Route::post('/grn', [GRNApiController::class, 'store']);
+    Route::get('/grn/{id}', [GRNApiController::class, 'show']);
+    Route::put('/grn/{id}', [GRNApiController::class, 'update']);
+    Route::post('/grn/{id}/approve', [GRNApiController::class, 'approve']);
+
+    // Warehouse CRUD Routes
+    Route::apiResource('warehouses-crud', WarehouseApiController::class);
 });
