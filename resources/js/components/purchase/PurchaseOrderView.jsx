@@ -173,12 +173,13 @@ export default function PurchaseOrderView({ poId, onBack, userPermissions = [], 
                                 <thead className="table-light text-uppercase font-monospace">
                                     <tr>
                                         <th>Product Variant</th>
-                                        <th>Purchasing Unit</th>
-                                        <th className="text-end">Rate</th>
-                                        <th className="text-end">Ordered Qty</th>
-                                        <th className="text-end">Received Qty</th>
+                                        <th>Ordered Qty</th>
+                                        <th>Pricing basis / Rate</th>
+                                        <th>Expected Area / Pricing Qty</th>
+                                        <th>Received Qty</th>
+                                        <th>Received Area / Pricing Qty</th>
                                         <th className="text-end">Subtotal</th>
-                                        <th className="text-center" style={{ width: '150px' }}>Inbound Progress</th>
+                                        <th className="text-center" style={{ width: '120px' }}>Inbound Progress</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -186,6 +187,7 @@ export default function PurchaseOrderView({ poId, onBack, userPermissions = [], 
                                         const ordered = parseFloat(item.quantity);
                                         const received = parseFloat(item.received_quantity);
                                         const pct = ordered > 0 ? Math.min(100, Math.round((received / ordered) * 100)) : 0;
+                                        const showPricingDiff = item.pricing_unit_symbol && item.pricing_unit_symbol !== item.unit_symbol;
                                         
                                         return (
                                             <tr key={item.id}>
@@ -193,11 +195,36 @@ export default function PurchaseOrderView({ poId, onBack, userPermissions = [], 
                                                     <div className="fw-bold text-dark">{item.product_variant_name}</div>
                                                     <span className="text-muted font-monospace text-xs">{item.product_variant_sku}</span>
                                                 </td>
-                                                <td>{item.unit_symbol}</td>
-                                                <td className="text-end">₹{item.unit_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                                <td className="text-end fw-semibold text-primary">{item.quantity}</td>
-                                                <td className="text-end fw-semibold text-success">{item.received_quantity}</td>
-                                                <td className="text-end fw-bold">₹{item.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                <td>
+                                                    <strong>{item.quantity}</strong> {item.unit_symbol}
+                                                </td>
+                                                <td>
+                                                    ₹{item.unit_price.toLocaleString(undefined, { minimumFractionDigits: 2 })} / {item.pricing_unit_symbol || item.unit_symbol}
+                                                </td>
+                                                <td>
+                                                    {showPricingDiff ? (
+                                                        <span>{parseFloat(item.estimated_pricing_quantity).toFixed(2)} {item.pricing_unit_symbol}</span>
+                                                    ) : (
+                                                        <span className="text-muted">-</span>
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    <strong>{item.received_quantity}</strong> {item.unit_symbol}
+                                                </td>
+                                                <td>
+                                                    {showPricingDiff ? (
+                                                        <strong>{parseFloat(item.received_pricing_quantity).toFixed(2)} {item.pricing_unit_symbol}</strong>
+                                                    ) : (
+                                                        <span className="text-muted">-</span>
+                                                    )}
+                                                </td>
+                                                <td className="text-end fw-bold">
+                                                    {item.subtotal > 0 ? (
+                                                        `₹${parseFloat(item.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                                                    ) : (
+                                                        <span className="text-muted small">Pending actual area</span>
+                                                    )}
+                                                </td>
                                                 <td>
                                                     <div className="d-flex align-items-center gap-2">
                                                         <div className="progress flex-grow-1" style={{ height: '6px' }}>

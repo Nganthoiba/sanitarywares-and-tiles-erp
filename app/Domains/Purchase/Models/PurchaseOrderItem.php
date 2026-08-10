@@ -16,7 +16,8 @@ class PurchaseOrderItem extends Model {
     protected $fillable = [
         'organization_id', 'purchase_order_id', 'product_variant_id',
         'quantity', 'received_quantity', 'unit_id', 'unit_price',
-        'discount_amount', 'tax_amount', 'tax_rate', 'subtotal'
+        'discount_amount', 'tax_amount', 'tax_rate', 'subtotal',
+        'pricing_unit_id', 'estimated_pricing_quantity', 'received_pricing_quantity'
     ];
     protected $casts = [
         'quantity' => 'decimal:4',
@@ -25,7 +26,9 @@ class PurchaseOrderItem extends Model {
         'discount_amount' => 'decimal:4',
         'tax_amount' => 'decimal:4',
         'tax_rate' => 'decimal:4',
-        'subtotal' => 'decimal:4'
+        'subtotal' => 'decimal:4',
+        'estimated_pricing_quantity' => 'decimal:4',
+        'received_pricing_quantity' => 'decimal:4'
     ];
 
     public function organization(): BelongsTo {
@@ -39,5 +42,8 @@ class PurchaseOrderItem extends Model {
     }
     public function unit(): BelongsTo {
         return $this->belongsTo(Unit::class);
+    }
+    public function pricingUnit(): BelongsTo {
+        return $this->belongsTo(Unit::class, 'pricing_unit_id');
     }
 }

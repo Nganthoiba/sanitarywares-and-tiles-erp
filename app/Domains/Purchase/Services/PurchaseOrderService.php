@@ -5,15 +5,13 @@ namespace App\Domains\Purchase\Services;
 use App\Domains\Purchase\Models\PurchaseOrder;
 use App\Domains\Purchase\Models\PurchaseOrderItem;
 use App\Domains\Purchase\Models\PurchaseRequisition;
-use App\Domains\Workflow\Services\WorkflowRunner;
 use Illuminate\Support\Facades\DB;
+use App\Domains\Product\Models\ProductVariant;
 use Exception;
 
 class PurchaseOrderService
 {
-    public function __construct(
-        protected WorkflowRunner $workflowRunner
-    ) {}
+    public function __construct() {}
 
     /**
      * Create a new Purchase Order.
@@ -43,7 +41,7 @@ class PurchaseOrderService
             }
 
             // Calculate totals
-            $totals = $this->calculateTotals($data['items'] ?? []);
+            $totals = $this->calculateTotals($data['items'] ?? [], $organizationId);
 
             $po = PurchaseOrder::create([
                 'organization_id' => $organizationId,
@@ -66,12 +64,33 @@ class PurchaseOrderService
             // Save items
             if (!empty($data['items'])) {
                 foreach ($data['items'] as $itemData) {
+                    $variant = ProductVariant::findOrFail($itemData['product_variant_id']);
                     $qty = (float) $itemData['quantity'];
                     $price = (float) $itemData['unit_price'];
                     $discount = (float) ($itemData['discount_amount'] ?? 0.0);
                     $taxRate = (float) ($itemData['tax_rate'] ?? 0.0);
+                    $purchaseUnitId = $itemData['unit_id'];
+                    $pricingUnitId = $itemData['pricing_unit_id'] ?? $purchaseUnitId;
 
-                    $subtotal = ($qty * $price) - $discount;
+                    if ($qty <= 0) {
+                        throw new Exception("Quantity must be greater than zero.");
+                    }
+                    if ($price < 0) {
+                        throw new Exception("Unit price must be non-negative.");
+                    }
+
+                    if ($purchaseUnitId != $pricingUnitId) {
+                        if ($variant->inventory_behavior === 'SLAB') {
+                            $pricingBasis = (float) ($itemData['estimated_pricing_quantity'] ?? 0.0);
+                        } else {
+                            $multiplier = app(\App\Domains\Inventory\Services\InventoryService::class)->convertQuantity(1.0, $purchaseUnitId, $pricingUnitId, $variant->id, $organizationId);
+                            $pricingBasis = $qty * $multiplier;
+                        }
+                    } else {
+                        $pricingBasis = $qty;
+                    }
+
+                    $subtotal = ($pricingBasis * $price) - $discount;
                     $taxAmount = $subtotal * ($taxRate / 100);
 
                     $po->items()->create([
@@ -79,7 +98,10 @@ class PurchaseOrderService
                         'product_variant_id' => $itemData['product_variant_id'],
                         'quantity' => $qty,
                         'received_quantity' => 0.0000,
-                        'unit_id' => $itemData['unit_id'],
+                        'unit_id' => $purchaseUnitId,
+                        'pricing_unit_id' => $pricingUnitId,
+                        'estimated_pricing_quantity' => $pricingBasis,
+                        'received_pricing_quantity' => 0.0000,
                         'unit_price' => $price,
                         'discount_amount' => $discount,
                         'tax_amount' => $taxAmount,
@@ -106,7 +128,7 @@ class PurchaseOrderService
             }
 
             // Calculate totals
-            $totals = $this->calculateTotals($data['items'] ?? []);
+            $totals = $this->calculateTotals($data['items'] ?? [], $po->organization_id);
 
             $po->update([
                 'branch_id' => $data['branch_id'],
@@ -127,12 +149,33 @@ class PurchaseOrderService
                 $po->items()->forceDelete();
 
                 foreach ($data['items'] as $itemData) {
+                    $variant = ProductVariant::findOrFail($itemData['product_variant_id']);
                     $qty = (float) $itemData['quantity'];
                     $price = (float) $itemData['unit_price'];
                     $discount = (float) ($itemData['discount_amount'] ?? 0.0);
                     $taxRate = (float) ($itemData['tax_rate'] ?? 0.0);
+                    $purchaseUnitId = $itemData['unit_id'];
+                    $pricingUnitId = $itemData['pricing_unit_id'] ?? $purchaseUnitId;
 
-                    $subtotal = ($qty * $price) - $discount;
+                    if ($qty <= 0) {
+                        throw new Exception("Quantity must be greater than zero.");
+                    }
+                    if ($price < 0) {
+                        throw new Exception("Unit price must be non-negative.");
+                    }
+
+                    if ($purchaseUnitId != $pricingUnitId) {
+                        if ($variant->inventory_behavior === 'SLAB') {
+                            $pricingBasis = (float) ($itemData['estimated_pricing_quantity'] ?? 0.0);
+                        } else {
+                            $multiplier = app(\App\Domains\Inventory\Services\InventoryService::class)->convertQuantity(1.0, $purchaseUnitId, $pricingUnitId, $variant->id, $po->organization_id);
+                            $pricingBasis = $qty * $multiplier;
+                        }
+                    } else {
+                        $pricingBasis = $qty;
+                    }
+
+                    $subtotal = ($pricingBasis * $price) - $discount;
                     $taxAmount = $subtotal * ($taxRate / 100);
 
                     $po->items()->create([
@@ -140,7 +183,10 @@ class PurchaseOrderService
                         'product_variant_id' => $itemData['product_variant_id'],
                         'quantity' => $qty,
                         'received_quantity' => 0.0000,
-                        'unit_id' => $itemData['unit_id'],
+                        'unit_id' => $purchaseUnitId,
+                        'pricing_unit_id' => $pricingUnitId,
+                        'estimated_pricing_quantity' => $pricingBasis,
+                        'received_pricing_quantity' => 0.0000,
                         'unit_price' => $price,
                         'discount_amount' => $discount,
                         'tax_amount' => $taxAmount,
@@ -168,20 +214,6 @@ class PurchaseOrderService
 
             $po->status = 'SUBMITTED';
             $po->save();
-
-            // Find workflow definition
-            $def = \App\Domains\Workflow\Models\WorkflowDefinition::where('organization_id', $po->organization_id)
-                ->where('code', 'PO-APPROVAL-FLOW')
-                ->where('is_active', true)
-                ->first();
-
-            if ($def) {
-                $this->workflowRunner->start($def, $po);
-            } else {
-                // Auto-approve if no approval flow is set up
-                $po->status = 'APPROVED';
-                $po->save();
-            }
 
             return $po;
         });
@@ -276,19 +308,40 @@ class PurchaseOrderService
     /**
      * Helper to calculate totals for PO items.
      */
-    protected function calculateTotals(array $items): array
+    protected function calculateTotals(array $items, int $organizationId): array
     {
         $totalAmount = 0.0;
         $discountAmount = 0.0;
         $taxAmount = 0.0;
 
         foreach ($items as $item) {
+            $variant = ProductVariant::findOrFail($item['product_variant_id']);
             $qty = (float) $item['quantity'];
             $price = (float) $item['unit_price'];
             $discount = (float) ($item['discount_amount'] ?? 0.0);
             $taxRate = (float) ($item['tax_rate'] ?? 0.0);
+            $purchaseUnitId = $item['unit_id'];
+            $pricingUnitId = $item['pricing_unit_id'] ?? $purchaseUnitId;
 
-            $subtotal = ($qty * $price) - $discount;
+            if ($qty <= 0) {
+                throw new Exception("Quantity must be greater than zero.");
+            }
+            if ($price < 0) {
+                throw new Exception("Unit price must be non-negative.");
+            }
+
+            if ($purchaseUnitId != $pricingUnitId) {
+                if ($variant->inventory_behavior === 'SLAB') {
+                    $pricingBasis = (float) ($item['estimated_pricing_quantity'] ?? 0.0);
+                } else {
+                    $multiplier = app(\App\Domains\Inventory\Services\InventoryService::class)->convertQuantity(1.0, $purchaseUnitId, $pricingUnitId, $variant->id, $organizationId);
+                    $pricingBasis = $qty * $multiplier;
+                }
+            } else {
+                $pricingBasis = $qty;
+            }
+
+            $subtotal = ($pricingBasis * $price) - $discount;
             $itemTax = $subtotal * ($taxRate / 100);
 
             $discountAmount += $discount;

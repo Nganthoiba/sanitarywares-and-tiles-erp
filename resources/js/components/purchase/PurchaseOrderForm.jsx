@@ -11,6 +11,7 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
     const [branches, setBranches] = useState([]);
     const [units, setUnits] = useState([]);
     const [products, setProducts] = useState([]);
+    const [conversions, setConversions] = useState([]);
     const [requisitions, setRequisitions] = useState([]);
 
     // Form states
@@ -28,6 +29,24 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
         items: []
     });
 
+    // Resolve conversion multiplier
+    const getConversionMultiplier = (variantId, fromUnit, toUnit) => {
+        if (!fromUnit || !toUnit || parseInt(fromUnit) === parseInt(toUnit)) return 1.0;
+        // 1. Variant-specific conversion
+        let conv = conversions.find(c => c.product_variant_id === parseInt(variantId) && c.from_unit_id === parseInt(fromUnit) && c.to_unit_id === parseInt(toUnit));
+        if (conv) return parseFloat(conv.multiplier);
+        // 2. Variant-specific in reverse
+        conv = conversions.find(c => c.product_variant_id === parseInt(variantId) && c.from_unit_id === parseInt(toUnit) && c.to_unit_id === parseInt(fromUnit));
+        if (conv && parseFloat(conv.multiplier) > 0) return 1.0 / parseFloat(conv.multiplier);
+        // 3. Global conversion
+        conv = conversions.find(c => !c.product_variant_id && c.from_unit_id === parseInt(fromUnit) && c.to_unit_id === parseInt(toUnit));
+        if (conv) return parseFloat(conv.multiplier);
+        // 4. Global in reverse
+        conv = conversions.find(c => !c.product_variant_id && c.from_unit_id === parseInt(toUnit) && c.to_unit_id === parseInt(fromUnit));
+        if (conv && parseFloat(conv.multiplier) > 0) return 1.0 / parseFloat(conv.multiplier);
+        return null;
+    };
+
     // Load setup configurations
     useEffect(() => {
         const fetchContext = async () => {
@@ -41,6 +60,7 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                 setBranches(res.data.branches || []);
                 setUnits(res.data.units || []);
                 setProducts(res.data.product_variants || []);
+                setConversions(res.data.unit_conversions || []);
                 setRequisitions(res.data.approved_requisitions || []);
 
                 if (poId) {
@@ -65,6 +85,8 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                             product_variant_id: item.product_variant_id,
                             quantity: item.quantity,
                             unit_id: item.unit_id,
+                            pricing_unit_id: item.pricing_unit_id || item.unit_id,
+                            estimated_pricing_quantity: item.estimated_pricing_quantity || item.quantity,
                             unit_price: item.unit_price,
                             discount_amount: item.discount_amount,
                             tax_rate: item.tax_rate
@@ -96,16 +118,18 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
 
         // Auto-assign items from Requisition
         const mappedItems = selectedPR.items.map(item => {
-            // Find base/purchase unit
             const variant = products.find(p => p.id === item.product_variant_id);
             const defaultPrice = variant ? parseFloat(variant.cost_price || 0.0) : 0.0;
+            const uId = item.unit_id || (variant?.purchase_unit_id || variant?.base_unit_id);
             return {
                 product_variant_id: item.product_variant_id,
                 quantity: parseFloat(item.quantity),
-                unit_id: item.unit_id || (variant?.purchase_unit_id || variant?.base_unit_id),
+                unit_id: uId,
+                pricing_unit_id: variant?.purchase_unit_id || variant?.base_unit_id || uId,
+                estimated_pricing_quantity: parseFloat(item.quantity),
                 unit_price: defaultPrice,
                 discount_amount: 0.0,
-                tax_rate: 18.0 // default tax profile rate or fallback
+                tax_rate: 18.0
             };
         });
 
@@ -131,6 +155,8 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                     product_variant_id: '',
                     quantity: 1,
                     unit_id: '',
+                    pricing_unit_id: '',
+                    estimated_pricing_quantity: '',
                     unit_price: 0,
                     discount_amount: 0,
                     tax_rate: 18.0
@@ -147,8 +173,25 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
         if (field === 'product_variant_id') {
             const variant = products.find(p => p.id === parseInt(value));
             if (variant) {
-                updatedItems[index].unit_id = variant.purchase_unit_id || variant.base_unit_id || '';
+                const uId = variant.purchase_unit_id || variant.base_unit_id || '';
+                updatedItems[index].unit_id = uId;
+                updatedItems[index].pricing_unit_id = uId;
+                updatedItems[index].estimated_pricing_quantity = 1;
                 updatedItems[index].unit_price = parseFloat(variant.cost_price || 0.0);
+            }
+        }
+
+        // If unit_id or quantity changes, or pricing_unit_id changes, auto-update estimated pricing quantity if not a slab product
+        if (field === 'quantity' || field === 'unit_id' || field === 'pricing_unit_id' || field === 'product_variant_id') {
+            const item = updatedItems[index];
+            const variant = products.find(p => p.id === parseInt(item.product_variant_id));
+            if (variant && variant.inventory_behavior !== 'SLAB') {
+                const multiplier = getConversionMultiplier(item.product_variant_id, item.unit_id, item.pricing_unit_id);
+                if (multiplier !== null) {
+                    updatedItems[index].estimated_pricing_quantity = (parseFloat(item.quantity || 0.0) * multiplier).toFixed(4);
+                } else {
+                    updatedItems[index].estimated_pricing_quantity = item.quantity;
+                }
             }
         }
 
@@ -167,15 +210,27 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
         let tax = 0.0;
 
         formData.items.forEach(item => {
+            const variant = products.find(p => p.id === parseInt(item.product_variant_id));
+            const isSlab = variant?.inventory_behavior === 'SLAB';
             const q = parseFloat(item.quantity || 0.0);
             const p = parseFloat(item.unit_price || 0.0);
             const d = parseFloat(item.discount_amount || 0.0);
             const t = parseFloat(item.tax_rate || 0.0);
 
-            const itemSub = (q * p) - d;
+            let pricingBasis = q;
+            if (item.unit_id && item.pricing_unit_id && parseInt(item.unit_id) !== parseInt(item.pricing_unit_id)) {
+                if (isSlab) {
+                    pricingBasis = parseFloat(item.estimated_pricing_quantity || 0.0);
+                } else {
+                    const multiplier = getConversionMultiplier(item.product_variant_id, item.unit_id, item.pricing_unit_id);
+                    pricingBasis = multiplier !== null ? q * multiplier : q;
+                }
+            }
+
+            const itemSub = (pricingBasis * p) - d;
             const itemTax = itemSub * (t / 100);
 
-            subtotal += (q * p);
+            subtotal += (pricingBasis * p);
             discount += d;
             tax += itemTax;
         });
@@ -354,12 +409,14 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                             <table className="table table-bordered table-sm align-middle">
                                 <thead className="table-light text-uppercase font-monospace" style={{ fontSize: '0.75rem' }}>
                                     <tr>
-                                        <th style={{ width: '35%' }}>Product Variant *</th>
-                                        <th style={{ width: '12%' }}>Quantity *</th>
-                                        <th style={{ width: '15%' }}>Unit *</th>
-                                        <th style={{ width: '15%' }}>Rate *</th>
-                                        <th style={{ width: '10%' }}>Discount</th>
-                                        <th style={{ width: '10%' }}>Tax %</th>
+                                        <th style={{ width: '25%' }}>Product Variant *</th>
+                                        <th style={{ width: '10%' }}>Order Qty *</th>
+                                        <th style={{ width: '12%' }}>Order Unit *</th>
+                                        <th style={{ width: '12%' }}>Pricing Unit *</th>
+                                        <th style={{ width: '14%' }}>Expected Area / Qty</th>
+                                        <th style={{ width: '12%' }}>Rate *</th>
+                                        <th style={{ width: '8%' }}>Discount</th>
+                                        <th style={{ width: '8%' }}>Tax %</th>
                                         <th style={{ width: '3%' }}></th>
                                     </tr>
                                 </thead>
@@ -404,6 +461,46 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                                                         <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>
                                                     ))}
                                                 </select>
+                                            </td>
+                                            <td>
+                                                <select
+                                                    className="form-select form-select-sm"
+                                                    value={item.pricing_unit_id}
+                                                    onChange={(e) => handleItemChange(index, 'pricing_unit_id', e.target.value)}
+                                                    required
+                                                >
+                                                    <option value="">-- Select --</option>
+                                                    {units.map(u => (
+                                                        <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>
+                                                    ))}
+                                                </select>
+                                            </td>
+                                            <td>
+                                                {(() => {
+                                                    const variant = products.find(p => p.id === parseInt(item.product_variant_id));
+                                                    const isSlab = variant?.inventory_behavior === 'SLAB';
+                                                    if (isSlab) {
+                                                        return (
+                                                            <input
+                                                                type="number"
+                                                                step="0.0001"
+                                                                className="form-control form-control-sm text-end"
+                                                                value={item.estimated_pricing_quantity || ''}
+                                                                onChange={(e) => handleItemChange(index, 'estimated_pricing_quantity', e.target.value)}
+                                                                placeholder="Pending area"
+                                                            />
+                                                        );
+                                                    } else {
+                                                        return (
+                                                            <input
+                                                                type="text"
+                                                                className="form-control form-control-sm text-end bg-light text-muted"
+                                                                value={item.estimated_pricing_quantity || item.quantity || ''}
+                                                                readOnly
+                                                            />
+                                                        );
+                                                    }
+                                                })()}
                                             </td>
                                             <td>
                                                 <div className="input-group input-group-sm">

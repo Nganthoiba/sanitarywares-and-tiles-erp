@@ -14,11 +14,12 @@ use App\Domains\Inventory\Models\InventoryObject;
 class GoodsReceiptItem extends Model {
     use BelongsToOrganization;
     use SoftDeletes;
-    protected $fillable = ['organization_id', 'goods_receipt_note_id', 'purchase_order_item_id', 'product_variant_id', 'unit_id', 'inventory_object_id', 'quantity_received', 'quantity_accepted', 'quantity_rejected'];
+    protected $fillable = ['organization_id', 'goods_receipt_note_id', 'purchase_order_item_id', 'product_variant_id', 'unit_id', 'inventory_object_id', 'quantity_received', 'quantity_accepted', 'quantity_rejected', 'received_pricing_quantity'];
     protected $casts = [
         'quantity_received' => 'decimal:4',
         'quantity_accepted' => 'decimal:4',
-        'quantity_rejected' => 'decimal:4'
+        'quantity_rejected' => 'decimal:4',
+        'received_pricing_quantity' => 'decimal:4'
     ];
 
     public function organization(): BelongsTo {

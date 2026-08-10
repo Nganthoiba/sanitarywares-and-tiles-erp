@@ -190,8 +190,14 @@ class GRNService
                             if ($policy === 'STRICT') {
                                 throw new Exception("Over-receipt not allowed for product {$variant->name}. Ordered: {$poItem->quantity}, Already Received: {$poItem->received_quantity}, Attempted: {$receivedQty}.");
                             } elseif ($policy === 'ALLOW_WITH_APPROVAL') {
-                                if (!($grn->remarks && str_contains(strtolower($grn->remarks), 'approved over-receipt'))) {
-                                    throw new Exception("Over-receipt requires authorization for product {$variant->name}.");
+                                $context = app(\App\Shared\Context\TenantContext::class);
+                                $user = $context->getUser();
+                                $isAdmin = $user && $user->roles()->where('slug', 'administrator')->exists();
+                                $permissions = $context->getPermissions();
+                                $hasOverReceiptPermission = $isAdmin || ($permissions && $permissions->contains('purchase.over_receipt.approve'));
+
+                                if (!$hasOverReceiptPermission) {
+                                    throw new Exception("Over-receipt requires 'purchase.over_receipt.approve' permission for product {$variant->name}.");
                                 }
                             }
                         }
@@ -216,6 +222,7 @@ class GRNService
                     
                     $price = $item->orderItem ? (float) $item->orderItem->unit_price : (float) $variant->cost_price;
                     $totalValue += $totalArea * $price;
+                    $receivedPricingQty = $totalArea;
                 } else {
                     if ($hasSlabs) {
                         throw new Exception("Slabs data must not be provided for non-slab product variant: " . $variant->name);
@@ -223,8 +230,18 @@ class GRNService
 
                     // Bulk calculation: received quantity * price
                     $price = $item->orderItem ? (float) $item->orderItem->unit_price : (float) $variant->cost_price;
-                    $totalValue += $receivedQty * $price;
+                    
+                    if ($item->orderItem && $item->orderItem->pricing_unit_id && $item->orderItem->pricing_unit_id != $item->orderItem->unit_id) {
+                        $receivedPricingQty = app(\App\Domains\Inventory\Services\InventoryService::class)->convertQuantity($receivedQty, $item->orderItem->unit_id, $item->orderItem->pricing_unit_id, $variant->id, $grn->organization_id);
+                    } else {
+                        $receivedPricingQty = $receivedQty;
+                    }
+
+                    $totalValue += $receivedPricingQty * $price;
                 }
+
+                $item->received_pricing_quantity = $receivedPricingQty;
+                $item->save();
             }
 
             // 2. Update status to APPROVED
@@ -243,6 +260,7 @@ class GRNService
                             $poItem = PurchaseOrderItem::lockForUpdate()->find($grnItem->purchase_order_item_id);
                             if ($poItem) {
                                 $poItem->received_quantity += (float) $grnItem->quantity_received;
+                                $poItem->received_pricing_quantity += (float) $grnItem->received_pricing_quantity;
                                 $poItem->save();
                             }
                         }

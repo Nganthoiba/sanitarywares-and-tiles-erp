@@ -56,27 +56,42 @@ export default function PurchaseOrderPdf({ po }) {
                 <thead className="table-light text-uppercase font-monospace text-dark" style={{ borderBottom: '2px solid #000' }}>
                     <tr>
                         <th className="text-center" style={{ width: '5%' }}>#</th>
-                        <th style={{ width: '45%' }}>Item Description & SKU</th>
-                        <th className="text-end" style={{ width: '12%' }}>Quantity</th>
-                        <th className="text-center" style={{ width: '8%' }}>Unit</th>
-                        <th className="text-end" style={{ width: '15%' }}>Rate</th>
-                        <th className="text-end" style={{ width: '15%' }}>Subtotal</th>
+                        <th style={{ width: '30%' }}>Item Description & SKU</th>
+                        <th className="text-end" style={{ width: '10%' }}>Quantity</th>
+                        <th className="text-center" style={{ width: '10%' }}>Unit</th>
+                        <th className="text-center" style={{ width: '12%' }}>Pricing Unit</th>
+                        <th className="text-end" style={{ width: '13%' }}>Expected Qty / Area</th>
+                        <th className="text-end" style={{ width: '10%' }}>Rate</th>
+                        <th className="text-end" style={{ width: '10%' }}>Subtotal</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {po.items?.map((item, idx) => (
-                        <tr key={item.id} style={{ borderBottom: '1px solid #ddd' }}>
-                            <td className="text-center font-monospace">{idx + 1}</td>
-                            <td>
-                                <div className="fw-bold">{item.product_variant_name}</div>
-                                <div className="text-muted text-xs font-monospace">{item.product_variant_sku}</div>
-                            </td>
-                            <td className="text-end font-monospace">{parseFloat(item.quantity).toFixed(2)}</td>
-                            <td className="text-center font-monospace">{item.unit_symbol}</td>
-                            <td className="text-end font-monospace">₹{parseFloat(item.unit_price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                            <td className="text-end font-monospace fw-bold">₹{parseFloat(item.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                        </tr>
-                    ))}
+                    {po.items?.map((item, idx) => {
+                        const showPricingDiff = item.pricing_unit_symbol && item.pricing_unit_symbol !== item.unit_symbol;
+                        return (
+                            <tr key={item.id} style={{ borderBottom: '1px solid #ddd' }}>
+                                <td className="text-center font-monospace">{idx + 1}</td>
+                                <td>
+                                    <div className="fw-bold">{item.product_variant_name}</div>
+                                    <div className="text-muted text-xs font-monospace">{item.product_variant_sku}</div>
+                                </td>
+                                <td className="text-end font-monospace">{parseFloat(item.quantity).toFixed(2)}</td>
+                                <td className="text-center font-monospace">{item.unit_symbol}</td>
+                                <td className="text-center font-monospace">{item.pricing_unit_symbol || item.unit_symbol}</td>
+                                <td className="text-end font-monospace">
+                                    {showPricingDiff ? parseFloat(item.estimated_pricing_quantity).toFixed(2) : '-'}
+                                </td>
+                                <td className="text-end font-monospace">₹{parseFloat(item.unit_price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                <td className="text-end font-monospace fw-bold">
+                                    {item.subtotal > 0 ? (
+                                        `₹${parseFloat(item.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                                    ) : (
+                                        <span className="text-muted small">Pending actual area</span>
+                                    )}
+                                </td>
+                            </tr>
+                        );
+                    })}
                 </tbody>
             </table>
 

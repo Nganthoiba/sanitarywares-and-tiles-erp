@@ -23,7 +23,7 @@ class PurchaseOrderApiController extends Controller
      */
     public function index(Request $request)
     {
-        $query = PurchaseOrder::with(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit']);
+        $query = PurchaseOrder::with(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit', 'items.pricingUnit']);
 
         // Apply filters
         if ($request->filled('supplier_id')) {
@@ -69,7 +69,7 @@ class PurchaseOrderApiController extends Controller
         try {
             $orgId = app(\App\Shared\Context\TenantContext::class)->getOrganizationId();
             $po = $this->poService->createPO($request->validated(), $orgId);
-            $po->load(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit']);
+            $po->load(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit', 'items.pricingUnit']);
             return new PurchaseOrderResource($po);
         } catch (Exception $e) {
             return response()->json([
@@ -84,7 +84,7 @@ class PurchaseOrderApiController extends Controller
      */
     public function show($id)
     {
-        $po = PurchaseOrder::with(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit'])
+        $po = PurchaseOrder::with(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit', 'items.pricingUnit'])
             ->findOrFail($id);
         return new PurchaseOrderResource($po);
     }
@@ -96,7 +96,7 @@ class PurchaseOrderApiController extends Controller
     {
         try {
             $po = $this->poService->updatePO($id, $request->validated());
-            $po->load(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit']);
+            $po->load(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit', 'items.pricingUnit']);
             return new PurchaseOrderResource($po);
         } catch (Exception $e) {
             return response()->json([
@@ -113,7 +113,7 @@ class PurchaseOrderApiController extends Controller
     {
         try {
             $po = $this->poService->submit($id);
-            $po->load(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit']);
+            $po->load(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit', 'items.pricingUnit']);
             return response()->json([
                 'success' => true,
                 'message' => 'Purchase Order submitted successfully.',
@@ -134,7 +134,7 @@ class PurchaseOrderApiController extends Controller
     {
         try {
             $po = $this->poService->approve($id);
-            $po->load(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit']);
+            $po->load(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit', 'items.pricingUnit']);
             return response()->json([
                 'success' => true,
                 'message' => 'Purchase Order approved successfully.',
@@ -155,7 +155,7 @@ class PurchaseOrderApiController extends Controller
     {
         try {
             $po = $this->poService->send($id);
-            $po->load(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit']);
+            $po->load(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit', 'items.pricingUnit']);
             return response()->json([
                 'success' => true,
                 'message' => 'Purchase Order sent to supplier successfully.',
@@ -176,7 +176,7 @@ class PurchaseOrderApiController extends Controller
     {
         try {
             $po = $this->poService->cancel($id);
-            $po->load(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit']);
+            $po->load(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit', 'items.pricingUnit']);
             return response()->json([
                 'success' => true,
                 'message' => 'Purchase Order cancelled successfully.',
@@ -197,7 +197,7 @@ class PurchaseOrderApiController extends Controller
     {
         try {
             $po = $this->poService->close($id);
-            $po->load(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit']);
+            $po->load(['branch', 'supplier', 'requisition', 'items.variant', 'items.unit', 'items.pricingUnit']);
             return response()->json([
                 'success' => true,
                 'message' => 'Purchase Order closed successfully.',
@@ -211,16 +211,15 @@ class PurchaseOrderApiController extends Controller
         }
     }
 
-    /**
-     * Retrieve all form data and reference arrays required for PO entry.
-     */
     public function getFormData(Request $request)
     {
+        $orgId = app(\App\Shared\Context\TenantContext::class)->getOrganizationId();
         return response()->json([
             'suppliers' => \App\Domains\Master\Models\Supplier::where('is_active', true)->orderBy('name')->get(),
             'branches' => \App\Domains\Master\Models\Branch::orderBy('name')->get(),
             'units' => \App\Domains\Master\Models\Unit::where('is_active', true)->orderBy('name')->get(),
             'product_variants' => \App\Domains\Product\Models\ProductVariant::where('is_active', true)->with(['baseUnit', 'purchaseUnit'])->orderBy('name')->get(),
+            'unit_conversions' => \App\Domains\Product\Models\UnitConversion::where('organization_id', $orgId)->get(),
             'approved_requisitions' => PurchaseRequisition::where('status', 'APPROVED')
                 ->with(['items.variant.purchaseUnit', 'items.variant.baseUnit', 'items.unit', 'requester'])
                 ->orderBy('pr_number', 'desc')
