@@ -14,6 +14,9 @@ use App\Http\Controllers\Api\Product\ProductApiController;
 use App\Http\Controllers\Api\Purchase\GRNApiController;
 use App\Http\Controllers\Api\Master\WarehouseApiController;
 use App\Http\Controllers\Api\Master\BranchApiController;
+use App\Http\Controllers\Api\Master\SupplierApiController;
+use App\Http\Controllers\Api\Master\StorageLocationApiController;
+
 
 // A simple api route to test whether the api route is working or not
 Route::get('/test', function () {
@@ -110,4 +113,6 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     // Warehouse CRUD Routes
     Route::apiResource('branches-crud', BranchApiController::class);
     Route::apiResource('warehouses-crud', WarehouseApiController::class);
+    Route::apiResource('suppliers-crud', SupplierApiController::class);
+    Route::apiResource('storage-locations-crud', StorageLocationApiController::class);
 });

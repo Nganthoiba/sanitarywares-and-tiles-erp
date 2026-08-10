@@ -8,7 +8,7 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
         <div className="container">
           <a className="navbar-brand d-flex align-items-center gap-2 fw-bold text-primary" href="#" onClick={(e) => { e.preventDefault(); }}>
             <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="me-1"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-            <span className="fs-4">New Life Tiles & Sanitary World</span>
+            <span className="fs-4">Tiles & Sanitary Portal</span>
           </a>
           <div className="ms-auto flex-row d-flex">
             <button onClick={onNavigateToLogin} className="btn btn-outline-primary px-4 fw-medium rounded-pill me-2">Log In</button>
@@ -23,8 +23,7 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
           <div className="position-absolute top-0 start-50 translate-middle-x w-100 h-100" style={{ background: 'radial-gradient(circle at center, #e0e7ff 0%, transparent 70%)', opacity: 0.5, zIndex: 0 }}></div>
           <div className="container py-xl-5 position-relative z-1">
             <div className="row justify-content-center">
-              <div className="col-lg-8">
-                <span className="badge bg-primary-subtle text-primary fw-semibold px-3 py-2 rounded-pill mb-3 border border-primary-subtle">Introducing CeramaFlow</span>
+              <div className="col-lg-8">                
                 <h1 className="display-4 fw-bolder text-dark mb-4" style={{ letterSpacing: '-1px' }}>
                   The Premium ERP for <br className="d-none d-md-block" />
                   <span className="text-primary">Tiles & Sanitaryware</span>
@@ -111,9 +110,9 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
         <div className="container d-flex flex-column flex-md-row justify-content-between align-items-center">
           <div className="d-flex align-items-center gap-2 mb-3 mb-md-0">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="me-1 opacity-75"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-            <span className="fw-bold">New Life Tiles & Sanitary World</span>
+            <span className="fw-bold">Tiles & Sanitary Portal</span>
           </div>
-          <p className="mb-0 text-white-50 small">© {new Date().getFullYear()} New Life Tiles & Sanitary World. All rights reserved.</p>
+          <p className="mb-0 text-white-50 small">© {new Date().getFullYear()} Tiles & Sanitary Portal. All rights reserved.</p>
         </div>
       </footer>
     </div>

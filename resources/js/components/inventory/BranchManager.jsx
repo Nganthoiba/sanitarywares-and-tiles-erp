@@ -120,7 +120,7 @@ export default function BranchManager() {
                     <p className="text-muted small mb-0">Define, edit, and manage branch office locations and sales outlets for your organization.</p>
                 </div>
                 <button className="btn btn-primary px-4 shadow-sm" onClick={handleOpenCreate}>
-                    <i className="fa-solid fa-plus me-2"></i> Define Branch Location
+                    <i className="fa-solid fa-plus me-2"></i> Define Your Branch Location
                 </button>
             </div>
 
@@ -195,7 +195,7 @@ export default function BranchManager() {
                                 {branches.length === 0 && (
                                     <tr>
                                         <td colSpan="4" className="text-center py-5 text-muted font-monospace">
-                                            No branch locations configured. Click 'Define Branch Location' to add one.
+                                            No branch locations configured. Click 'Define Your Branch Location' to add one.
                                         </td>
                                     </tr>
                                 )}
@@ -213,7 +213,7 @@ export default function BranchManager() {
                             <div className="modal-header border-bottom-0 pb-0 pt-4 px-4">
                                 <h5 className="modal-title fw-bold text-dark">
                                     <i className="fa-solid fa-code-branch text-primary me-2"></i>
-                                    {modalMode === 'create' ? 'Define Branch Location' : 'Edit Branch Location'}
+                                    {modalMode === 'create' ? 'Define Your Branch Location' : 'Edit Your Branch Location'}
                                 </h5>
                                 <button type="button" className="btn-close" onClick={() => setShowModal(false)} aria-label="Close"></button>
                             </div>

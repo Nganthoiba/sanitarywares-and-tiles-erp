@@ -3,6 +3,9 @@ import axios from 'axios';
 import GRNItemsTable from './GRNItemsTable';
 import GRNSummary from './GRNSummary';
 import QuickWarehouseModal from './QuickWarehouseModal';
+import QuickSupplierModal from './QuickSupplierModal';
+import QuickStorageLocationModal from '../inventory/QuickStorageLocationModal';
+
 
 export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
     const [loading, setLoading] = useState(false);
@@ -10,6 +13,9 @@ export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
     const [showQuickWHModal, setShowQuickWHModal] = useState(false);
+    const [showQuickSupplierModal, setShowQuickSupplierModal] = useState(false);
+    const [showQuickSLModal, setShowQuickSLModal] = useState(false);
+
 
     // Form Contexts
     const [contexts, setContexts] = useState({
@@ -246,7 +252,19 @@ export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
                     </div>
 
                     <div className="col-md-3">
-                        <label className="form-label small fw-semibold">Storage Location</label>
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                            <label className="form-label small fw-semibold mb-0">Storage Location</label>
+                            {!isReadOnly && formData.warehouse_id && (
+                                <button
+                                    type="button"
+                                    className="btn btn-link p-0 text-primary small text-decoration-none fw-semibold"
+                                    onClick={() => setShowQuickSLModal(true)}
+                                    style={{ fontSize: '0.75rem' }}
+                                >
+                                    <i className="fa-solid fa-plus me-1"></i> Add New
+                                </button>
+                            )}
+                        </div>
                         <select
                             className="form-select form-select-sm"
                             value={formData.storage_location_id}
@@ -276,7 +294,19 @@ export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
                     </div>
 
                     <div className="col-md-3">
-                        <label className="form-label small fw-semibold">Supplier</label>
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                            <label className="form-label small fw-semibold mb-0">Supplier</label>
+                            {!isReadOnly && !formData.purchase_order_id && (
+                                <button
+                                    type="button"
+                                    className="btn btn-link p-0 text-primary small text-decoration-none fw-semibold"
+                                    onClick={() => setShowQuickSupplierModal(true)}
+                                    style={{ fontSize: '0.75rem' }}
+                                >
+                                    <i className="fa-solid fa-plus me-1"></i> Add New
+                                </button>
+                            )}
+                        </div>
                         {formData.purchase_order_id ? (
                             <input
                                 type="text"
@@ -368,6 +398,38 @@ export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
                     setFormData(prev => ({
                         ...prev,
                         warehouse_id: newWH.id
+                    }));
+                }}
+            />
+
+            <QuickSupplierModal
+                show={showQuickSupplierModal}
+                onClose={() => setShowQuickSupplierModal(false)}
+                onSave={(newSupplier) => {
+                    setContexts(prev => ({
+                        ...prev,
+                        suppliers: [...prev.suppliers, newSupplier]
+                    }));
+                    setFormData(prev => ({
+                        ...prev,
+                        supplier_id: newSupplier.id
+                    }));
+                }}
+            />
+
+            <QuickStorageLocationModal
+                show={showQuickSLModal}
+                onClose={() => setShowQuickSLModal(false)}
+                warehouseId={formData.warehouse_id}
+                warehouses={contexts.warehouses}
+                onSave={(newSL) => {
+                    setContexts(prev => ({
+                        ...prev,
+                        storage_locations: [...prev.storage_locations, newSL]
+                    }));
+                    setFormData(prev => ({
+                        ...prev,
+                        storage_location_id: newSL.id
                     }));
                 }}
             />

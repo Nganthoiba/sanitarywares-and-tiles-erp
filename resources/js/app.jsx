@@ -13,7 +13,10 @@ import ProductEntry from './components/product/ProductEntry';
 import GRNList from './components/grn/GRNList';
 import WarehouseManager from './components/inventory/WarehouseManager';
 import BranchManager from './components/inventory/BranchManager';
+import SupplierManager from './components/grn/SupplierManager';
+import StorageLocationManager from './components/inventory/StorageLocationManager';
 import LandingPage from './components/auth/LandingPage';
+
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
@@ -22,6 +25,14 @@ function App() {
     const [view, setView] = useState('landing'); // landing, login, register, accept, dashboard
     const [activeTab, setActiveTab] = useState('slabs');
     const [user, setUser] = useState(null);
+    const [grnMenuOpen, setGrnMenuOpen] = useState(false);
+
+    useEffect(() => {
+        if (activeTab && activeTab.startsWith('grn')) {
+            setGrnMenuOpen(true);
+        }
+    }, [activeTab]);
+
 
     // Font size state
     const [fontSize, setFontSize] = useState(() => {
@@ -199,10 +210,38 @@ function App() {
                         </button>
                     </li>
                     <li className="sidebar-menu-item">
-                        <button className={`sidebar-link ${activeTab === 'grn' ? 'active' : ''}`} onClick={() => setActiveTab('grn')}>
-                            <i className="fa-solid fa-file-invoice me-3"></i>
-                            <span className="sidebar-text">Goods Receipt (GRN)</span>
+                        <button 
+                            className={`sidebar-link d-flex justify-content-between align-items-center ${activeTab.startsWith('grn') ? 'active' : ''}`} 
+                            onClick={() => setGrnMenuOpen(!grnMenuOpen)}
+                        >
+                            <span className="d-flex align-items-center">
+                                <i className="fa-solid fa-file-invoice me-3"></i>
+                                <span className="sidebar-text">Goods Receipt (GRN)</span>
+                            </span>
+                            <i className={`fa-solid fa-chevron-${grnMenuOpen ? 'down' : 'right'} ms-auto`} style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
                         </button>
+                        {grnMenuOpen && (
+                            <ul className="sidebar-submenu animate__animated animate__fadeIn">
+                                <li>
+                                    <button 
+                                        className={`sidebar-submenu-link ${activeTab === 'grn' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('grn')}
+                                    >
+                                        <i className="fa-solid fa-list me-2" style={{ fontSize: '0.8rem' }}></i>
+                                        Registry List
+                                    </button>
+                                </li>
+                                <li>
+                                    <button 
+                                        className={`sidebar-submenu-link ${activeTab === 'grn-new' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('grn-new')}
+                                    >
+                                        <i className="fa-solid fa-plus me-2" style={{ fontSize: '0.8rem' }}></i>
+                                        New GRN Note
+                                    </button>
+                                </li>
+                            </ul>
+                        )}
                     </li>
                     <li className="sidebar-menu-item">
                         <button className={`sidebar-link ${activeTab === 'branches' ? 'active' : ''}`} onClick={() => setActiveTab('branches')}>
@@ -214,6 +253,18 @@ function App() {
                         <button className={`sidebar-link ${activeTab === 'warehouses' ? 'active' : ''}`} onClick={() => setActiveTab('warehouses')}>
                             <i className="fa-solid fa-warehouse me-3"></i>
                             <span className="sidebar-text">Warehouses</span>
+                        </button>
+                    </li>
+                    <li className="sidebar-menu-item">
+                        <button className={`sidebar-link ${activeTab === 'storage_locations' ? 'active' : ''}`} onClick={() => setActiveTab('storage_locations')}>
+                            <i className="fa-solid fa-map-pin me-3"></i>
+                            <span className="sidebar-text">Storage Locations</span>
+                        </button>
+                    </li>
+                    <li className="sidebar-menu-item">
+                        <button className={`sidebar-link ${activeTab === 'suppliers' ? 'active' : ''}`} onClick={() => setActiveTab('suppliers')}>
+                            <i className="fa-solid fa-truck-field me-3"></i>
+                            <span className="sidebar-text">Suppliers</span>
                         </button>
                     </li>
                     <li className="sidebar-menu-item">
@@ -312,9 +363,23 @@ function App() {
                 {/* Dashboard Main Content */}
                 <div className="container-fluid p-4">
                     {activeTab === 'slabs' ? <InventoryManager /> : 
-                     activeTab === 'grn' ? <GRNList /> :
+                     activeTab.startsWith('grn') ? (
+                         <GRNList 
+                             key={activeTab}
+                             initialViewMode={activeTab === 'grn-new' ? 'create' : 'list'} 
+                             onViewModeChange={(mode) => {
+                                 if (mode === 'list' && activeTab === 'grn-new') {
+                                     setActiveTab('grn');
+                                 } else if (mode === 'create' && activeTab === 'grn') {
+                                     setActiveTab('grn-new');
+                                 }
+                             }}
+                         />
+                     ) :
                      activeTab === 'branches' ? <BranchManager /> :
                      activeTab === 'warehouses' ? <WarehouseManager /> :
+                     activeTab === 'storage_locations' ? <StorageLocationManager /> :
+                     activeTab === 'suppliers' ? <SupplierManager /> :
                      activeTab === 'products' ? <ProductEntry /> :
                      activeTab === 'workflows' ? <WorkflowMonitor /> : 
                      activeTab === 'bookkeeping' ? <LedgerReports /> : 

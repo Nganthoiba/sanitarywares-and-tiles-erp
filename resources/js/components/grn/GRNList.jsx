@@ -2,12 +2,23 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import GRNForm from './GRNForm';
 
-export default function GRNList() {
-    const [viewMode, setViewMode] = useState('list'); // list, create, edit
+export default function GRNList({ initialViewMode = 'list', onViewModeChange }) {
+    const [viewMode, setViewMode] = useState(initialViewMode);
     const [selectedGrnId, setSelectedGrnId] = useState(null);
     const [grns, setGrns] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+
+    useEffect(() => {
+        setViewMode(initialViewMode);
+    }, [initialViewMode]);
+
+    useEffect(() => {
+        if (onViewModeChange) {
+            onViewModeChange(viewMode);
+        }
+    }, [viewMode, onViewModeChange]);
+
 
     // Filters
     const [filters, setFilters] = useState({
