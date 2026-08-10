@@ -35,4 +35,36 @@ class StoreGRNRequest extends FormRequest
             'items.*.slabs.*.origin' => ['nullable', 'string'],
         ];
     }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            $items = $this->input('items', []);
+            foreach ($items as $index => $item) {
+                $variantId = $item['product_variant_id'] ?? null;
+                if (!$variantId) continue;
+
+                $variant = \App\Domains\Product\Models\ProductVariant::find($variantId);
+                if (!$variant) continue;
+
+                $hasSlabs = !empty($item['slabs']);
+
+                if ($variant->inventory_behavior === 'SLAB') {
+                    if (!$hasSlabs) {
+                        $validator->errors()->add("items.{$index}.slabs", "Granite slabs are required for slab product variant: {$variant->name}.");
+                    } else {
+                        $qty = (float) ($item['quantity_received'] ?? 0);
+                        $slabCount = count($item['slabs']);
+                        if ($slabCount !== (int) $qty) {
+                            $validator->errors()->add("items.{$index}.slabs", "Slab count ({$slabCount}) must match received quantity ({$qty}) for Granite variant: {$variant->name}.");
+                        }
+                    }
+                } else {
+                    if ($hasSlabs) {
+                        $validator->errors()->add("items.{$index}.slabs", "Slabs data must not be provided for non-slab product variant: {$variant->name}.");
+                    }
+                }
+            }
+        });
+    }
 }

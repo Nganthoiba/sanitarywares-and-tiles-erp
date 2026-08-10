@@ -21,6 +21,17 @@ class InventoryService
     public function receiveGRN(GoodsReceiptNote $grn): void
     {
         DB::transaction(function () use ($grn) {
+            // Check if inventory has already been processed for this GRN
+            $alreadyProcessed = DB::table('inventory_movements')
+                ->where('organization_id', $grn->organization_id)
+                ->where('reference_type', 'GoodsReceiptNote')
+                ->where('reference_id', $grn->id)
+                ->exists();
+
+            if ($alreadyProcessed) {
+                throw new \Exception("Inventory has already been processed for this Goods Receipt Note.");
+            }
+
             foreach ($grn->items as $item) {
                 $variant = $item->variant;
 
@@ -33,6 +44,14 @@ class InventoryService
                         $area = ($length * $width) / 144.0;
                         
                         $slabCode = $slabData->slab_code ?: 'SLAB-' . $grn->grn_number . '-' . $item->id . '-' . ($index + 1);
+
+                        // Check if slab inventory object already exists to prevent duplicate
+                        $exists = InventoryObject::where('organization_id', $grn->organization_id)
+                            ->where('object_code', $slabCode)
+                            ->exists();
+                        if ($exists) {
+                            throw new \Exception("Inventory object with code {$slabCode} already exists.");
+                        }
 
                         // Create unique inventory object representing the physical slab
                         $inventoryObj = InventoryObject::create([
@@ -93,6 +112,14 @@ class InventoryService
 
                     // Generate a unique object code for the bulk batch
                     $objectCode = 'BULK-' . $grn->grn_number . '-' . $item->id;
+
+                    // Check if bulk inventory object already exists to prevent duplicate
+                    $exists = InventoryObject::where('organization_id', $grn->organization_id)
+                        ->where('object_code', $objectCode)
+                        ->exists();
+                    if ($exists) {
+                        throw new \Exception("Inventory object with code {$objectCode} already exists.");
+                    }
 
                     $inventoryObj = InventoryObject::create([
                         'organization_id' => $grn->organization_id,

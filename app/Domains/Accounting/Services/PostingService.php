@@ -197,6 +197,52 @@ class PostingService
     }
 
     /**
+     * Post a Goods Receipt Note record.
+     * Entry:
+     *   Dr. Inventory A/c
+     *     To Goods Received Not Invoiced (GRNI) / Supplier
+     */
+    public function postGRNReceipt(
+        int $organizationId,
+        float $totalValue,
+        int $inventoryAccountId,
+        int $grniAccountId,
+        string $grnNumber,
+        string $date,
+        int $grnId
+    ): void {
+        if ($totalValue <= 0) {
+            return;
+        }
+
+        $financialYear = $this->getActiveFinancialYear($organizationId);
+
+        $journalData = [
+            'organization_id' => $organizationId,
+            'financial_year_id' => $financialYear->id,
+            'journal_date' => $date,
+            'narration' => "GRN inventory receipt posted: {$grnNumber}",
+            'reference_type' => 'GoodsReceiptNote',
+            'reference_id' => $grnId,
+        ];
+
+        $entries = [
+            [
+                'account_id' => $inventoryAccountId,
+                'is_debit' => true,
+                'amount' => $totalValue,
+            ],
+            [
+                'account_id' => $grniAccountId,
+                'is_debit' => false,
+                'amount' => $totalValue,
+            ]
+        ];
+
+        $this->journalService->postJournal($journalData, $entries);
+    }
+
+    /**
      * Active financial year helper.
      */
     protected function getActiveFinancialYear(int $organizationId): FinancialYear
