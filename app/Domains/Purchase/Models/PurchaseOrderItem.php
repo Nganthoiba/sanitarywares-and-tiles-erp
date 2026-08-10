@@ -13,12 +13,18 @@ use App\Domains\Master\Models\Unit;
 class PurchaseOrderItem extends Model {
     use BelongsToOrganization;
     use SoftDeletes;
-    protected $fillable = ['organization_id', 'purchase_order_id', 'product_variant_id', 'quantity', 'received_quantity', 'unit_id', 'unit_price', 'tax_amount', 'subtotal'];
+    protected $fillable = [
+        'organization_id', 'purchase_order_id', 'product_variant_id',
+        'quantity', 'received_quantity', 'unit_id', 'unit_price',
+        'discount_amount', 'tax_amount', 'tax_rate', 'subtotal'
+    ];
     protected $casts = [
         'quantity' => 'decimal:4',
         'received_quantity' => 'decimal:4',
         'unit_price' => 'decimal:4',
+        'discount_amount' => 'decimal:4',
         'tax_amount' => 'decimal:4',
+        'tax_rate' => 'decimal:4',
         'subtotal' => 'decimal:4'
     ];
 

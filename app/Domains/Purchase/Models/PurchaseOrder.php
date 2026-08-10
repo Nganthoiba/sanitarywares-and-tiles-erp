@@ -14,8 +14,19 @@ use App\Domains\Master\Models\Supplier;
 class PurchaseOrder extends Model {
     use BelongsToOrganization;
     use SoftDeletes;
-    protected $fillable = ['organization_id', 'branch_id', 'supplier_id', 'purchase_requisition_id', 'po_number', 'po_date', 'total_amount', 'status', 'remarks'];
-    protected $casts = ['po_date' => 'date', 'total_amount' => 'decimal:4'];
+    protected $fillable = [
+        'organization_id', 'branch_id', 'supplier_id', 'purchase_requisition_id',
+        'po_number', 'po_date', 'expected_delivery_date', 'reference_number',
+        'payment_terms', 'delivery_terms', 'total_amount', 'discount_amount',
+        'tax_amount', 'status', 'remarks'
+    ];
+    protected $casts = [
+        'po_date' => 'date',
+        'expected_delivery_date' => 'date',
+        'total_amount' => 'decimal:4',
+        'discount_amount' => 'decimal:4',
+        'tax_amount' => 'decimal:4'
+    ];
 
     public function organization(): BelongsTo {
         return $this->belongsTo(Organization::class);

@@ -1,10 +1,12 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
-    public function up(): void {
+    public function up(): void
+    {
         Schema::create('purchase_orders', function (Blueprint $table) {
             $table->id();
             $table->foreignId('organization_id')->index()->constrained('organizations')->onDelete('cascade');
@@ -14,14 +16,15 @@ return new class extends Migration {
             $table->string('po_number', 50);
             $table->date('po_date');
             $table->decimal('total_amount', 15, 4)->default(0.0000);
-            $table->string('status')->default('DRAFT'); // DRAFT, SENT, PARTIALLY_RECEIVED, COMPLETED, CANCELLED
+            $table->string('status')->default('DRAFT'); // DRAFT, SUBMITTED, APPROVED, SENT, PARTIALLY_RECEIVED, FULLY_RECEIVED, CLOSED, CANCELLED
             $table->text('remarks')->nullable();
             $table->timestamps();
             $table->softDeletes();
             $table->unique(['organization_id', 'po_number']);
         });
     }
-    public function down(): void {
+    public function down(): void
+    {
         Schema::dropIfExists('purchase_orders');
     }
 };

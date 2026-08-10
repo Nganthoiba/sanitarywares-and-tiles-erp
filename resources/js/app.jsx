@@ -16,6 +16,7 @@ import BranchManager from './components/inventory/BranchManager';
 import SupplierManager from './components/grn/SupplierManager';
 import StorageLocationManager from './components/inventory/StorageLocationManager';
 import LandingPage from './components/auth/LandingPage';
+import PurchaseOrderList from './components/purchase/PurchaseOrderList';
 
 
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -26,10 +27,14 @@ function App() {
     const [activeTab, setActiveTab] = useState('slabs');
     const [user, setUser] = useState(null);
     const [grnMenuOpen, setGrnMenuOpen] = useState(false);
+    const [poMenuOpen, setPoMenuOpen] = useState(false);
 
     useEffect(() => {
         if (activeTab && activeTab.startsWith('grn')) {
             setGrnMenuOpen(true);
+        }
+        if (activeTab && activeTab.startsWith('purchase-orders')) {
+            setPoMenuOpen(true);
         }
     }, [activeTab]);
 
@@ -244,6 +249,40 @@ function App() {
                         )}
                     </li>
                     <li className="sidebar-menu-item">
+                        <button 
+                            className={`sidebar-link d-flex justify-content-between align-items-center ${activeTab.startsWith('purchase-orders') ? 'active' : ''}`} 
+                            onClick={() => setPoMenuOpen(!poMenuOpen)}
+                        >
+                            <span className="d-flex align-items-center">
+                                <i className="fa-solid fa-cart-shopping me-3"></i>
+                                <span className="sidebar-text">Purchase Orders</span>
+                            </span>
+                            <i className={`fa-solid fa-chevron-${poMenuOpen ? 'down' : 'right'} ms-auto`} style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
+                        </button>
+                        {poMenuOpen && (
+                            <ul className="sidebar-submenu animate__animated animate__fadeIn">
+                                <li>
+                                    <button 
+                                        className={`sidebar-submenu-link ${activeTab === 'purchase-orders' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('purchase-orders')}
+                                    >
+                                        <i className="fa-solid fa-list me-2" style={{ fontSize: '0.8rem' }}></i>
+                                        PO Registry List
+                                    </button>
+                                </li>
+                                <li>
+                                    <button 
+                                        className={`sidebar-submenu-link ${activeTab === 'purchase-orders-new' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('purchase-orders-new')}
+                                    >
+                                        <i className="fa-solid fa-plus me-2" style={{ fontSize: '0.8rem' }}></i>
+                                        New Purchase Order
+                                    </button>
+                                </li>
+                            </ul>
+                        )}
+                    </li>
+                    <li className="sidebar-menu-item">
                         <button className={`sidebar-link ${activeTab === 'branches' ? 'active' : ''}`} onClick={() => setActiveTab('branches')}>
                             <i className="fa-solid fa-code-branch me-3"></i>
                             <span className="sidebar-text">Branch Locations</span>
@@ -374,6 +413,20 @@ function App() {
                                      setActiveTab('grn-new');
                                  }
                              }}
+                         />
+                     ) :
+                     activeTab.startsWith('purchase-orders') ? (
+                         <PurchaseOrderList 
+                             key={activeTab}
+                             initialViewMode={activeTab === 'purchase-orders-new' ? 'create' : 'list'} 
+                             onViewModeChange={(mode) => {
+                                 if (mode === 'list' && activeTab === 'purchase-orders-new') {
+                                     setActiveTab('purchase-orders');
+                                 } else if (mode === 'create' && activeTab === 'purchase-orders') {
+                                     setActiveTab('purchase-orders-new');
+                                 }
+                             }}
+                             userPermissions={user?.permissions || []}
                          />
                      ) :
                      activeTab === 'branches' ? <BranchManager /> :

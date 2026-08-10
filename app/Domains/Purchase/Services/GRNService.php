@@ -180,6 +180,24 @@ class GRNService
                     throw new Exception("Received quantity must be greater than zero for product: " . $variant->name);
                 }
 
+                // Over-receipt policy check
+                if ($item->purchase_order_item_id) {
+                    $poItem = PurchaseOrderItem::find($item->purchase_order_item_id);
+                    if ($poItem) {
+                        $policy = $grn->organization->settings['over_receipt_policy'] ?? 'STRICT';
+                        $newReceivedTotal = (float) $poItem->received_quantity + $receivedQty;
+                        if ($newReceivedTotal > (float) $poItem->quantity) {
+                            if ($policy === 'STRICT') {
+                                throw new Exception("Over-receipt not allowed for product {$variant->name}. Ordered: {$poItem->quantity}, Already Received: {$poItem->received_quantity}, Attempted: {$receivedQty}.");
+                            } elseif ($policy === 'ALLOW_WITH_APPROVAL') {
+                                if (!($grn->remarks && str_contains(strtolower($grn->remarks), 'approved over-receipt'))) {
+                                    throw new Exception("Over-receipt requires authorization for product {$variant->name}.");
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // If product is granite, ensure slab count equals accepted received qty
                 if ($variant->inventory_behavior === 'SLAB') {
                     if (!$hasSlabs) {
@@ -215,6 +233,46 @@ class GRNService
 
             // 3. Trigger Inventory Service to generate stock
             $this->inventoryService->receiveGRN($grn);
+
+            // 3.5 Update Purchase Order item received quantities and PO status
+            if ($grn->purchase_order_id) {
+                $po = PurchaseOrder::lockForUpdate()->find($grn->purchase_order_id);
+                if ($po) {
+                    foreach ($grn->items as $grnItem) {
+                        if ($grnItem->purchase_order_item_id) {
+                            $poItem = PurchaseOrderItem::lockForUpdate()->find($grnItem->purchase_order_item_id);
+                            if ($poItem) {
+                                $poItem->received_quantity += (float) $grnItem->quantity_received;
+                                $poItem->save();
+                            }
+                        }
+                    }
+
+                    // Re-evaluate PO status
+                    $po->refresh();
+                    $allFullyReceived = true;
+                    $anyReceived = false;
+
+                    foreach ($po->items as $poItem) {
+                        $received = (float) $poItem->received_quantity;
+                        $ordered = (float) $poItem->quantity;
+
+                        if ($received > 0) {
+                            $anyReceived = true;
+                        }
+                        if ($received < $ordered) {
+                            $allFullyReceived = false;
+                        }
+                    }
+
+                    if ($allFullyReceived) {
+                        $po->status = 'FULLY_RECEIVED';
+                    } elseif ($anyReceived) {
+                        $po->status = 'PARTIALLY_RECEIVED';
+                    }
+                    $po->save();
+                }
+            }
 
             // 4. Resolve or create accounts and post to accounting
             if ($totalValue > 0) {

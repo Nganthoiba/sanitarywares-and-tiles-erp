@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Auth\UserInvitationController;
 use App\Http\Controllers\Api\Auth\UserManagementController;
 use App\Http\Controllers\Api\Product\ProductApiController;
 use App\Http\Controllers\Api\Purchase\GRNApiController;
+use App\Http\Controllers\Api\Purchase\PurchaseOrderApiController;
 use App\Http\Controllers\Api\Master\WarehouseApiController;
 use App\Http\Controllers\Api\Master\BranchApiController;
 use App\Http\Controllers\Api\Master\SupplierApiController;
@@ -109,6 +110,18 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::get('/grn/{id}', [GRNApiController::class, 'show']);
     Route::put('/grn/{id}', [GRNApiController::class, 'update']);
     Route::post('/grn/{id}/approve', [GRNApiController::class, 'approve']);
+
+    // Core Purchase Order Routes
+    Route::get('/purchase-orders/form-data', [PurchaseOrderApiController::class, 'getFormData']);
+    Route::get('/purchase-orders', [PurchaseOrderApiController::class, 'index']);
+    Route::post('/purchase-orders', [PurchaseOrderApiController::class, 'store'])->middleware('permission:purchase.orders.create');
+    Route::get('/purchase-orders/{id}', [PurchaseOrderApiController::class, 'show']);
+    Route::put('/purchase-orders/{id}', [PurchaseOrderApiController::class, 'update'])->middleware('permission:purchase.orders.create');
+    Route::post('/purchase-orders/{id}/submit', [PurchaseOrderApiController::class, 'submit'])->middleware('permission:purchase.orders.create');
+    Route::post('/purchase-orders/{id}/approve', [PurchaseOrderApiController::class, 'approve'])->middleware('permission:purchase.orders.approve');
+    Route::post('/purchase-orders/{id}/send', [PurchaseOrderApiController::class, 'send'])->middleware('permission:purchase.orders.create');
+    Route::post('/purchase-orders/{id}/cancel', [PurchaseOrderApiController::class, 'cancel']);
+    Route::post('/purchase-orders/{id}/close', [PurchaseOrderApiController::class, 'close'])->middleware('permission:purchase.orders.create');
 
     // Warehouse CRUD Routes
     Route::apiResource('branches-crud', BranchApiController::class);
