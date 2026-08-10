@@ -25,8 +25,8 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
             <div className="row justify-content-center">
               <div className="col-lg-8">                
                 <h1 className="display-4 fw-bolder text-dark mb-4" style={{ letterSpacing: '-1px' }}>
-                  The Premium ERP for <br className="d-none d-md-block" />
-                  <span className="text-primary">Tiles & Sanitaryware</span>
+                  Manage Your Tiles, Sanitary & Granite Business<br className="d-none d-md-block" />
+                  <span className="text-primary">All in One Smart ERP</span>
                 </h1>
                 <p className="lead text-secondary mb-5 px-md-5">
                   Streamline your inventory, manage multi-unit conversions effortlessly (Box, Piece, SQFT), and accelerate your sales cycle with our industry-tailored platform.
@@ -37,22 +37,7 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
                   </button>
                 </div>
               </div>
-            </div>
-
-            {/* Dashboard Mockup Preview */}
-            <div className="row justify-content-center mt-5 pt-3">
-              <div className="col-11 col-lg-10">
-                <div className="bg-light rounded-4 shadow-lg p-2 border border-light-subtle">
-                  <div className="bg-white rounded-3 shadow-sm overflow-hidden d-flex flex-column align-items-center justify-content-center" style={{ height: '400px', backgroundImage: 'linear-gradient(to bottom right, #f8fafc, #eff6ff)' }}>
-                    <div className="text-center text-secondary opacity-50">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-3"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                      <h4 className="fw-bold">Intelligent Dashboard Awaits</h4>
-                      <p>Sign in to view your real-time analytics.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            </div>            
           </div>
         </section>
 
