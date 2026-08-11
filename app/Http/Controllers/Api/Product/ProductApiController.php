@@ -104,13 +104,14 @@ class ProductApiController extends Controller
             'cost_price' => 'required|numeric|min:0',
             'sale_price' => 'required|numeric|min:0',
             'is_active' => 'boolean',
+            'pieces_per_box' => 'nullable|numeric|min:0.0001',
             'attributes' => 'nullable|array',
             'attributes.*.attribute_id' => 'required|exists:product_attributes,id',
             'attributes.*.value' => 'required|string'
         ]);
 
         $variant = DB::transaction(function () use ($validated, $orgId) {
-            $variantData = collect($validated)->except(['attributes'])->toArray();
+            $variantData = collect($validated)->except(['attributes', 'pieces_per_box'])->toArray();
             
             $variant = ProductVariant::create(array_merge($variantData, [
                 'organization_id' => $orgId,
@@ -124,6 +125,25 @@ class ProductApiController extends Controller
                         'product_variant_id' => $variant->id,
                         'product_attribute_id' => $attr['attribute_id'],
                         'value' => $attr['value']
+                    ]);
+                }
+            }
+
+            if (!empty($validated['pieces_per_box'])) {
+                $boxUnit = \App\Domains\Master\Models\Unit::where('organization_id', $orgId)
+                    ->where('symbol', 'BOX')
+                    ->first();
+                $pcsUnit = \App\Domains\Master\Models\Unit::where('organization_id', $orgId)
+                    ->where('symbol', 'PCS')
+                    ->first();
+
+                if ($boxUnit && $pcsUnit) {
+                    \App\Domains\Product\Models\UnitConversion::create([
+                        'organization_id' => $orgId,
+                        'product_variant_id' => $variant->id,
+                        'from_unit_id' => $boxUnit->id,
+                        'to_unit_id' => $pcsUnit->id,
+                        'multiplier' => (float) $validated['pieces_per_box'],
                     ]);
                 }
             }

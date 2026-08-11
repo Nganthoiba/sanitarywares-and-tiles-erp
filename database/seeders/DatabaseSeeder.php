@@ -121,6 +121,14 @@ class DatabaseSeeder extends Seeder
             'decimal_places' => 0,
         ]);
 
+        $slabUnit = Unit::create([
+            'organization_id' => $org->id,
+            'name' => 'Slab',
+            'symbol' => 'SLAB',
+            'type' => 'QUANTITY',
+            'decimal_places' => 0,
+        ]);
+
         $tileCat = Category::create([
             'organization_id' => $org->id,
             'name' => 'Ceramic Tiles',

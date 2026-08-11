@@ -79,13 +79,11 @@ class PurchaseOrderService
                         throw new Exception("Unit price must be non-negative.");
                     }
 
-                    if ($purchaseUnitId != $pricingUnitId) {
-                        if ($variant->inventory_behavior === 'SLAB') {
-                            $pricingBasis = (float) ($itemData['estimated_pricing_quantity'] ?? 0.0);
-                        } else {
-                            $multiplier = app(\App\Domains\Inventory\Services\InventoryService::class)->convertQuantity(1.0, $purchaseUnitId, $pricingUnitId, $variant->id, $organizationId);
-                            $pricingBasis = $qty * $multiplier;
-                        }
+                    if ($variant->inventory_behavior === 'SLAB') {
+                        $pricingBasis = (float) ($itemData['estimated_pricing_quantity'] ?? 0.0);
+                    } elseif ($purchaseUnitId != $pricingUnitId) {
+                        $multiplier = app(\App\Domains\Inventory\Services\InventoryService::class)->convertQuantity(1.0, $purchaseUnitId, $pricingUnitId, $variant->id, $organizationId);
+                        $pricingBasis = $qty * $multiplier;
                     } else {
                         $pricingBasis = $qty;
                     }
@@ -164,13 +162,11 @@ class PurchaseOrderService
                         throw new Exception("Unit price must be non-negative.");
                     }
 
-                    if ($purchaseUnitId != $pricingUnitId) {
-                        if ($variant->inventory_behavior === 'SLAB') {
-                            $pricingBasis = (float) ($itemData['estimated_pricing_quantity'] ?? 0.0);
-                        } else {
-                            $multiplier = app(\App\Domains\Inventory\Services\InventoryService::class)->convertQuantity(1.0, $purchaseUnitId, $pricingUnitId, $variant->id, $po->organization_id);
-                            $pricingBasis = $qty * $multiplier;
-                        }
+                    if ($variant->inventory_behavior === 'SLAB') {
+                        $pricingBasis = (float) ($itemData['estimated_pricing_quantity'] ?? 0.0);
+                    } elseif ($purchaseUnitId != $pricingUnitId) {
+                        $multiplier = app(\App\Domains\Inventory\Services\InventoryService::class)->convertQuantity(1.0, $purchaseUnitId, $pricingUnitId, $variant->id, $po->organization_id);
+                        $pricingBasis = $qty * $multiplier;
                     } else {
                         $pricingBasis = $qty;
                     }

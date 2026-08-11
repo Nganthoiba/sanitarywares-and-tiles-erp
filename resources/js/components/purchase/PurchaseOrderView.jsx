@@ -202,10 +202,10 @@ export default function PurchaseOrderView({ poId, onBack, userPermissions = [], 
                                                     ₹{item.unit_price.toLocaleString(undefined, { minimumFractionDigits: 2 })} / {item.pricing_unit_symbol || item.unit_symbol}
                                                 </td>
                                                 <td>
-                                                    {showPricingDiff ? (
+                                                    {item.product_behavior === 'SLAB' ? (
                                                         <span>{parseFloat(item.estimated_pricing_quantity).toFixed(2)} {item.pricing_unit_symbol}</span>
                                                     ) : (
-                                                        <span className="text-muted">-</span>
+                                                        <span className="text-muted">N/A</span>
                                                     )}
                                                 </td>
                                                 <td>

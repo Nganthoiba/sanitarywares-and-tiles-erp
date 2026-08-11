@@ -394,7 +394,7 @@ function App() {
                             </button>
                         </li>
                         <li className="nav-item">
-                            <span className="nav-link font-monospace text-muted" style={{ fontSize: '0.85rem' }}>Status: Production API Connected</span>
+                            <span className="d-none nav-link font-monospace text-muted" style={{ fontSize: '0.85rem' }}>Status: Production API Connected</span>
                         </li>
                     </ul>
                 </nav>

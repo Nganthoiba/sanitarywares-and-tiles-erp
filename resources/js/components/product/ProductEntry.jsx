@@ -45,6 +45,7 @@ export default function ProductEntry() {
         cost_price: 0,
         sale_price: 0,
         is_active: true,
+        pieces_per_box: "",
         attributes: {} // key is attribute_id, value is string
     });
 
@@ -198,6 +199,7 @@ export default function ProductEntry() {
                     cost_price: 0,
                     sale_price: 0,
                     is_active: true,
+                    pieces_per_box: "",
                     attributes: {}
                 });
                 await loadVariants();
@@ -545,6 +547,25 @@ export default function ProductEntry() {
                                     </select>
                                 </div>
                             </div>
+
+                            {variantForm.inventory_behavior !== 'SLAB' && (
+                                <div className="row mb-3">
+                                    <div className="col-md-4">
+                                        <label className="form-label small fw-semibold">Pieces per Box</label>
+                                        <input
+                                            type="number"
+                                            step="0.0001"
+                                            className="form-control"
+                                            placeholder="e.g. 4"
+                                            value={variantForm.pieces_per_box}
+                                            onChange={(e) => setVariantForm({ ...variantForm, pieces_per_box: e.target.value })}
+                                        />
+                                        <div className="form-text text-muted" style={{ fontSize: '0.75rem' }}>
+                                            Conversion ratio: 1 BOX = X PCS (Leave blank if not applicable)
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="row mb-3">
                                 <div className="col-md-4">

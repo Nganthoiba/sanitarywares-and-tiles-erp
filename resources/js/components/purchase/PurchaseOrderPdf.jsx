@@ -79,7 +79,7 @@ export default function PurchaseOrderPdf({ po }) {
                                 <td className="text-center font-monospace">{item.unit_symbol}</td>
                                 <td className="text-center font-monospace">{item.pricing_unit_symbol || item.unit_symbol}</td>
                                 <td className="text-end font-monospace">
-                                    {showPricingDiff ? parseFloat(item.estimated_pricing_quantity).toFixed(2) : '-'}
+                                    {item.product_behavior === 'SLAB' ? parseFloat(item.estimated_pricing_quantity).toFixed(2) : 'N/A'}
                                 </td>
                                 <td className="text-end font-monospace">₹{parseFloat(item.unit_price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                 <td className="text-end font-monospace fw-bold">

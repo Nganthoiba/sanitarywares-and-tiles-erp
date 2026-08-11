@@ -218,13 +218,11 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
             const t = parseFloat(item.tax_rate || 0.0);
 
             let pricingBasis = q;
-            if (item.unit_id && item.pricing_unit_id && parseInt(item.unit_id) !== parseInt(item.pricing_unit_id)) {
-                if (isSlab) {
-                    pricingBasis = parseFloat(item.estimated_pricing_quantity || 0.0);
-                } else {
-                    const multiplier = getConversionMultiplier(item.product_variant_id, item.unit_id, item.pricing_unit_id);
-                    pricingBasis = multiplier !== null ? q * multiplier : q;
-                }
+            if (isSlab) {
+                pricingBasis = parseFloat(item.estimated_pricing_quantity || 0.0);
+            } else if (item.unit_id && item.pricing_unit_id && parseInt(item.unit_id) !== parseInt(item.pricing_unit_id)) {
+                const multiplier = getConversionMultiplier(item.product_variant_id, item.unit_id, item.pricing_unit_id);
+                pricingBasis = multiplier !== null ? q * multiplier : q;
             }
 
             const itemSub = (pricingBasis * p) - d;
@@ -413,8 +411,8 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                                         <th style={{ width: '10%' }}>Order Qty *</th>
                                         <th style={{ width: '12%' }}>Order Unit *</th>
                                         <th style={{ width: '12%' }}>Pricing Unit *</th>
-                                        <th style={{ width: '14%' }}>Expected Area / Qty</th>
-                                        <th style={{ width: '12%' }}>Rate *</th>
+                                        <th style={{ width: '14%' }}>Expected Area</th>
+                                        <th style={{ width: '12%' }}>Rate Per Pricing Unit *</th>
                                         <th style={{ width: '8%' }}>Discount</th>
                                         <th style={{ width: '8%' }}>Tax %</th>
                                         <th style={{ width: '3%' }}></th>
@@ -478,7 +476,17 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                                             <td>
                                                 {(() => {
                                                     const variant = products.find(p => p.id === parseInt(item.product_variant_id));
-                                                    const isSlab = variant?.inventory_behavior === 'SLAB';
+                                                    if (!variant) {
+                                                        return (
+                                                            <input
+                                                                type="text"
+                                                                className="form-control form-control-sm text-end bg-light text-muted"
+                                                                value=""
+                                                                readOnly
+                                                            />
+                                                        );
+                                                    }
+                                                    const isSlab = variant.inventory_behavior === 'SLAB';
                                                     if (isSlab) {
                                                         return (
                                                             <input
@@ -495,7 +503,7 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                                                             <input
                                                                 type="text"
                                                                 className="form-control form-control-sm text-end bg-light text-muted"
-                                                                value={item.estimated_pricing_quantity || item.quantity || ''}
+                                                                value="N/A"
                                                                 readOnly
                                                             />
                                                         );
