@@ -28,6 +28,7 @@ function App() {
     const [user, setUser] = useState(null);
     const [grnMenuOpen, setGrnMenuOpen] = useState(false);
     const [poMenuOpen, setPoMenuOpen] = useState(false);
+    const [productsMenuOpen, setProductsMenuOpen] = useState(false);
 
     useEffect(() => {
         if (activeTab && activeTab.startsWith('grn')) {
@@ -35,6 +36,9 @@ function App() {
         }
         if (activeTab && activeTab.startsWith('purchase-orders')) {
             setPoMenuOpen(true);
+        }
+        if (activeTab && activeTab.startsWith('products')) {
+            setProductsMenuOpen(true);
         }
     }, [activeTab]);
 
@@ -307,10 +311,38 @@ function App() {
                         </button>
                     </li>
                     <li className="sidebar-menu-item">
-                        <button className={`sidebar-link ${activeTab === 'products' ? 'active' : ''}`} onClick={() => setActiveTab('products')}>
-                            <i className="fa-solid fa-cube me-3"></i>
-                            <span className="sidebar-text">Product Entry</span>
+                        <button 
+                            className={`sidebar-link d-flex justify-content-between align-items-center ${activeTab.startsWith('products') ? 'active' : ''}`} 
+                            onClick={() => setProductsMenuOpen(!productsMenuOpen)}
+                        >
+                            <span className="d-flex align-items-center">
+                                <i className="fa-solid fa-cube me-3"></i>
+                                <span className="sidebar-text">Products</span>
+                            </span>
+                            <i className={`fa-solid fa-chevron-${productsMenuOpen ? 'down' : 'right'} ms-auto`} style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
                         </button>
+                        {productsMenuOpen && (
+                            <ul className="sidebar-submenu animate__animated animate__fadeIn">
+                                <li>
+                                    <button 
+                                        className={`sidebar-submenu-link ${activeTab === 'products' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('products')}
+                                    >
+                                        <i className="fa-solid fa-list me-2" style={{ fontSize: '0.8rem' }}></i>
+                                        All Products
+                                    </button>
+                                </li>
+                                <li>
+                                    <button 
+                                        className={`sidebar-submenu-link ${activeTab === 'products-families' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('products-families')}
+                                    >
+                                        <i className="fa-solid fa-folder-tree me-2" style={{ fontSize: '0.8rem' }}></i>
+                                        Families
+                                    </button>
+                                </li>
+                            </ul>
+                        )}
                     </li>
                     <li className="sidebar-menu-item">
                         <button className={`sidebar-link ${activeTab === 'workflows' ? 'active' : ''}`} onClick={() => setActiveTab('workflows')}>
@@ -433,7 +465,7 @@ function App() {
                      activeTab === 'warehouses' ? <WarehouseManager /> :
                      activeTab === 'storage_locations' ? <StorageLocationManager /> :
                      activeTab === 'suppliers' ? <SupplierManager /> :
-                     activeTab === 'products' ? <ProductEntry /> :
+                     activeTab.startsWith('products') ? <ProductEntry key={activeTab} initialSubTab={activeTab === 'products-families' ? 'families' : 'list'} /> :
                      activeTab === 'workflows' ? <WorkflowMonitor /> : 
                      activeTab === 'bookkeeping' ? <LedgerReports /> : 
                      activeTab === 'reporting' ? <ReportingHub /> : 
