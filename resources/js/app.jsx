@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
+import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import SlabInventoryView from './components/inventory/SlabInventoryView';
 import InventoryManager from './components/inventory/InventoryManager';
 import WorkflowMonitor from './components/workflow/WorkflowMonitor';
@@ -18,30 +19,304 @@ import StorageLocationManager from './components/inventory/StorageLocationManage
 import LandingPage from './components/auth/LandingPage';
 import PurchaseOrderList from './components/purchase/PurchaseOrderList';
 
-
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
-function App() {
-    const [view, setView] = useState('landing'); // landing, login, register, accept, dashboard
-    const [activeTab, setActiveTab] = useState('slabs');
-    const [user, setUser] = useState(null);
-    const [grnMenuOpen, setGrnMenuOpen] = useState(false);
-    const [poMenuOpen, setPoMenuOpen] = useState(false);
-    const [productsMenuOpen, setProductsMenuOpen] = useState(false);
+function ProtectedRoute({ user }) {
+    if (!user) {
+        return <Navigate to="/login" replace />;
+    }
+    return <Outlet />;
+}
+
+function GuestRoute({ user }) {
+    if (user) {
+        return <Navigate to="/inventory" replace />;
+    }
+    return <Outlet />;
+}
+
+function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontSize, theme, toggleTheme, setShowSettingsModal }) {
+    const location = useLocation();
+
+    // Determine default menu open states based on the current path (for browser refresh / direct entry)
+    const [grnMenuOpen, setGrnMenuOpen] = useState(() => location.pathname.startsWith('/grn'));
+    const [poMenuOpen, setPoMenuOpen] = useState(() => location.pathname.startsWith('/purchase-orders'));
+    const [productsMenuOpen, setProductsMenuOpen] = useState(() => location.pathname.startsWith('/products'));
 
     useEffect(() => {
-        if (activeTab && activeTab.startsWith('grn')) {
+        if (location.pathname.startsWith('/grn')) {
             setGrnMenuOpen(true);
         }
-        if (activeTab && activeTab.startsWith('purchase-orders')) {
+        if (location.pathname.startsWith('/purchase-orders')) {
             setPoMenuOpen(true);
         }
-        if (activeTab && activeTab.startsWith('products')) {
+        if (location.pathname.startsWith('/products')) {
             setProductsMenuOpen(true);
         }
-    }, [activeTab]);
+    }, [location.pathname]);
 
+    return (
+        <div className="d-flex" style={{ minHeight: '100vh' }}>
+            {/* Elegant Sidebar Navigation */}
+            <div className="sidebar-wrapper">
+                <div className="sidebar-brand">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="me-2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                    <span className="fs-6 text-uppercase fw-bold ls-tight sidebar-title">Tiles <span style={{color: 'var(--accent-color)'}}>ERP</span></span>
+                </div>
+                
+                <ul className="sidebar-menu">
+                    <li className="sidebar-menu-item">
+                        <NavLink to="/inventory" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                            <i className="fa-solid fa-boxes-stacked me-3"></i>
+                            <span className="sidebar-text">Inventory Engine</span>
+                        </NavLink>
+                    </li>
+                    <li className="sidebar-menu-item">
+                        <button 
+                            className={`sidebar-link d-flex justify-content-between align-items-center ${location.pathname.startsWith('/grn') ? 'active' : ''}`} 
+                            onClick={() => setGrnMenuOpen(!grnMenuOpen)}
+                        >
+                            <span className="d-flex align-items-center">
+                                <i className="fa-solid fa-file-invoice me-3"></i>
+                                <span className="sidebar-text">Goods Receipt (GRN)</span>
+                            </span>
+                            <i className={`fa-solid fa-chevron-${grnMenuOpen ? 'down' : 'right'} ms-auto`} style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
+                        </button>
+                        {grnMenuOpen && (
+                            <ul className="sidebar-submenu animate__animated animate__fadeIn">
+                                <li>
+                                    <NavLink 
+                                        to="/grn" 
+                                        end
+                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
+                                    >
+                                        <i className="fa-solid fa-list me-2" style={{ fontSize: '0.8rem' }}></i>
+                                        Registry List
+                                    </NavLink>
+                                </li>
+                                <li>
+                                    <NavLink 
+                                        to="/grn/new" 
+                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
+                                    >
+                                        <i className="fa-solid fa-plus me-2" style={{ fontSize: '0.8rem' }}></i>
+                                        New GRN Note
+                                    </NavLink>
+                                </li>
+                            </ul>
+                        )}
+                    </li>
+                    <li className="sidebar-menu-item">
+                        <button 
+                            className={`sidebar-link d-flex justify-content-between align-items-center ${location.pathname.startsWith('/purchase-orders') ? 'active' : ''}`} 
+                            onClick={() => setPoMenuOpen(!poMenuOpen)}
+                        >
+                            <span className="d-flex align-items-center">
+                                <i className="fa-solid fa-cart-shopping me-3"></i>
+                                <span className="sidebar-text">Purchase Orders</span>
+                            </span>
+                            <i className={`fa-solid fa-chevron-${poMenuOpen ? 'down' : 'right'} ms-auto`} style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
+                        </button>
+                        {poMenuOpen && (
+                            <ul className="sidebar-submenu animate__animated animate__fadeIn">
+                                <li>
+                                    <NavLink 
+                                        to="/purchase-orders" 
+                                        end
+                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
+                                    >
+                                        <i className="fa-solid fa-list me-2" style={{ fontSize: '0.8rem' }}></i>
+                                        PO Registry List
+                                    </NavLink>
+                                </li>
+                                <li>
+                                    <NavLink 
+                                        to="/purchase-orders/new" 
+                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
+                                    >
+                                        <i className="fa-solid fa-plus me-2" style={{ fontSize: '0.8rem' }}></i>
+                                        New Purchase Order
+                                    </NavLink>
+                                </li>
+                            </ul>
+                        )}
+                    </li>
+                    <li className="sidebar-menu-item">
+                        <NavLink to="/branches" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                            <i className="fa-solid fa-code-branch me-3"></i>
+                            <span className="sidebar-text">Branch Locations</span>
+                        </NavLink>
+                    </li>
+                    <li className="sidebar-menu-item">
+                        <NavLink to="/warehouses" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                            <i className="fa-solid fa-warehouse me-3"></i>
+                            <span className="sidebar-text">Warehouses</span>
+                        </NavLink>
+                    </li>
+                    <li className="sidebar-menu-item">
+                        <NavLink to="/storage-locations" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                            <i className="fa-solid fa-map-pin me-3"></i>
+                            <span className="sidebar-text">Storage Locations</span>
+                        </NavLink>
+                    </li>
+                    <li className="sidebar-menu-item">
+                        <NavLink to="/suppliers" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                            <i className="fa-solid fa-truck-field me-3"></i>
+                            <span className="sidebar-text">Suppliers</span>
+                        </NavLink>
+                    </li>
+                    <li className="sidebar-menu-item">
+                        <button 
+                            className={`sidebar-link d-flex justify-content-between align-items-center ${location.pathname.startsWith('/products') ? 'active' : ''}`} 
+                            onClick={() => setProductsMenuOpen(!productsMenuOpen)}
+                        >
+                            <span className="d-flex align-items-center">
+                                <i className="fa-solid fa-cube me-3"></i>
+                                <span className="sidebar-text">Products</span>
+                            </span>
+                            <i className={`fa-solid fa-chevron-${productsMenuOpen ? 'down' : 'right'} ms-auto`} style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
+                        </button>
+                        {productsMenuOpen && (
+                            <ul className="sidebar-submenu animate__animated animate__fadeIn">
+                                <li>
+                                    <NavLink 
+                                        to="/products/variants" 
+                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
+                                    >
+                                        <i className="fa-solid fa-list me-2" style={{ fontSize: '0.8rem' }}></i>
+                                        All Products
+                                    </NavLink>
+                                </li>
+                                <li>
+                                    <NavLink 
+                                        to="/products/families" 
+                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
+                                    >
+                                        <i className="fa-solid fa-folder-tree me-2" style={{ fontSize: '0.8rem' }}></i>
+                                        Families
+                                    </NavLink>
+                                </li>
+                            </ul>
+                        )}
+                    </li>
+                    <li className="sidebar-menu-item">
+                        <NavLink to="/workflows" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                            <i className="fa-solid fa-diagram-project me-3"></i>
+                            <span className="sidebar-text">BPM Workflows</span>
+                        </NavLink>
+                    </li>
+                    <li className="sidebar-menu-item">
+                        <NavLink to="/bookkeeping" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                            <i className="fa-solid fa-calculator me-3"></i>
+                            <span className="sidebar-text">General Bookkeeping</span>
+                        </NavLink>
+                    </li>
+                    <li className="sidebar-menu-item">
+                        <NavLink to="/reporting" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                            <i className="fa-solid fa-chart-line me-3"></i>
+                            <span className="sidebar-text">Reporting & BI Hub</span>
+                        </NavLink>
+                    </li>
+                    {hasPermission('master.users.manage') && (
+                        <li className="sidebar-menu-item">
+                            <NavLink to="/users" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                                <i className="fa-solid fa-users-gear me-3"></i>
+                                <span className="sidebar-text">User & Role Manager</span>
+                            </NavLink>
+                        </li>
+                    )}
+                </ul>
+
+                <hr />
+
+                <div className="sidebar-footer border-top p-3 mt-auto">
+                    <div className="d-flex align-items-center justify-content-between">
+                        <div className="d-flex align-items-center">
+                            <div className="rounded-circle d-flex justify-content-center align-items-center me-2 font-monospace fw-bold" style={{ width: '32px', height: '32px', fontSize: '0.85rem', backgroundColor: 'var(--border-color)', color: 'var(--accent-color)' }}>
+                                {user?.name?.substring(0, 2).toUpperCase() || 'US'}
+                            </div>
+                            <div style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <div className="fw-bold" style={{ fontSize: '0.85rem' }}>{user?.name || 'Operator'}</div>
+                                <span className="text-muted font-monospace" style={{ fontSize: '0.75rem' }}>{user?.organizationName || 'Acme'}</span>
+                            </div>
+                        </div>
+                        <div className="d-flex gap-1">
+                            <button className="btn btn-xs btn-link text-secondary p-1 shadow-none border-0 bg-transparent" onClick={() => setShowSettingsModal(true)} title="Profile Settings">
+                                <i className="fa-solid fa-gear"></i>
+                            </button>
+                            <button className="btn btn-xs btn-link text-danger p-1 shadow-none border-0 bg-transparent" onClick={handleLogout} title="Logout">
+                                <i className="fa-solid fa-right-from-bracket"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Application Window */}
+            <div className="flex-grow-1 d-flex flex-column">
+                {/* Navbar */}
+                <nav className="navbar navbar-expand navbar-light bg-white py-3 px-4 border-bottom shadow-sm">
+                    <span className="navbar-brand mb-0 h1 fs-5 fw-bold text-dark">Building Materials Core Manager</span>
+                    <ul className="navbar-nav ms-auto align-items-center">
+                        <li className="nav-item d-flex align-items-center me-4">
+                            <span className="text-muted small me-2" style={{ fontSize: '0.8rem' }}>Aa:</span>
+                            <div className="btn-group btn-group-sm" role="group" aria-label="Font size selector">
+                                <button type="button" className={`btn btn-outline-secondary py-0.5 px-2 ${fontSize === 12 ? 'active' : ''}`} onClick={() => setFontSize(12)} style={{ fontSize: '11px' }}>XS</button>
+                                <button type="button" className={`btn btn-outline-secondary py-0.5 px-2 ${fontSize === 13.5 ? 'active' : ''}`} onClick={() => setFontSize(13.5)} style={{ fontSize: '11px' }}>S</button>
+                                <button type="button" className={`btn btn-outline-secondary py-0.5 px-2 ${fontSize === 15 ? 'active' : ''}`} onClick={() => setFontSize(15)} style={{ fontSize: '11px' }}>M</button>
+                                <button type="button" className={`btn btn-outline-secondary py-0.5 px-2 ${fontSize === 16.5 ? 'active' : ''}`} onClick={() => setFontSize(16.5)} style={{ fontSize: '11px' }}>L</button>
+                            </div>
+                        </li>
+                        <li className="nav-item d-flex align-items-center me-4">
+                            <button 
+                                className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 py-1 px-3" 
+                                onClick={toggleTheme}
+                                style={{ fontSize: '0.8rem', borderRadius: '20px' }}
+                            >
+                                {theme === 'light' ? (
+                                    <><i className="fa-solid fa-moon me-1"></i> Dark</>
+                                ) : (
+                                    <><i className="fa-solid fa-sun me-1"></i> Light</>
+                                )}
+                            </button>
+                        </li>
+                        <li className="nav-item">
+                            <span className="d-none nav-link font-monospace text-muted" style={{ fontSize: '0.85rem' }}>Status: Production API Connected</span>
+                        </li>
+                    </ul>
+                </nav>
+
+                {/* Dashboard Main Content */}
+                <div className="container-fluid p-4">
+                    <Outlet />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function App() {
+    const navigate = useNavigate();
+
+    // Check stored session credentials synchronously on initialization to avoid flash of guest layout
+    const [user, setUser] = useState(() => {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+            try {
+                return {
+                    name: localStorage.getItem('user_name'),
+                    email: localStorage.getItem('user_email'),
+                    organizationName: localStorage.getItem('organization_name'),
+                    permissions: JSON.parse(localStorage.getItem('user_permissions') || '[]')
+                };
+            } catch (e) {
+                console.error("Failed to parse user permissions:", e);
+                return null;
+            }
+        }
+        return null;
+    });
 
     // Font size state
     const [fontSize, setFontSize] = useState(() => {
@@ -138,30 +413,7 @@ function App() {
         }
     };
 
-    useEffect(() => {
-        // 1. Detect if invitation route is requested in URL
-        if (window.location.pathname === '/accept-invitation' || window.location.search.includes('token=')) {
-            setView('accept');
-            return;
-        }
-
-        // 2. Check stored session credentials
-        const token = localStorage.getItem('auth_token');
-        if (token) {
-            setUser({
-                name: localStorage.getItem('user_name'),
-                email: localStorage.getItem('user_email'),
-                organizationName: localStorage.getItem('organization_name'),
-                permissions: JSON.parse(localStorage.getItem('user_permissions') || '[]')
-            });
-            setView('dashboard');
-        } else {
-            setView('landing');
-        }
-    }, []);
-
     const handleLoginSuccess = (data) => {
-        console.log(data);
         setUser({
             name: data.user.name,
             email: data.user.email,
@@ -173,309 +425,113 @@ function App() {
         localStorage.setItem('user_email', data.user.email);
         localStorage.setItem('organization_name', data.user.organization.name);
         localStorage.setItem('user_permissions', JSON.stringify(data.user.permissions));
-        setView('dashboard');
+        navigate('/inventory');
     };
 
     const handleLogout = () => {
         localStorage.clear();
         setUser(null);
-        setView('login');
+        navigate('/login');
     };
 
     const hasPermission = (perm) => {
         return user?.permissions?.includes(perm) || user?.permissions?.includes('administrator');
     };
 
-    if (view === 'landing') {
-        return <LandingPage onNavigateToLogin={() => setView('login')} onNavigateToRegister={() => setView('register')} />;
-    }
-
-    if (view === 'login') {
-        return <Login onLoginSuccess={handleLoginSuccess} onNavigateToRegister={() => setView('register')} />;
-    }
-
-    if (view === 'register') {
-        return <RegisterOrganization onRegistrationSuccess={handleLoginSuccess} onNavigateToLogin={() => setView('login')} />;
-    }
-
-    if (view === 'accept') {
-        return <AcceptInvitation onNavigateToLogin={() => setView('login')} />;
-    }
-
     return (
-        <div className="d-flex" style={{ minHeight: '100vh' }}>
-            {/* Elegant Sidebar Navigation */}
-            <div className="sidebar-wrapper">
-                <div className="sidebar-brand">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="me-2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                    <span className="fs-6 text-uppercase fw-bold ls-tight sidebar-title">Tiles <span style={{color: 'var(--accent-color)'}}>ERP</span></span>
-                </div>
-                
-                <ul className="sidebar-menu">
-                    <li className="sidebar-menu-item">
-                        <button className={`sidebar-link ${activeTab === 'slabs' ? 'active' : ''}`} onClick={() => setActiveTab('slabs')}>
-                            <i className="fa-solid fa-boxes-stacked me-3"></i>
-                            <span className="sidebar-text">Inventory Engine</span>
-                        </button>
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <button 
-                            className={`sidebar-link d-flex justify-content-between align-items-center ${activeTab.startsWith('grn') ? 'active' : ''}`} 
-                            onClick={() => setGrnMenuOpen(!grnMenuOpen)}
-                        >
-                            <span className="d-flex align-items-center">
-                                <i className="fa-solid fa-file-invoice me-3"></i>
-                                <span className="sidebar-text">Goods Receipt (GRN)</span>
-                            </span>
-                            <i className={`fa-solid fa-chevron-${grnMenuOpen ? 'down' : 'right'} ms-auto`} style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
-                        </button>
-                        {grnMenuOpen && (
-                            <ul className="sidebar-submenu animate__animated animate__fadeIn">
-                                <li>
-                                    <button 
-                                        className={`sidebar-submenu-link ${activeTab === 'grn' ? 'active' : ''}`}
-                                        onClick={() => setActiveTab('grn')}
-                                    >
-                                        <i className="fa-solid fa-list me-2" style={{ fontSize: '0.8rem' }}></i>
-                                        Registry List
-                                    </button>
-                                </li>
-                                <li>
-                                    <button 
-                                        className={`sidebar-submenu-link ${activeTab === 'grn-new' ? 'active' : ''}`}
-                                        onClick={() => setActiveTab('grn-new')}
-                                    >
-                                        <i className="fa-solid fa-plus me-2" style={{ fontSize: '0.8rem' }}></i>
-                                        New GRN Note
-                                    </button>
-                                </li>
-                            </ul>
-                        )}
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <button 
-                            className={`sidebar-link d-flex justify-content-between align-items-center ${activeTab.startsWith('purchase-orders') ? 'active' : ''}`} 
-                            onClick={() => setPoMenuOpen(!poMenuOpen)}
-                        >
-                            <span className="d-flex align-items-center">
-                                <i className="fa-solid fa-cart-shopping me-3"></i>
-                                <span className="sidebar-text">Purchase Orders</span>
-                            </span>
-                            <i className={`fa-solid fa-chevron-${poMenuOpen ? 'down' : 'right'} ms-auto`} style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
-                        </button>
-                        {poMenuOpen && (
-                            <ul className="sidebar-submenu animate__animated animate__fadeIn">
-                                <li>
-                                    <button 
-                                        className={`sidebar-submenu-link ${activeTab === 'purchase-orders' ? 'active' : ''}`}
-                                        onClick={() => setActiveTab('purchase-orders')}
-                                    >
-                                        <i className="fa-solid fa-list me-2" style={{ fontSize: '0.8rem' }}></i>
-                                        PO Registry List
-                                    </button>
-                                </li>
-                                <li>
-                                    <button 
-                                        className={`sidebar-submenu-link ${activeTab === 'purchase-orders-new' ? 'active' : ''}`}
-                                        onClick={() => setActiveTab('purchase-orders-new')}
-                                    >
-                                        <i className="fa-solid fa-plus me-2" style={{ fontSize: '0.8rem' }}></i>
-                                        New Purchase Order
-                                    </button>
-                                </li>
-                            </ul>
-                        )}
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <button className={`sidebar-link ${activeTab === 'branches' ? 'active' : ''}`} onClick={() => setActiveTab('branches')}>
-                            <i className="fa-solid fa-code-branch me-3"></i>
-                            <span className="sidebar-text">Branch Locations</span>
-                        </button>
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <button className={`sidebar-link ${activeTab === 'warehouses' ? 'active' : ''}`} onClick={() => setActiveTab('warehouses')}>
-                            <i className="fa-solid fa-warehouse me-3"></i>
-                            <span className="sidebar-text">Warehouses</span>
-                        </button>
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <button className={`sidebar-link ${activeTab === 'storage_locations' ? 'active' : ''}`} onClick={() => setActiveTab('storage_locations')}>
-                            <i className="fa-solid fa-map-pin me-3"></i>
-                            <span className="sidebar-text">Storage Locations</span>
-                        </button>
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <button className={`sidebar-link ${activeTab === 'suppliers' ? 'active' : ''}`} onClick={() => setActiveTab('suppliers')}>
-                            <i className="fa-solid fa-truck-field me-3"></i>
-                            <span className="sidebar-text">Suppliers</span>
-                        </button>
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <button 
-                            className={`sidebar-link d-flex justify-content-between align-items-center ${activeTab.startsWith('products') ? 'active' : ''}`} 
-                            onClick={() => setProductsMenuOpen(!productsMenuOpen)}
-                        >
-                            <span className="d-flex align-items-center">
-                                <i className="fa-solid fa-cube me-3"></i>
-                                <span className="sidebar-text">Products</span>
-                            </span>
-                            <i className={`fa-solid fa-chevron-${productsMenuOpen ? 'down' : 'right'} ms-auto`} style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
-                        </button>
-                        {productsMenuOpen && (
-                            <ul className="sidebar-submenu animate__animated animate__fadeIn">
-                                <li>
-                                    <button 
-                                        className={`sidebar-submenu-link ${activeTab === 'products' ? 'active' : ''}`}
-                                        onClick={() => setActiveTab('products')}
-                                    >
-                                        <i className="fa-solid fa-list me-2" style={{ fontSize: '0.8rem' }}></i>
-                                        All Products
-                                    </button>
-                                </li>
-                                <li>
-                                    <button 
-                                        className={`sidebar-submenu-link ${activeTab === 'products-families' ? 'active' : ''}`}
-                                        onClick={() => setActiveTab('products-families')}
-                                    >
-                                        <i className="fa-solid fa-folder-tree me-2" style={{ fontSize: '0.8rem' }}></i>
-                                        Families
-                                    </button>
-                                </li>
-                            </ul>
-                        )}
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <button className={`sidebar-link ${activeTab === 'workflows' ? 'active' : ''}`} onClick={() => setActiveTab('workflows')}>
-                            <i className="fa-solid fa-diagram-project me-3"></i>
-                            <span className="sidebar-text">BPM Workflows</span>
-                        </button>
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <button className={`sidebar-link ${activeTab === 'bookkeeping' ? 'active' : ''}`} onClick={() => setActiveTab('bookkeeping')}>
-                            <i className="fa-solid fa-calculator me-3"></i>
-                            <span className="sidebar-text">General Bookkeeping</span>
-                        </button>
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <button className={`sidebar-link ${activeTab === 'reporting' ? 'active' : ''}`} onClick={() => setActiveTab('reporting')}>
-                            <i className="fa-solid fa-chart-line me-3"></i>
-                            <span className="sidebar-text">Reporting & BI Hub</span>
-                        </button>
-                    </li>
-                    {hasPermission('master.users.manage') && (
-                        <li className="sidebar-menu-item">
-                            <button className={`sidebar-link ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>
-                                <i className="fa-solid fa-users-gear me-3"></i>
-                                <span className="sidebar-text">User & Role Manager</span>
-                            </button>
-                        </li>
-                    )}
-                </ul>
+        <>
+            <Routes>
+                {/* Guest-only routes */}
+                <Route element={<GuestRoute user={user} />}>
+                    <Route path="/" element={<LandingPage onNavigateToLogin={() => navigate('/login')} onNavigateToRegister={() => navigate('/register')} />} />
+                    <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} onNavigateToRegister={() => navigate('/register')} />} />
+                    <Route path="/register" element={<RegisterOrganization onRegistrationSuccess={handleLoginSuccess} onNavigateToLogin={() => navigate('/login')} />} />
+                    <Route path="/accept-invitation" element={<AcceptInvitation onNavigateToLogin={() => navigate('/login')} />} />
+                </Route>
 
-                <hr />
+                {/* Protected routes */}
+                <Route element={<ProtectedRoute user={user} />}>
+                    <Route element={
+                        <DashboardLayout 
+                            user={user} 
+                            handleLogout={handleLogout} 
+                            hasPermission={hasPermission} 
+                            fontSize={fontSize} 
+                            setFontSize={setFontSize} 
+                            theme={theme} 
+                            toggleTheme={toggleTheme} 
+                            setShowSettingsModal={setShowSettingsModal} 
+                        />
+                    }>
+                        <Route path="/dashboard" element={<Navigate to="/inventory" replace />} />
+                        <Route path="/inventory" element={<InventoryManager />} />
+                        
+                        <Route path="/grn" element={
+                            <GRNList 
+                                key="grn-list" 
+                                initialViewMode="list" 
+                                onViewModeChange={(mode) => {
+                                    if (mode === 'create') navigate('/grn/new');
+                                }} 
+                            />
+                        } />
+                        <Route path="/grn/new" element={
+                            <GRNList 
+                                key="grn-new" 
+                                initialViewMode="create" 
+                                onViewModeChange={(mode) => {
+                                    if (mode === 'list') navigate('/grn');
+                                }} 
+                            />
+                        } />
 
-                <div className="sidebar-footer border-top p-3 mt-auto">
-                    <div className="d-flex align-items-center justify-content-between">
-                        <div className="d-flex align-items-center">
-                            <div className="rounded-circle d-flex justify-content-center align-items-center me-2 font-monospace fw-bold" style={{ width: '32px', height: '32px', fontSize: '0.85rem', backgroundColor: 'var(--border-color)', color: 'var(--accent-color)' }}>
-                                {user?.name?.substring(0, 2).toUpperCase() || 'US'}
-                            </div>
-                            <div style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                <div className="fw-bold" style={{ fontSize: '0.85rem' }}>{user?.name || 'Operator'}</div>
-                                <span className="text-muted font-monospace" style={{ fontSize: '0.75rem' }}>{user?.organizationName || 'Acme'}</span>
-                            </div>
-                        </div>
-                        <div className="d-flex gap-1">
-                            <button className="btn btn-xs btn-link text-secondary p-1 shadow-none border-0 bg-transparent" onClick={() => setShowSettingsModal(true)} title="Profile Settings">
-                                <i className="fa-solid fa-gear"></i>
-                            </button>
-                            <button className="btn btn-xs btn-link text-danger p-1 shadow-none border-0 bg-transparent" onClick={handleLogout} title="Logout">
-                                <i className="fa-solid fa-right-from-bracket"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                        <Route path="/purchase-orders" element={
+                            <PurchaseOrderList 
+                                key="po-list" 
+                                initialViewMode="list" 
+                                onViewModeChange={(mode) => {
+                                    if (mode === 'create') navigate('/purchase-orders/new');
+                                }} 
+                                userPermissions={user?.permissions || []}
+                            />
+                        } />
+                        <Route path="/purchase-orders/new" element={
+                            <PurchaseOrderList 
+                                key="po-new" 
+                                initialViewMode="create" 
+                                onViewModeChange={(mode) => {
+                                    if (mode === 'list') navigate('/purchase-orders');
+                                }} 
+                                userPermissions={user?.permissions || []}
+                            />
+                        } />
 
-            {/* Main Application Window */}
-            <div className="flex-grow-1 d-flex flex-column">
-                {/* Navbar */}
-                <nav className="navbar navbar-expand navbar-light bg-white py-3 px-4 border-bottom shadow-sm">
-                    <span className="navbar-brand mb-0 h1 fs-5 fw-bold text-dark">Building Materials Core Manager</span>
-                    <ul className="navbar-nav ms-auto align-items-center">
-                        <li className="nav-item d-flex align-items-center me-4">
-                            <span className="text-muted small me-2" style={{ fontSize: '0.8rem' }}>Aa:</span>
-                            <div className="btn-group btn-group-sm" role="group" aria-label="Font size selector">
-                                <button type="button" className={`btn btn-outline-secondary py-0.5 px-2 ${fontSize === 12 ? 'active' : ''}`} onClick={() => setFontSize(12)} style={{ fontSize: '11px' }}>XS</button>
-                                <button type="button" className={`btn btn-outline-secondary py-0.5 px-2 ${fontSize === 13.5 ? 'active' : ''}`} onClick={() => setFontSize(13.5)} style={{ fontSize: '11px' }}>S</button>
-                                <button type="button" className={`btn btn-outline-secondary py-0.5 px-2 ${fontSize === 15 ? 'active' : ''}`} onClick={() => setFontSize(15)} style={{ fontSize: '11px' }}>M</button>
-                                <button type="button" className={`btn btn-outline-secondary py-0.5 px-2 ${fontSize === 16.5 ? 'active' : ''}`} onClick={() => setFontSize(16.5)} style={{ fontSize: '11px' }}>L</button>
-                            </div>
-                        </li>
-                        <li className="nav-item d-flex align-items-center me-4">
-                            <button 
-                                className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 py-1 px-3" 
-                                onClick={toggleTheme}
-                                style={{ fontSize: '0.8rem', borderRadius: '20px' }}
-                            >
-                                {theme === 'light' ? (
-                                    <><i className="fa-solid fa-moon me-1"></i> Dark</>
-                                ) : (
-                                    <><i className="fa-solid fa-sun me-1"></i> Light</>
-                                )}
-                            </button>
-                        </li>
-                        <li className="nav-item">
-                            <span className="d-none nav-link font-monospace text-muted" style={{ fontSize: '0.85rem' }}>Status: Production API Connected</span>
-                        </li>
-                    </ul>
-                </nav>
+                        <Route path="/branches" element={<BranchManager />} />
+                        <Route path="/warehouses" element={<WarehouseManager />} />
+                        <Route path="/storage-locations" element={<StorageLocationManager />} />
+                        <Route path="/suppliers" element={<SupplierManager />} />
 
-                {/* Dashboard Main Content */}
-                <div className="container-fluid p-4">
-                    {activeTab === 'slabs' ? <InventoryManager /> : 
-                     activeTab.startsWith('grn') ? (
-                         <GRNList 
-                             key={activeTab}
-                             initialViewMode={activeTab === 'grn-new' ? 'create' : 'list'} 
-                             onViewModeChange={(mode) => {
-                                 if (mode === 'list' && activeTab === 'grn-new') {
-                                     setActiveTab('grn');
-                                 } else if (mode === 'create' && activeTab === 'grn') {
-                                     setActiveTab('grn-new');
-                                 }
-                             }}
-                         />
-                     ) :
-                     activeTab.startsWith('purchase-orders') ? (
-                         <PurchaseOrderList 
-                             key={activeTab}
-                             initialViewMode={activeTab === 'purchase-orders-new' ? 'create' : 'list'} 
-                             onViewModeChange={(mode) => {
-                                 if (mode === 'list' && activeTab === 'purchase-orders-new') {
-                                     setActiveTab('purchase-orders');
-                                 } else if (mode === 'create' && activeTab === 'purchase-orders') {
-                                     setActiveTab('purchase-orders-new');
-                                 }
-                             }}
-                             userPermissions={user?.permissions || []}
-                         />
-                     ) :
-                     activeTab === 'branches' ? <BranchManager /> :
-                     activeTab === 'warehouses' ? <WarehouseManager /> :
-                     activeTab === 'storage_locations' ? <StorageLocationManager /> :
-                     activeTab === 'suppliers' ? <SupplierManager /> :
-                     activeTab.startsWith('products') ? <ProductEntry key={activeTab} initialSubTab={activeTab === 'products-families' ? 'families' : 'list'} /> :
-                     activeTab === 'workflows' ? <WorkflowMonitor /> : 
-                     activeTab === 'bookkeeping' ? <LedgerReports /> : 
-                     activeTab === 'reporting' ? <ReportingHub /> : 
-                     activeTab === 'users' ? <UserManagement /> : (
-                        <div className="text-center py-5">
-                            <h4 className="text-muted">Domain view under construction.</h4>
-                        </div>
-                    )}
-                </div>
-            </div>
+                        <Route path="/products" element={<Navigate to="/products/variants" replace />} />
+                        <Route path="/products/variants" element={<ProductEntry key="products-variants" initialSubTab="list" />} />
+                        <Route path="/products/families" element={<ProductEntry key="products-families" initialSubTab="families" />} />
+
+                        <Route path="/workflows" element={<WorkflowMonitor />} />
+                        <Route path="/bookkeeping" element={<LedgerReports />} />
+                        <Route path="/reporting" element={<ReportingHub />} />
+                        
+                        <Route path="/users" element={
+                            hasPermission('master.users.manage') ? (
+                                <UserManagement />
+                            ) : (
+                                <Navigate to="/inventory" replace />
+                            )
+                        } />
+                    </Route>
+                </Route>
+
+                {/* Catch-all fallback */}
+                <Route path="*" element={<Navigate to={user ? "/inventory" : "/"} replace />} />
+            </Routes>
 
             {/* User Profile & Settings Modal */}
             {showSettingsModal && (
@@ -578,7 +634,7 @@ function App() {
                     </div>
                 </div>
             )}
-        </div>
+        </>
     );
 }
 
@@ -586,7 +642,9 @@ const rootEl = document.getElementById('app');
 if (rootEl) {
     ReactDOM.createRoot(rootEl).render(
         <React.StrictMode>
-            <App />
+            <BrowserRouter>
+                <App />
+            </BrowserRouter>
         </React.StrictMode>
     );
 }
