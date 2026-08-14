@@ -72,7 +72,7 @@ export default function QuickBranchModal({ show, onClose, onSave }) {
                                     className="form-control form-control-sm"
                                     value={form.name}
                                     onChange={(e) => handleChange('name', e.target.value)}
-                                    placeholder="e.g. Gujarat Morbi Location"
+                                    placeholder="e.g. Kodompokpi Mayai Leikai"
                                     required
                                 />
                             </div>
