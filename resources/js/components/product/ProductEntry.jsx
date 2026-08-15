@@ -72,6 +72,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
 
 
 
+    const [showTypeGuide, setShowTypeGuide] = useState(false);
     const [showAttrModal, setShowAttrModal] = useState(false);
     const [attributeForm, setAttributeForm] = useState({
         name: "",
@@ -972,24 +973,76 @@ export default function ProductEntry({ initialSubTab = "list" }) {
 
                             {/* Section 4: Product Type */}
                             <div className="mb-4">
-                                <h6 className="text-primary fw-bold mb-3 border-bottom pb-2">4. Product Type</h6>
-                                <div className="row mb-3">
+                                <h6 className="text-primary fw-bold mb-3 border-bottom pb-2 d-flex align-items-center justify-content-between">
+                                    <span className="d-flex align-items-center">
+                                        4. Product Type & Inventory Behavior
+                                        <button 
+                                            type="button" 
+                                            className="btn btn-link text-primary p-0 ms-2 text-decoration-none small"
+                                            onClick={() => setShowTypeGuide(!showTypeGuide)}
+                                            title="View Product Type Comparison Guide"
+                                        >
+                                            <i className="fa-solid fa-circle-info me-1"></i>
+                                            <span className="small">What's the difference?</span>
+                                        </button>
+                                    </span>
+                                </h6>
+
+                                {showTypeGuide && (
+                                    <div className="p-3 mb-3 bg-light border border-info-subtle rounded-3 small animate__animated animate__fadeIn">
+                                        <div className="fw-bold text-dark mb-2 d-flex align-items-center">
+                                            <i className="fa-solid fa-layer-group text-info me-2"></i>
+                                            Product Type Classification Guide:
+                                        </div>
+                                        <div className="row g-3">
+                                            <div className="col-md-6">
+                                                <div className="p-2 border bg-white rounded-2 h-100 shadow-sm">
+                                                    <span className="fw-bold text-primary d-block mb-1">
+                                                        <i className="fa-solid fa-boxes-stacked me-1"></i> Standard Product
+                                                    </span>
+                                                    <p className="text-muted mb-1" style={{ fontSize: "0.82rem" }}>
+                                                        Fixed, countable commercial quantity. POs and GRNs use fixed unit conversions without measuring individual items.
+                                                    </p>
+                                                    <span className="badge bg-primary-subtle text-primary" style={{ fontSize: "0.72rem" }}>
+                                                        Examples: Tiles (BOX/PCS), Faucets, Basins, Cement (BAG)
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="col-md-6">
+                                                <div className="p-2 border bg-white rounded-2 h-100 shadow-sm">
+                                                    <span className="fw-bold text-warning-emphasis d-block mb-1">
+                                                        <i className="fa-solid fa-ruler-combined me-1 text-warning"></i> Measured Material
+                                                    </span>
+                                                    <p className="text-muted mb-1" style={{ fontSize: "0.82rem" }}>
+                                                        Value depends on actual physical measurement of each individual item received during GRN. No fixed 1-to-1 ratio.
+                                                    </p>
+                                                    <span className="badge bg-warning-subtle text-warning-emphasis" style={{ fontSize: "0.72rem" }}>
+                                                        Examples: Granite Slabs, Marble Slabs (SQ.FT.)
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="row mb-3 align-items-center">
                                     <div className="col-md-4">
                                         <label className="form-label small fw-semibold">Product Type *</label>
                                         <select 
-                                            className="form-select form-select-sm" 
+                                            className="form-select form-select-sm fw-semibold" 
                                             value={productForm.product_type} 
                                             onChange={(e) => setProductForm({ ...productForm, product_type: e.target.value })} 
                                             required
                                         >
-                                            <option value="STANDARD">Standard</option>
+                                            <option value="STANDARD">Standard Product</option>
                                             <option value="MEASURED_MATERIAL">Measured Material</option>
                                         </select>
                                     </div>
-                                    {productForm.product_type === "MEASURED_MATERIAL" && (
+
+                                    {productForm.product_type === "MEASURED_MATERIAL" ? (
                                         <>
                                             <div className="col-md-4">
-                                                <label className="form-label small fw-semibold">Physical Object *</label>
+                                                <label className="form-label small fw-semibold">Stock Form *</label>
                                                 <select 
                                                     className="form-select form-select-sm" 
                                                     value={productForm.physical_object} 
@@ -1000,7 +1053,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                                 </select>
                                             </div>
                                             <div className="col-md-4">
-                                                <label className="form-label small fw-semibold">Measurement Unit *</label>
+                                                <label className="form-label small fw-semibold">Pricing Basis *</label>
                                                 <select 
                                                     className="form-select form-select-sm" 
                                                     value={productForm.measurement_unit} 
@@ -1011,8 +1064,26 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                                 </select>
                                             </div>
                                         </>
+                                    ) : (
+                                        <div className="col-md-8">
+                                            <div className="p-2 border rounded bg-light text-muted small d-flex align-items-center mt-3">
+                                                <i className="fa-solid fa-circle-check text-success me-2 fs-5"></i>
+                                                <div>
+                                                    <strong>Standard Inventory Flow:</strong> Counted directly in fixed commercial units (BOX, PCS, BAG).
+                                                </div>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
+
+                                {productForm.product_type === "MEASURED_MATERIAL" && (
+                                    <div className="p-2 border border-warning-subtle bg-warning-subtle text-warning-emphasis rounded small d-flex align-items-center">
+                                        <i className="fa-solid fa-triangle-exclamation me-2 fs-5 text-warning"></i>
+                                        <div>
+                                            <strong>Measured Material Flow:</strong> PO specifies expected quantity (e.g. 10 Slabs / 200 SQ.FT.), while GRN records actual dimensions per individual slab.
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Section 5: Commercial Information */}
