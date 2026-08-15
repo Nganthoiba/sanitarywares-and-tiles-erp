@@ -232,7 +232,11 @@ class GRNService
                     $price = $item->orderItem ? (float) $item->orderItem->unit_price : (float) $variant->cost_price;
                     
                     if ($item->orderItem && $item->orderItem->pricing_unit_id && $item->orderItem->pricing_unit_id != $item->orderItem->unit_id) {
-                        $receivedPricingQty = app(\App\Domains\Inventory\Services\InventoryService::class)->convertQuantity($receivedQty, $item->orderItem->unit_id, $item->orderItem->pricing_unit_id, $variant->id, $grn->organization_id);
+                        if ($item->orderItem->pricing_conversion_factor !== null) {
+                            $receivedPricingQty = $receivedQty * (float) $item->orderItem->pricing_conversion_factor;
+                        } else {
+                            $receivedPricingQty = app(\App\Domains\Inventory\Services\InventoryService::class)->convertQuantity($receivedQty, $item->orderItem->unit_id, $item->orderItem->pricing_unit_id, $variant->id, $grn->organization_id);
+                        }
                     } else {
                         $receivedPricingQty = $receivedQty;
                     }

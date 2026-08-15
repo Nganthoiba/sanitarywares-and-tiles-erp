@@ -27,6 +27,7 @@ class PurchaseOrderItemResource extends JsonResource
             'pricing_unit_symbol' => $this->pricingUnit->symbol ?? null,
             'estimated_pricing_quantity' => (float) $this->estimated_pricing_quantity,
             'received_pricing_quantity' => (float) $this->received_pricing_quantity,
+            'pricing_conversion_factor' => $this->pricing_conversion_factor !== null ? (float) $this->pricing_conversion_factor : null,
             'unit_price' => (float) $this->unit_price,
             'discount_amount' => (float) $this->discount_amount,
             'tax_amount' => (float) $this->tax_amount,

@@ -17,7 +17,8 @@ class PurchaseOrderItem extends Model {
         'organization_id', 'purchase_order_id', 'product_variant_id',
         'quantity', 'received_quantity', 'unit_id', 'unit_price',
         'discount_amount', 'tax_amount', 'tax_rate', 'subtotal',
-        'pricing_unit_id', 'estimated_pricing_quantity', 'received_pricing_quantity'
+        'pricing_unit_id', 'estimated_pricing_quantity', 'received_pricing_quantity',
+        'pricing_conversion_factor'
     ];
     protected $casts = [
         'quantity' => 'decimal:4',
@@ -28,7 +29,8 @@ class PurchaseOrderItem extends Model {
         'tax_rate' => 'decimal:4',
         'subtotal' => 'decimal:4',
         'estimated_pricing_quantity' => 'decimal:4',
-        'received_pricing_quantity' => 'decimal:4'
+        'received_pricing_quantity' => 'decimal:4',
+        'pricing_conversion_factor' => 'decimal:6'
     ];
 
     public function organization(): BelongsTo {

@@ -935,4 +935,87 @@ class PurchaseOrderFlowTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonPath('data.items.0.pricing_unit_symbol', null);
     }
+
+    /**
+     * 23. Product conversion changes after PO creation does not affect historical calculations.
+     */
+    public function test_product_conversion_changes_after_po_creation_does_not_affect_po(): void
+    {
+        $this->actingAs($this->user);
+
+        // 1. Create a PO with 10 BOX, priced per PCS (1 BOX = 4 PCS)
+        $po = $this->poService->createPO([
+            'branch_id' => $this->branch->id,
+            'supplier_id' => $this->supplier->id,
+            'po_date' => now()->toDateString(),
+            'items' => [
+                [
+                    'product_variant_id' => $this->tileVariant->id,
+                    'quantity' => 10, // 10 BOX
+                    'unit_id' => $this->boxUnit->id,
+                    'pricing_unit_id' => $this->pcsUnit->id, // priced by PCS
+                    'unit_price' => 200.00, // ₹200/PCS
+                ]
+            ]
+        ], $this->org->id);
+
+        $po = $this->poService->submit($po->id);
+        $po = $this->poService->approve($po->id);
+        $po = $this->poService->send($po->id);
+
+        // Subtotal must be 10 * 4 * 200 = 8000 (excluding tax)
+        $poItem = $po->items->first();
+        $this->assertEquals(8000.0, (float) $poItem->subtotal - (float) $poItem->tax_amount);
+
+        // 2. Change the variant conversion configuration: 1 BOX = 6 PCS
+        $conversion = UnitConversion::where('product_variant_id', $this->tileVariant->id)
+            ->where('from_unit_id', $this->boxUnit->id)
+            ->where('to_unit_id', $this->pcsUnit->id)
+            ->first();
+        $conversion->multiplier = 6.000000;
+        $conversion->save();
+
+        // 3. Receive the goods via GRN
+        $warehouse = \App\Domains\Master\Models\Warehouse::create([
+            'organization_id' => $this->org->id,
+            'branch_id' => $this->branch->id,
+            'name' => 'Central Store',
+            'code' => 'CSTORE',
+        ]);
+
+        $loc = StorageLocation::create([
+            'organization_id' => $this->org->id,
+            'warehouse_id' => $warehouse->id,
+            'name' => 'Loc A',
+            'location_type' => 'ZONE',
+            'code' => 'LOC-A'
+        ]);
+
+        $grn = GoodsReceiptNote::create([
+            'organization_id' => $this->org->id,
+            'purchase_order_id' => $po->id,
+            'warehouse_id' => $warehouse->id,
+            'storage_location_id' => $loc->id,
+            'grn_number' => 'GRN-HISTORICAL',
+            'received_date' => now()->toDateString(),
+            'status' => 'DRAFT',
+        ]);
+
+        $grnItem = GoodsReceiptItem::create([
+            'organization_id' => $this->org->id,
+            'goods_receipt_note_id' => $grn->id,
+            'purchase_order_item_id' => $poItem->id,
+            'product_variant_id' => $this->tileVariant->id,
+            'unit_id' => $this->boxUnit->id,
+            'quantity_received' => 10.0, // all 10 BOX received
+            'quantity_accepted' => 10.0,
+            'quantity_rejected' => 0.0,
+        ]);
+
+        $this->grnService->approveGRN($grn->id);
+
+        $poItem->refresh();
+        // Since it's snapshotted, received pricing quantity should be 10 BOX * 4 = 40 (NOT 60!)
+        $this->assertEquals(40.0, (float) $poItem->received_pricing_quantity);
+    }
 }

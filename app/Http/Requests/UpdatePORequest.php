@@ -29,7 +29,7 @@ class UpdatePORequest extends FormRequest
             'items.*.product_variant_id' => ['required', 'exists:product_variants,id'],
             'items.*.quantity' => ['required', 'numeric', 'gt:0'],
             'items.*.unit_id' => ['required', 'exists:units,id'],
-            'items.*.pricing_unit_id' => ['required', 'exists:units,id'],
+            'items.*.pricing_unit_id' => ['nullable', 'exists:units,id'],
             'items.*.estimated_pricing_quantity' => ['nullable', 'numeric', 'min:0'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
