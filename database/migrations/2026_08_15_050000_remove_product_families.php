@@ -16,10 +16,15 @@ return new class extends Migration {
         }
 
         // 2. Migrate existing category mappings from product_families
-        if (Schema::hasTable('product_families')) {
-            DB::table('product_variants')
-                ->join('product_families', 'product_variants.product_family_id', '=', 'product_families.id')
-                ->update(['product_variants.category_id' => DB::raw('product_families.category_id')]);
+        if (Schema::hasTable('product_families') && Schema::hasColumn('product_families', 'category_id')) {
+            $families = DB::table('product_families')->get(['id', 'category_id']);
+            foreach ($families as $fam) {
+                if ($fam->category_id) {
+                    DB::table('product_variants')
+                        ->where('product_family_id', $fam->id)
+                        ->update(['category_id' => $fam->category_id]);
+                }
+            }
         }
 
         // 3. Fallback: Assign first category if any product has no category
@@ -54,9 +59,15 @@ return new class extends Migration {
             } catch (\Exception $e) {}
         });
 
-        // 7. Drop product_family_id foreign key constraint and column if they exist
+        // 7. Drop product_family_id index, foreign key constraint and column if they exist
         Schema::table('product_variants', function (Blueprint $table) {
             if (Schema::hasColumn('product_variants', 'product_family_id')) {
+                try {
+                    $table->dropIndex(['product_family_id']);
+                } catch (\Exception $e) {}
+                try {
+                    $table->dropIndex(['organization_id', 'product_family_id']);
+                } catch (\Exception $e) {}
                 try {
                     $table->dropForeign(['product_family_id']);
                 } catch (\Exception $e) {}

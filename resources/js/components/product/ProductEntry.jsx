@@ -14,12 +14,9 @@ export default function ProductEntry({ initialSubTab = "list" }) {
     const [taxProfiles, setTaxProfiles] = useState([]);
     const [manufacturers, setManufacturers] = useState([]);
     const [attributes, setAttributes] = useState([]);
-    const [families, setFamilies] = useState([]);
     
     // Core List State
     const [products, setProducts] = useState([]);
-    const [familyProducts, setFamilyProducts] = useState([]); // for viewing specific family products
-    const [selectedFamilyId, setSelectedFamilyId] = useState(""); // active family context
 
     // UX States
     const [loading, setLoading] = useState(false);
@@ -28,11 +25,9 @@ export default function ProductEntry({ initialSubTab = "list" }) {
     const [success, setSuccess] = useState(null);
 
     // Concept Info Toggles (Registry List View)
-    const [showFamilyInfo, setShowFamilyInfo] = useState(false);
     const [showVariantInfo, setShowVariantInfo] = useState(false);
 
     // Concept Info Toggles (Form View)
-    const [showFormFamilyInfo, setShowFormFamilyInfo] = useState(false);
     const [showFormVariantInfo, setShowFormVariantInfo] = useState(false);
 
     // Filter States
@@ -41,8 +36,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
         category: "",
         brand: "",
         productType: "",
-        status: "",
-        family: ""
+        status: ""
     });
 
     // Add/Edit Product Form State
@@ -52,7 +46,6 @@ export default function ProductEntry({ initialSubTab = "list" }) {
         category_id: "",
         brand_id: "",
         manufacturer_id: "",
-        product_family_id: "",
         sku: "",
         gtin: "",
         barcode: "",
@@ -77,18 +70,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
     // Calculated Inventory State
     const [inventorySummary, setInventorySummary] = useState(null);
 
-    // Modal forms
-    const [showFamilyModal, setShowFamilyModal] = useState(false);
-    const [familyModalMode, setFamilyModalMode] = useState('create'); // 'create', 'edit'
-    const [editingFamilyId, setEditingFamilyId] = useState(null);
-    const [familyForm, setFamilyForm] = useState({
-        name: "",
-        code: "",
-        category_id: "",
-        brand_id: "",
-        tax_profile_id: "",
-        description: ""
-    });
+
 
     const [showAttrModal, setShowAttrModal] = useState(false);
     const [attributeForm, setAttributeForm] = useState({
@@ -138,7 +120,6 @@ export default function ProductEntry({ initialSubTab = "list" }) {
             setTaxProfiles(data.tax_profiles || []);
             setManufacturers(data.manufacturers || []);
             setAttributes(data.attributes || []);
-            setFamilies(data.families || []);
 
             // Set some smart defaults for creation form
             if (data.categories.length > 0) {
@@ -204,7 +185,6 @@ export default function ProductEntry({ initialSubTab = "list" }) {
             category_id: categories[0]?.id?.toString() || "",
             brand_id: "",
             manufacturer_id: "",
-            product_family_id: "",
             sku: "",
             gtin: "",
             barcode: "",
@@ -271,10 +251,9 @@ export default function ProductEntry({ initialSubTab = "list" }) {
             setProductForm({
                 id: p.id,
                 name: p.name,
-                category_id: p.family?.category_id?.toString() || "",
+                category_id: p.category_id?.toString() || "",
                 brand_id: p.brand_id?.toString() || "",
                 manufacturer_id: p.manufacturer_id?.toString() || "",
-                product_family_id: p.product_family_id?.toString() || "",
                 sku: p.sku,
                 gtin: p.gtin || "",
                 barcode: p.barcode || "",
@@ -467,126 +446,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
         }
     };
 
-    // -------------------------------------------------------------
-    // Inline Family Creation Handler
-    // -------------------------------------------------------------
-    const handleOpenCreateFamily = () => {
-        setFamilyModalMode('create');
-        setEditingFamilyId(null);
-        setFamilyForm({
-            name: "",
-            code: "",
-            category_id: "",
-            brand_id: "",
-            tax_profile_id: "",
-            description: ""
-        });
-        setError(null);
-        setShowFamilyModal(true);
-    };
 
-    const handleOpenEditFamily = (family) => {
-        setFamilyModalMode('edit');
-        setEditingFamilyId(family.id);
-        setFamilyForm({
-            name: family.name || "",
-            code: family.code || "",
-            category_id: family.category_id ? family.category_id.toString() : "",
-            brand_id: family.brand_id ? family.brand_id.toString() : "",
-            tax_profile_id: family.tax_profile_id ? family.tax_profile_id.toString() : "",
-            description: family.description || ""
-        });
-        setError(null);
-        setShowFamilyModal(true);
-    };
-
-    const handleDeleteFamily = async (family) => {
-        if (!confirm(`Are you sure you want to delete product family "${family.name}"? This action cannot be undone.`)) {
-            return;
-        }
-        setError(null);
-        setSuccess(null);
-        try {
-            const token = localStorage.getItem("auth_token");
-            await axios.delete(`/api/product/families/${family.id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setSuccess("Product family successfully deleted.");
-            
-            // Refresh families list
-            const res = await axios.get("/api/product/form-data", {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setFamilies(res.data.families || []);
-            setSelectedFamilyId("");
-            setFamilyProducts([]);
-        } catch (err) {
-            setError(err.response?.data?.message || "Failed to delete product family.");
-        }
-    };
-
-    const handleFamilyFormSubmit = async (e) => {
-        e.preventDefault();
-        setError(null);
-        setLoading(true);
-        try {
-            const token = localStorage.getItem("auth_token");
-            const payload = {
-                ...familyForm,
-                // Prefill context if not manually chosen
-                category_id: familyForm.category_id || productForm.category_id,
-                brand_id: familyForm.brand_id || productForm.brand_id,
-                tax_profile_id: familyForm.tax_profile_id || productForm.tax_profile_id
-            };
-            
-            let response;
-            if (familyModalMode === 'create') {
-                response = await axios.post("/api/product/families", payload, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-            } else {
-                response = await axios.put(`/api/product/families/${editingFamilyId}`, payload, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-            }
-
-            if (response.data.success) {
-                // Reload lookups
-                const res = await axios.get("/api/product/form-data", {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setFamilies(res.data.families || []);
-                
-                if (familyModalMode === 'create') {
-                    const newFam = response.data.data;
-                    // Automatically select newly created family
-                    setProductForm(prev => ({
-                        ...prev,
-                        product_family_id: newFam.id.toString(),
-                        category_id: newFam.category_id.toString(),
-                        brand_id: newFam.brand_id ? newFam.brand_id.toString() : prev.brand_id
-                    }));
-                    setSuccess("New Product Family registered successfully!");
-                } else {
-                    setSuccess("Product Family updated successfully!");
-                }
-
-                setShowFamilyModal(false);
-                setFamilyForm({
-                    name: "",
-                    code: "",
-                    category_id: "",
-                    brand_id: "",
-                    tax_profile_id: "",
-                    description: ""
-                });
-            }
-        } catch (err) {
-            setError(err.response?.data?.message || "Failed to save product family.");
-        } finally {
-            setLoading(false);
-        }
-    };
 
     // -------------------------------------------------------------
     // Inline Category, Brand, Manufacturer Quick Add Handlers
@@ -741,7 +601,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
             (p.gtin && p.gtin.toLowerCase().includes(filters.search.toLowerCase())) ||
             (p.barcode && p.barcode.toLowerCase().includes(filters.search.toLowerCase()));
 
-        const matchesCategory = !filters.category || p.family?.category_id?.toString() === filters.category;
+        const matchesCategory = !filters.category || p.category_id?.toString() === filters.category;
         const matchesBrand = !filters.brand || p.brand_id?.toString() === filters.brand;
         const matchesType = !filters.productType || 
             (filters.productType === 'MEASURED_MATERIAL' && p.inventory_behavior === 'SLAB') ||
@@ -749,17 +609,13 @@ export default function ProductEntry({ initialSubTab = "list" }) {
         const matchesStatus = !filters.status || 
             (filters.status === 'ACTIVE' && p.is_active) ||
             (filters.status === 'INACTIVE' && !p.is_active);
-        const matchesFamily = !filters.family || p.product_family_id?.toString() === filters.family;
 
-        return matchesSearch && matchesCategory && matchesBrand && matchesType && matchesStatus && matchesFamily;
+        return matchesSearch && matchesCategory && matchesBrand && matchesType && matchesStatus;
     });
 
-    // Resolve active family name for Step 2 preview
-    const activeFamilyObj = families.find(f => f.id.toString() === productForm.product_family_id);
-    const activeFamilyName = activeFamilyObj ? activeFamilyObj.name : "System Resolved Family";
-
     return (
-        <div className="card shadow-sm border-light" style={{ backgroundColor: "#fafbfc" }}>
+        <>
+            <div className="card shadow-sm border-light" style={{ backgroundColor: "#fafbfc" }}>
             {/* Header section */}
             <div className="card-header bg-white d-flex justify-content-between align-items-center py-3 border-bottom-0">
                 <div>
@@ -797,53 +653,16 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                 {/* ---------------------------------------------------------
                     SUB-VIEW: LIST / PRODUCTS REGISTRY
                     --------------------------------------------------------- */}
-                {view === "list" && (
+                {(view === "list" || view === "create" || view === "edit") && (
                     <div>
-                        {/* Concept Introductions (Educational Quick Toggles) */}
+                        {/* Concept Introductions */}
                         <div className="p-3 bg-white border border-light rounded-3 mb-4 shadow-sm">
                             <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
                                 <div className="d-flex align-items-center gap-2">
-                                    <span className="badge bg-primary-subtle text-primary font-monospace px-2 py-1">Concept Guide</span>
-                                    <span className="text-muted small">New to catalog hierarchy? Click to explore:</span>
-                                </div>
-                                <div className="d-flex gap-2">
-                                    <button 
-                                        type="button" 
-                                        className={`btn btn-xs ${showFamilyInfo ? 'btn-primary' : 'btn-outline-primary'} d-flex align-items-center gap-1`}
-                                        onClick={() => { setShowFamilyInfo(!showFamilyInfo); setShowVariantInfo(false); }}
-                                    >
-                                        <i className="fa-solid fa-circle-info"></i> Product Family
-                                    </button>
-                                    <button 
-                                        type="button" 
-                                        className={`btn btn-xs ${showVariantInfo ? 'btn-secondary' : 'btn-outline-secondary'} d-flex align-items-center gap-1`}
-                                        onClick={() => { setShowVariantInfo(!showVariantInfo); setShowFamilyInfo(false); }}
-                                    >
-                                        <i className="fa-solid fa-circle-info"></i> Product Variant
-                                    </button>
+                                    <span className="badge bg-primary-subtle text-primary font-monospace px-2 py-1">Catalog Structure</span>
+                                    <span className="text-muted small">Products are directly categorized and branded for fast, streamlined inventory management.</span>
                                 </div>
                             </div>
-
-                            {/* Dropdown details of concepts */}
-                            {showFamilyInfo && (
-                                <div className="mt-3 p-3 bg-primary-subtle text-primary rounded-3 border-0 animate__animated animate__fadeIn" style={{ fontSize: "0.85rem" }}>
-                                    <strong className="d-block mb-1"><i className="fa-solid fa-folder-tree me-1"></i>Product Family (Level 1 Hierarchy)</strong>
-                                    A group of related products belonging to the same product line or series. 
-                                    Families share common categorizations, brand references, and basic tax profiles.
-                                    <div className="mt-2 font-monospace text-dark-50">Example: <em>Kajaria Eternity</em>.</div>
-                                    <button className="btn btn-xs btn-primary mt-2" onClick={() => setView("families")}>
-                                        <i className="fa-solid fa-folder-open me-1"></i> View Families Registry
-                                    </button>
-                                </div>
-                            )}
-
-                            {showVariantInfo && (
-                                <div className="mt-3 p-3 bg-secondary-subtle text-secondary rounded-3 border-0 animate__animated animate__fadeIn" style={{ fontSize: "0.85rem" }}>
-                                    <strong className="d-block mb-1"><i className="fa-solid fa-boxes-stacked me-1"></i>Product Variant (Level 2 Hierarchy)</strong>
-                                    A specific product model within a family. Variants represent actual sellable items and are distinguished by attributes like size, color, finish, thickness, or material code.
-                                    <div className="mt-2 font-monospace text-dark-50">Example: <em>Eternity 600×600 White Glossy</em>.</div>
-                                </div>
-                            )}
                         </div>
 
                         {/* Search and Filters panel */}
@@ -934,13 +753,8 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                                 <tr key={p.id}>
                                                     <td>
                                                         <div className="fw-bold text-dark">{p.name}</div>
-                                                        {p.family && (
-                                                            <small className="text-muted d-block" style={{ fontSize: "0.8rem" }}>
-                                                                Family: {p.family.name}
-                                                            </small>
-                                                        )}
                                                     </td>
-                                                    <td>{p.family?.category?.name || <span className="text-muted">-</span>}</td>
+                                                    <td>{p.category?.name || <span className="text-muted">-</span>}</td>
                                                     <td>{p.brand?.name || <span className="text-muted">-</span>}</td>
                                                     <td>
                                                         <span className="badge bg-primary-subtle text-primary border-light">{p.sku}</span>
@@ -988,36 +802,27 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                     SUB-VIEW: ADD / EDIT PRODUCT FORM
                     --------------------------------------------------------- */}
                 {(view === "create" || view === "edit") && (
-                    <form onSubmit={handleProductSubmit}>
-                        <div className="card border-0 p-4 rounded-3 shadow-sm bg-white mb-4">
-                            <h5 className="fw-bold mb-4 text-dark d-flex align-items-center">
-                                <i className="fa-solid fa-cube text-primary me-2"></i>
-                                {productForm.id ? "Edit Product Specifications" : "Add Product Wizard"}
-                            </h5>
+                    <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1050 }}>
+                        <div className="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+                            <div className="modal-content border-0 shadow-lg" style={{ borderRadius: "12px" }}>
+                                <div className="modal-header border-bottom pb-3 pt-4 px-4 bg-light">
+                                    <h5 className="modal-title fw-bold text-dark d-flex align-items-center mb-0">
+                                        <i className="fa-solid fa-cube text-primary me-2 fs-4"></i>
+                                        {productForm.id ? "Edit Product Specifications" : "Add Product Wizard"}
+                                    </h5>
+                                    <button type="button" className="btn-close" onClick={navigateToList}></button>
+                                </div>
+                                <form onSubmit={handleProductSubmit}>
+                                    <div className="modal-body px-4 py-4" style={{ maxHeight: "75vh", overflowY: "auto" }}>
 
-                            {/* Section 1: Basic Information & Families Concept */}
+                            {/* Section 1: Classification (Category & Brand) */}
                             <div className="mb-4">
                                 <h6 className="text-primary fw-bold mb-3 border-bottom pb-2 d-flex align-items-center">
-                                    1. Basic Information & Product Family
-                                    <button 
-                                        type="button" 
-                                        className="btn btn-link text-muted p-0 ms-2"
-                                        onClick={() => setShowFormFamilyInfo(!showFormFamilyInfo)}
-                                        title="What is a Product Family?"
-                                    >
-                                        <i className="fa-solid fa-circle-info"></i>
-                                    </button>
+                                    1. Category & Brand Classification
                                 </h6>
                                 
-                                {showFormFamilyInfo && (
-                                    <div className="alert alert-info bg-info-subtle text-info border-0 p-2.5 mb-3 small animate__animated animate__fadeIn">
-                                        <strong>Product Family Selection:</strong> A product family represents a line or series of items (e.g. *Kajaria Eternity*). 
-                                        Selecting a family inherits its category, brand, and default tax configurations automatically. Leave blank to auto-create a default family.
-                                    </div>
-                                )}
-
                                 <div className="row mb-3 align-items-end">
-                                    <div className="col-md-4">
+                                    <div className="col-md-6">
                                         <label className="form-label small fw-semibold">Category *</label>
                                         <div className="input-group input-group-sm">
                                             <select 
@@ -1045,15 +850,16 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                             </button>
                                         </div>
                                     </div>
-                                    <div className="col-md-4">
-                                        <label className="form-label small fw-semibold">Brand</label>
+                                    <div className="col-md-6">
+                                        <label className="form-label small fw-semibold">Brand *</label>
                                         <div className="input-group input-group-sm">
                                             <select 
                                                 className="form-select" 
                                                 value={productForm.brand_id} 
                                                 onChange={(e) => setProductForm({ ...productForm, brand_id: e.target.value })}
+                                                required
                                             >
-                                                <option value="">No Brand / Generic</option>
+                                                <option value="">Select Brand</option>
                                                 {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                                             </select>
                                             <button 
@@ -1063,33 +869,6 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                                 title="Quick add Brand"
                                             >
                                                 <i className="fa-solid fa-plus"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="col-md-4">
-                                        <label className="form-label small fw-semibold">Product Family (Optional)</label>
-                                        <div className="input-group input-group-sm">
-                                            <select 
-                                                className="form-select" 
-                                                value={productForm.product_family_id} 
-                                                onChange={(e) => setProductForm({ ...productForm, product_family_id: e.target.value })}
-                                            >
-                                                <option value="">None (Auto-Resolve Default)</option>
-                                                {families.map(f => <option key={f.id} value={f.id}>{f.name} ({f.code})</option>)}
-                                            </select>
-                                            <button 
-                                                type="button" 
-                                                className="btn btn-outline-primary"
-                                                onClick={() => {
-                                                    setFamilyForm(prev => ({
-                                                        ...prev,
-                                                        category_id: productForm.category_id,
-                                                        brand_id: productForm.brand_id
-                                                    }));
-                                                    setShowFamilyModal(true);
-                                                }}
-                                            >
-                                                <i className="fa-solid fa-plus"></i> New Family
                                             </button>
                                         </div>
                                     </div>
@@ -1119,18 +898,15 @@ export default function ProductEntry({ initialSubTab = "list" }) {
 
                                 <div className="row mb-3">
                                     <div className="col-md-6">
-                                        <label className="form-label small fw-semibold">Product Variant Name *</label>
+                                        <label className="form-label small fw-semibold">Product Name *</label>
                                         <input 
                                             type="text" 
                                             className="form-control form-control-sm" 
-                                            placeholder="e.g. Eternity 600x600 White Glossy" 
+                                            placeholder="e.g. Kajaria Royal Gold 600x600 mm" 
                                             value={productForm.name} 
                                             onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} 
                                             required 
                                         />
-                                        <div className="form-text text-muted font-monospace" style={{ fontSize: "0.75rem" }}>
-                                            <strong>Hierarchy Map:</strong> Family: <span className="text-primary">{activeFamilyName}</span> ➔ Variant Name: <span className="text-dark fw-bold">{productForm.name || "(enter name)"}</span>
-                                        </div>
                                     </div>
                                     <div className="col-md-6">
                                         <label className="form-label small fw-semibold">Manufacturer</label>
@@ -1321,15 +1097,18 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                 )}
                             </div>
 
-                            <div className="d-flex justify-content-end gap-2 mt-4 border-top pt-3">
-                                <button type="button" className="btn btn-sm btn-secondary px-3" onClick={navigateToList}>Cancel</button>
-                                <button type="submit" className="btn btn-sm btn-primary px-4" disabled={loading}>
-                                    {loading ? <span className="spinner-border spinner-border-sm me-2"></span> : null}
-                                    Save Product
-                                </button>
+                                    </div>
+                                    <div className="modal-footer border-top pt-3 pb-4 px-4 bg-light">
+                                        <button type="button" className="btn btn-secondary px-3" onClick={navigateToList}>Cancel</button>
+                                        <button type="submit" className="btn btn-primary px-4" disabled={loading}>
+                                            {loading ? <span className="spinner-border spinner-border-sm me-2"></span> : null}
+                                            {productForm.id ? "Update Product" : "Save Product"}
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
-                    </form>
+                    </div>
                 )}
 
                 {/* ---------------------------------------------------------
@@ -1408,21 +1187,17 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                                         <strong className="text-dark">{selectedProduct.name}</strong>
                                                     </div>
                                                     <div className="col-md-6 border-bottom pb-2">
-                                                        <span className="text-muted d-block small">Category</span>
-                                                        <strong className="text-dark">{selectedProduct.family?.category?.name || "N/A"}</strong>
-                                                    </div>
-                                                    <div className="col-md-6 border-bottom pb-2">
-                                                        <span className="text-muted d-block small">Brand</span>
-                                                        <strong className="text-dark">{selectedProduct.brand?.name || "Generic / None"}</strong>
-                                                    </div>
-                                                    <div className="col-md-6 border-bottom pb-2">
-                                                        <span className="text-muted d-block small">Manufacturer</span>
-                                                        <strong className="text-dark">{selectedProduct.manufacturer?.name || "N/A"}</strong>
-                                                    </div>
-                                                    <div className="col-md-6 border-bottom pb-2">
-                                                        <span className="text-muted d-block small">Product Family</span>
-                                                        <strong className="text-dark">{selectedProduct.family ? `${selectedProduct.family.name} (${selectedProduct.family.code})` : "None"}</strong>
-                                                    </div>
+                                                         <span className="text-muted d-block small">Category</span>
+                                                         <strong className="text-dark">{selectedProduct.category?.name || "N/A"}</strong>
+                                                     </div>
+                                                     <div className="col-md-6 border-bottom pb-2">
+                                                         <span className="text-muted d-block small">Brand</span>
+                                                         <strong className="text-dark">{selectedProduct.brand?.name || "N/A"}</strong>
+                                                     </div>
+                                                     <div className="col-md-6 border-bottom pb-2">
+                                                         <span className="text-muted d-block small">Manufacturer</span>
+                                                         <strong className="text-dark">{selectedProduct.manufacturer?.name || "N/A"}</strong>
+                                                     </div>
                                                     <div className="col-md-6 border-bottom pb-2">
                                                         <span className="text-muted d-block small">SKU Code</span>
                                                         <strong className="text-dark font-monospace">{selectedProduct.sku}</strong>
@@ -1687,231 +1462,10 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                         )}
                     </div>
                 )}
-
-                {/* ---------------------------------------------------------
-                    SUB-VIEW: FAMILY MANAGEMENT VIEW
-                    --------------------------------------------------------- */}
-                {view === "families" && (
-                    <div>
-                        <div className="d-flex align-items-center justify-content-between mb-4">
-                            <h5 className="fw-bold mb-0 text-dark">Product Family Manager</h5>
-                            <button className="btn btn-primary btn-sm px-3 shadow-sm" onClick={handleOpenCreateFamily}>
-                                <i className="fa-solid fa-plus me-1"></i> Register Product Family
-                            </button>
-                        </div>
-                        <div className="alert alert-info bg-info-subtle text-info border-0 p-3 mb-4 small animate__animated animate__fadeIn">
-                            <strong>What is a Product Family?</strong> A product family represents a group or series of related products that share common characteristics, such as design line, collections, or base pricing behavior (e.g. <i>Kajaria Eternity Series</i>). Selecting a family inherits category, brand, and default tax configurations, making product variant creation faster and more consistent.
-                        </div>
-                        <div className="row">
-                            <div className="col-md-5 mb-4">
-                                <div className="card border-0 p-3 bg-white rounded-3 shadow-sm border border-light">
-                                    <h6 className="fw-bold mb-3 border-bottom pb-2 text-dark">Registered Families ({families.length})</h6>
-                                    <div className="list-group list-group-flush" style={{ maxHeight: "400px", overflowY: "auto" }}>
-                                        {families.map(f => (
-                                            <button 
-                                                key={f.id} 
-                                                type="button" 
-                                                className={`list-group-item list-group-item-action border-light rounded-2 mb-1 py-2 ${selectedFamilyId === f.id ? 'active' : ''}`}
-                                                onClick={() => handleViewFamilyProducts(f)}
-                                            >
-                                                <div className="d-flex w-100 justify-content-between align-items-center">
-                                                    <strong className="mb-1">{f.name}</strong>
-                                                    <span className="badge bg-secondary font-monospace" style={{ fontSize: "0.7rem" }}>{f.code}</span>
-                                                </div>
-                                                <small className="d-block text-muted">{f.category?.name} {f.brand ? `• ${f.brand.name}` : ''}</small>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="col-md-7 mb-4">
-                                <div className="card border-0 p-3 rounded-3 shadow-sm bg-white border border-light">
-                                    {selectedFamilyId && families.find(f => f.id === selectedFamilyId) && (() => {
-                                        const activeFamily = families.find(f => f.id === selectedFamilyId);
-                                        return (
-                                            <div className="mb-4 p-3 bg-light rounded-3 border border-light">
-                                                <div className="d-flex justify-content-between align-items-start mb-2">
-                                                    <div>
-                                                        <h6 className="fw-bold text-dark mb-1">
-                                                            {activeFamily.name}
-                                                            <span className="badge bg-secondary font-monospace ms-2" style={{ fontSize: '0.75rem' }}>{activeFamily.code}</span>
-                                                        </h6>
-                                                        <p className="text-muted small mb-0">{activeFamily.description || "No description provided."}</p>
-                                                    </div>
-                                                    <div className="d-flex gap-1">
-                                                        <button className="btn btn-xs btn-outline-primary px-2" onClick={() => handleOpenEditFamily(activeFamily)} style={{ fontSize: '0.75rem' }}>
-                                                            <i className="fa-solid fa-pen me-1"></i> Edit
-                                                        </button>
-                                                        <button className="btn btn-xs btn-outline-danger px-2" onClick={() => handleDeleteFamily(activeFamily)} style={{ fontSize: '0.75rem' }}>
-                                                            <i className="fa-solid fa-trash me-1"></i> Delete
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <hr className="my-2 text-muted opacity-25" />
-                                                <div className="row g-2 text-secondary small">
-                                                    <div className="col-sm-4">
-                                                        <strong>Category:</strong> {activeFamily.category?.name || "N/A"}
-                                                    </div>
-                                                    <div className="col-sm-4">
-                                                        <strong>Brand:</strong> {activeFamily.brand?.name || "Generic"}
-                                                    </div>
-                                                    <div className="col-sm-4">
-                                                        <strong>Tax Profile:</strong> {activeFamily.tax_profile?.name || "None"}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
-
-                                    <h6 className="fw-bold mb-3 border-bottom pb-2 text-dark">
-                                        Products in Family: {selectedFamilyId ? families.find(f => f.id === selectedFamilyId)?.name : "Select a Family"}
-                                    </h6>
-                                    <div className="table-responsive">
-                                        <table className="table align-middle border-0">
-                                            <thead>
-                                                <tr>
-                                                    <th className="py-2 border-bottom-0 text-muted">Product Name</th>
-                                                    <th className="py-2 border-bottom-0 text-muted">SKU</th>
-                                                    <th className="py-2 border-bottom-0 text-muted">Pricing</th>
-                                                    <th className="py-2 border-bottom-0 text-muted">Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {!selectedFamilyId ? (
-                                                    <tr>
-                                                        <td colSpan="4" className="text-center text-muted small py-4">
-                                                            Click a family on the left to show its member products.
-                                                        </td>
-                                                    </tr>
-                                                ) : familyProducts.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan="4" className="text-center text-muted small py-4">
-                                                            No products defined within this family context.
-                                                        </td>
-                                                    </tr>
-                                                ) : (
-                                                    familyProducts.map(p => (
-                                                        <tr key={p.id}>
-                                                            <td><strong>{p.name}</strong></td>
-                                                            <td><span className="badge bg-light text-dark font-monospace border">{p.sku}</span></td>
-                                                            <td>
-                                                                <div className="small">Sale: ₹{parseFloat(p.sale_price).toFixed(2)}</div>
-                                                            </td>
-                                                            <td>
-                                                                {p.is_active ? (
-                                                                    <span className="badge bg-success-subtle text-success">Active</span>
-                                                                ) : (
-                                                                    <span className="badge bg-danger-subtle text-danger">Inactive</span>
-                                                                )}
-                                                            </td>
-                                                        </tr>
-                                                    ))
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
+        </div>
 
-            {/* -------------------------------------------------------------
-                MODAL: CONTEXTUAL PRODUCT FAMILY CREATION
-                ------------------------------------------------------------- */}
-            {showFamilyModal && (
-                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1100 }}>
-                    <div className="modal-dialog modal-dialog-centered">
-                        <div className="modal-content shadow-lg border-0" style={{ borderRadius: "12px" }}>
-                            <div className="modal-header border-bottom-0 pt-4 px-4">
-                                <h5 className="modal-title fw-bold fs-5">
-                                    {familyModalMode === 'create' ? 'Create Product Family' : 'Edit Product Family'}
-                                </h5>
-                                <button type="button" className="btn-close" onClick={() => setShowFamilyModal(false)}></button>
-                            </div>
-                            <form onSubmit={handleFamilyFormSubmit}>
-                                <div className="modal-body px-4">
-                                    <div className="mb-3">
-                                        <label className="form-label small fw-semibold">Family Name *</label>
-                                        <input 
-                                            type="text" 
-                                            className="form-control" 
-                                            placeholder="e.g. Eternity Series" 
-                                            value={familyForm.name} 
-                                            onChange={(e) => setFamilyForm({ ...familyForm, name: e.target.value })} 
-                                            required 
-                                        />
-                                    </div>
-                                    <div className="mb-3">
-                                        <label className="form-label small fw-semibold">Unique Code / Prefix *</label>
-                                        <input 
-                                            type="text" 
-                                            className="form-control" 
-                                            placeholder="e.g. KAJ-ETERN" 
-                                            value={familyForm.code} 
-                                            onChange={(e) => setFamilyForm({ ...familyForm, code: e.target.value.toUpperCase() })} 
-                                            required 
-                                        />
-                                    </div>
-                                    <div className="mb-3">
-                                        <label className="form-label small fw-semibold">Category *</label>
-                                        <select 
-                                            className="form-select" 
-                                            value={familyForm.category_id} 
-                                            onChange={(e) => setFamilyForm({ ...familyForm, category_id: e.target.value })} 
-                                            required
-                                        >
-                                            <option value="">Select Category</option>
-                                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="mb-3">
-                                        <label className="form-label small fw-semibold">Brand (Optional)</label>
-                                        <select 
-                                            className="form-select" 
-                                            value={familyForm.brand_id} 
-                                            onChange={(e) => setFamilyForm({ ...familyForm, brand_id: e.target.value })}
-                                        >
-                                            <option value="">No Brand / Generic</option>
-                                            {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="mb-3">
-                                        <label className="form-label small fw-semibold">Tax Profile (Optional)</label>
-                                        <select 
-                                            className="form-select" 
-                                            value={familyForm.tax_profile_id} 
-                                            onChange={(e) => setFamilyForm({ ...familyForm, tax_profile_id: e.target.value })}
-                                        >
-                                            <option value="">Select Tax Profile</option>
-                                            {taxProfiles.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="mb-3">
-                                        <label className="form-label small fw-semibold">Description</label>
-                                        <textarea 
-                                            className="form-control" 
-                                            rows="3" 
-                                            placeholder="Details, series notes..."
-                                            value={familyForm.description}
-                                            onChange={(e) => setFamilyForm({ ...familyForm, description: e.target.value })}
-                                        ></textarea>
-                                    </div>
-                                </div>
-                                <div className="modal-footer border-top-0 pb-4 px-4">
-                                    <button type="button" className="btn btn-secondary px-3" onClick={() => setShowFamilyModal(false)}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary px-4" disabled={loading}>
-                                        {loading ? <span className="spinner-border spinner-border-sm me-2"></span> : null}
-                                        {familyModalMode === 'create' ? 'Create Family' : 'Save Changes'}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            )}
+
 
             {/* -------------------------------------------------------------
                 MODAL: DEFINE CUSTOM SPECIFICATION ATTRIBUTE
@@ -2133,6 +1687,6 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                     </div>
                 </div>
             )}
-        </div>
+        </>
     );
 }

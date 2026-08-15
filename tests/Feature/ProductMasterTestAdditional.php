@@ -9,8 +9,7 @@ use App\Domains\Master\Models\Brand;
 use App\Domains\Master\Models\Manufacturer;
 use App\Domains\Master\Models\TaxProfile;
 use App\Domains\Master\Models\Unit;
-use App\Domains\Product\Models\ProductFamily;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 use App\Domains\Product\Models\ProductAttribute;
 use App\Domains\Product\Models\ProductAttributeValue;
 use App\Domains\Product\Models\UnitConversion;
@@ -27,7 +26,7 @@ class ProductMasterTestAdditional extends TestCase
     protected Brand $brand;
     protected Manufacturer $manufacturer;
     protected TaxProfile $taxProfile;
-    protected ProductFamily $family;
+
     protected Unit $pcsUnit;
     protected Unit $sqftUnit;
     protected Unit $boxUnit;
@@ -71,14 +70,7 @@ class ProductMasterTestAdditional extends TestCase
             'is_active' => true,
         ]);
 
-        $this->family = ProductFamily::create([
-            'organization_id' => $this->org->id,
-            'category_id' => $this->category->id,
-            'brand_id' => $this->brand->id,
-            'tax_profile_id' => $this->taxProfile->id,
-            'name' => 'Kajaria Polished Vitrified',
-            'code' => 'KAJ-PV',
-        ]);
+
 
         $this->pcsUnit = Unit::create([
             'organization_id' => $this->org->id,
@@ -110,9 +102,10 @@ class ProductMasterTestAdditional extends TestCase
      */
     public function test_can_retrieve_product_details()
     {
-        $variant = ProductVariant::create([
+        $variant = Product::create([
             'organization_id' => $this->org->id,
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
             'purchase_unit_id' => $this->pcsUnit->id,
             'sales_unit_id' => $this->pcsUnit->id,
             'base_unit_id' => $this->pcsUnit->id,
@@ -164,24 +157,11 @@ class ProductMasterTestAdditional extends TestCase
 
         $response->assertStatus(201);
         
-        // Assert a default family was created for Sanitaryware + Hindware
-        $this->assertDatabaseHas('product_families', [
-            'organization_id' => $this->org->id,
-            'category_id' => $newCategory->id,
-            'brand_id' => $newBrand->id,
-            'name' => 'Hindware Sanitaryware Family',
-        ]);
-
-        $family = ProductFamily::where('organization_id', $this->org->id)
-            ->where('category_id', $newCategory->id)
-            ->where('brand_id', $newBrand->id)
-            ->first();
-
-        $response->assertJsonPath('data.product_family_id', $family->id);
         $this->assertDatabaseHas('product_variants', [
             'organization_id' => $this->org->id,
             'sku' => 'UNCAT-TILE-001',
-            'product_family_id' => $family->id,
+            'category_id' => $newCategory->id,
+            'brand_id' => $newBrand->id,
         ]);
     }
 
@@ -190,9 +170,10 @@ class ProductMasterTestAdditional extends TestCase
      */
     public function test_can_update_product_details()
     {
-        $variant = ProductVariant::create([
+        $variant = Product::create([
             'organization_id' => $this->org->id,
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
             'purchase_unit_id' => $this->pcsUnit->id,
             'sales_unit_id' => $this->pcsUnit->id,
             'base_unit_id' => $this->pcsUnit->id,
@@ -205,7 +186,8 @@ class ProductMasterTestAdditional extends TestCase
         ]);
 
         $payload = [
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
             'name' => 'Kajaria White Glossy 600x600 Updated',
             'sku' => 'KAJ-WHT-GLO-600-UPD',
             'cost_price' => 850.00,
@@ -231,9 +213,10 @@ class ProductMasterTestAdditional extends TestCase
      */
     public function test_cannot_update_sku_to_taken_sku()
     {
-        $variant1 = ProductVariant::create([
+        $variant1 = Product::create([
             'organization_id' => $this->org->id,
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
             'purchase_unit_id' => $this->pcsUnit->id,
             'sales_unit_id' => $this->pcsUnit->id,
             'base_unit_id' => $this->pcsUnit->id,
@@ -245,9 +228,10 @@ class ProductMasterTestAdditional extends TestCase
             'sale_price' => 150.00,
         ]);
 
-        $variant2 = ProductVariant::create([
+        $variant2 = Product::create([
             'organization_id' => $this->org->id,
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
             'purchase_unit_id' => $this->pcsUnit->id,
             'sales_unit_id' => $this->pcsUnit->id,
             'base_unit_id' => $this->pcsUnit->id,
@@ -261,7 +245,8 @@ class ProductMasterTestAdditional extends TestCase
 
         // Try updating Product 2 to use Product 1's SKU
         $payload = [
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
             'name' => 'Product 2 Updated',
             'sku' => 'SKU-ONE',
             'cost_price' => 100.00,
@@ -280,9 +265,10 @@ class ProductMasterTestAdditional extends TestCase
      */
     public function test_can_manage_unit_conversions()
     {
-        $variant = ProductVariant::create([
+        $variant = Product::create([
             'organization_id' => $this->org->id,
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
             'purchase_unit_id' => $this->pcsUnit->id,
             'sales_unit_id' => $this->pcsUnit->id,
             'base_unit_id' => $this->pcsUnit->id,
@@ -338,9 +324,10 @@ class ProductMasterTestAdditional extends TestCase
      */
     public function test_can_retrieve_calculated_inventory_summary()
     {
-        $variant = ProductVariant::create([
+        $variant = Product::create([
             'organization_id' => $this->org->id,
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
             'purchase_unit_id' => $this->pcsUnit->id,
             'sales_unit_id' => $this->pcsUnit->id,
             'base_unit_id' => $this->pcsUnit->id,

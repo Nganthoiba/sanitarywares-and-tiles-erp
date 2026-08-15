@@ -68,6 +68,7 @@ echo "--- Bootstrapping Laravel for Inventory & Slab Optimization Engine Verific
         'name' => 'Italian Marble Brand'
     ], [
         'code' => 'IT-MARB',
+        'slug' => 'italian-marble-brand',
         'is_active' => true
     ]);
 

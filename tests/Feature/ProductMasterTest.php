@@ -9,8 +9,7 @@ use App\Domains\Master\Models\Brand;
 use App\Domains\Master\Models\Manufacturer;
 use App\Domains\Master\Models\TaxProfile;
 use App\Domains\Master\Models\Unit;
-use App\Domains\Product\Models\ProductFamily;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 use App\Domains\Product\Models\ProductAttribute;
 use App\Domains\Product\Models\ProductAttributeValue;
 use App\Domains\Product\Models\UnitConversion;
@@ -27,7 +26,7 @@ class ProductMasterTest extends TestCase
     protected Brand $brand;
     protected Manufacturer $manufacturer;
     protected TaxProfile $taxProfile;
-    protected ProductFamily $family;
+
     protected Unit $pcsUnit;
     protected Unit $sqftUnit;
     protected ProductAttribute $thicknessAttribute;
@@ -73,15 +72,7 @@ class ProductMasterTest extends TestCase
             'is_active' => true,
         ]);
 
-        // 3. Create Product Family
-        $this->family = ProductFamily::create([
-            'organization_id' => $this->org->id,
-            'category_id' => $this->category->id,
-            'brand_id' => $this->brand->id,
-            'tax_profile_id' => $this->taxProfile->id,
-            'name' => 'Kajaria Polished Vitrified',
-            'code' => 'KAJ-PV',
-        ]);
+
 
         // 4. Create standard units in Database
         $this->pcsUnit = Unit::create([
@@ -115,7 +106,9 @@ class ProductMasterTest extends TestCase
     public function test_standard_product_creation_defaults_behavior_and_pcs_units()
     {
         $payload = [
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
+            'tax_profile_id' => $this->taxProfile->id,
             'name' => 'Kajaria White Glossy 600x600',
             'sku' => 'KAJ-WHT-GLO-600',
             'product_type' => 'STANDARD',
@@ -148,7 +141,9 @@ class ProductMasterTest extends TestCase
     public function test_measured_material_creation_defaults_slab_behavior_and_sqft_units()
     {
         $payload = [
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
+            'tax_profile_id' => $this->taxProfile->id,
             'name' => 'Premium Black Granite',
             'sku' => 'GRN-BLK-PREM',
             'product_type' => 'MEASURED_MATERIAL',
@@ -183,7 +178,9 @@ class ProductMasterTest extends TestCase
     public function test_tile_creation_inherits_brand_and_tax_profile_from_family()
     {
         $payload = [
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
+            'tax_profile_id' => $this->taxProfile->id,
             'name' => 'Kajaria Gold Metallic 600x600',
             'sku' => 'KAJ-GLD-MET-600',
             'product_type' => 'STANDARD',
@@ -212,7 +209,9 @@ class ProductMasterTest extends TestCase
     public function test_sanitaryware_creation()
     {
         $payload = [
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
+            'tax_profile_id' => $this->taxProfile->id,
             'name' => 'Wall Hung WC Closet',
             'sku' => 'WC-WALL-HUNG',
             'product_type' => 'STANDARD',
@@ -236,7 +235,9 @@ class ProductMasterTest extends TestCase
     public function test_granite_creation()
     {
         $payload = [
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
+            'tax_profile_id' => $this->taxProfile->id,
             'name' => 'Black Galaxy Granite',
             'sku' => 'GRN-BLK-GALAXY',
             'product_type' => 'MEASURED_MATERIAL',
@@ -263,7 +264,9 @@ class ProductMasterTest extends TestCase
     public function test_marble_creation()
     {
         $payload = [
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
+            'tax_profile_id' => $this->taxProfile->id,
             'name' => 'Carrara Italian Marble Slab',
             'sku' => 'MBL-CAR-ITALIAN',
             'product_type' => 'MEASURED_MATERIAL',
@@ -290,9 +293,10 @@ class ProductMasterTest extends TestCase
     public function test_sku_uniqueness_rules()
     {
         // Create first
-        ProductVariant::create([
+        Product::create([
             'organization_id' => $this->org->id,
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
             'name' => 'Tile Variant 1',
             'sku' => 'DUPLICATE-SKU',
             'inventory_behavior' => 'STANDARD',
@@ -305,7 +309,9 @@ class ProductMasterTest extends TestCase
         ]);
 
         $payload = [
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
+            'tax_profile_id' => $this->taxProfile->id,
             'name' => 'Tile Variant 2',
             'sku' => 'DUPLICATE-SKU',
             'product_type' => 'STANDARD',
@@ -326,7 +332,9 @@ class ProductMasterTest extends TestCase
     public function test_gtin_validation()
     {
         $payload = [
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
+            'tax_profile_id' => $this->taxProfile->id,
             'name' => 'Kajaria White Glossy 600x600',
             'sku' => 'KAJ-WHT-GLO-600',
             'product_type' => 'STANDARD',
@@ -348,7 +356,8 @@ class ProductMasterTest extends TestCase
     public function test_tax_profile_validation()
     {
         $payload = [
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
             'name' => 'Kajaria White Glossy 600x600',
             'sku' => 'KAJ-WHT-GLO-600',
             'product_type' => 'STANDARD',
@@ -370,7 +379,9 @@ class ProductMasterTest extends TestCase
     public function test_dynamic_attribute_validation()
     {
         $payload = [
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
+            'tax_profile_id' => $this->taxProfile->id,
             'name' => 'Kajaria White Glossy 600x600',
             'sku' => 'KAJ-WHT-GLO-600',
             'product_type' => 'STANDARD',
@@ -402,7 +413,9 @@ class ProductMasterTest extends TestCase
     {
         // Case A: Missing physical_object / measurement_unit
         $payloadMissing = [
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
+            'tax_profile_id' => $this->taxProfile->id,
             'name' => 'Premium Black Granite',
             'sku' => 'GRN-BLK-PREM',
             'product_type' => 'MEASURED_MATERIAL',
@@ -418,7 +431,9 @@ class ProductMasterTest extends TestCase
 
         // Case B: Invalid values
         $payloadInvalid = [
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
+            'tax_profile_id' => $this->taxProfile->id,
             'name' => 'Premium Black Granite',
             'sku' => 'GRN-BLK-PREM',
             'product_type' => 'MEASURED_MATERIAL',
@@ -450,7 +465,9 @@ class ProductMasterTest extends TestCase
         ]);
 
         $payload = [
-            'product_family_id' => $this->family->id, // Belongs to Org A!
+            'category_id' => $this->category->id, // Belongs to Org A!
+            'brand_id' => $this->brand->id,
+            'tax_profile_id' => $this->taxProfile->id,
             'name' => 'Kajaria White Glossy 600x600',
             'sku' => 'KAJ-WHT-GLO-600',
             'product_type' => 'STANDARD',
@@ -458,7 +475,7 @@ class ProductMasterTest extends TestCase
             'sale_price' => 1000.00,
         ];
 
-        // User B tries to build variant using Org A's family
+        // User B tries to build variant using Org A's category
         $response = $this->actingAs($userB, 'sanctum')
             ->postJson('/api/product/variants', $payload);
 
@@ -471,7 +488,8 @@ class ProductMasterTest extends TestCase
     public function test_legacy_payload_compatibility()
     {
         $payload = [
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
             'name' => 'Legacy Ceramic Tile',
             'sku' => 'KAJ-LEGACY',
             'inventory_behavior' => 'CONVERTIBLE',
@@ -501,9 +519,10 @@ class ProductMasterTest extends TestCase
      */
     public function test_uom_compatibility()
     {
-        $variant = ProductVariant::create([
+        $variant = Product::create([
             'organization_id' => $this->org->id,
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
             'purchase_unit_id' => $this->sqftUnit->id,
             'sales_unit_id' => $this->sqftUnit->id,
             'base_unit_id' => $this->sqftUnit->id,
@@ -525,9 +544,10 @@ class ProductMasterTest extends TestCase
      */
     public function test_unit_conversion_compatibility()
     {
-        $variant = ProductVariant::create([
+        $variant = Product::create([
             'organization_id' => $this->org->id,
-            'product_family_id' => $this->family->id,
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
             'purchase_unit_id' => $this->sqftUnit->id,
             'sales_unit_id' => $this->sqftUnit->id,
             'base_unit_id' => $this->sqftUnit->id,

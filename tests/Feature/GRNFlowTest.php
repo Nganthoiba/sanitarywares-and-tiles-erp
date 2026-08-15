@@ -8,8 +8,7 @@ use App\Domains\Master\Models\Warehouse;
 use App\Domains\Master\Models\StorageLocation;
 use App\Domains\Master\Models\Supplier;
 use App\Domains\Master\Models\Unit;
-use App\Domains\Product\Models\ProductVariant;
-use App\Domains\Product\Models\ProductFamily;
+use App\Domains\Product\Models\Product;
 use App\Domains\Product\Models\UnitConversion;
 use App\Domains\Purchase\Models\GoodsReceiptNote;
 use App\Domains\Purchase\Models\GoodsReceiptItem;
@@ -34,8 +33,8 @@ class GRNFlowTest extends TestCase
     protected Unit $boxUnit;
     protected Unit $pcsUnit;
     protected Unit $sqftUnit;
-    protected ProductVariant $tileVariant;
-    protected ProductVariant $graniteVariant;
+    protected Product $tileVariant;
+    protected Product $graniteVariant;
 
     protected function setUp(): void
     {
@@ -111,14 +110,18 @@ class GRNFlowTest extends TestCase
             'slug' => 'granite-slabs',
         ]);
 
-        // Families
-        $tileFamily = ProductFamily::create(['organization_id' => $this->org->id, 'name' => 'Tiles', 'code' => 'TILE-FAM', 'category_id' => $tileCat->id, 'tax_profile_id' => $tax->id]);
-        $graniteFamily = ProductFamily::create(['organization_id' => $this->org->id, 'name' => 'Granites', 'code' => 'GRAN-FAM', 'category_id' => $graniteCat->id, 'tax_profile_id' => $tax->id]);
+        $brand = \App\Domains\Master\Models\Brand::create([
+            'organization_id' => $this->org->id,
+            'name' => 'Default Test Brand',
+            'slug' => 'default-test-brand',
+            'code' => 'DEF-BRAND',
+        ]);
 
         // Product variants
-        $this->tileVariant = ProductVariant::create([
+        $this->tileVariant = Product::create([
             'organization_id' => $this->org->id,
-            'product_family_id' => $tileFamily->id,
+            'category_id' => $tileCat->id,
+            'brand_id' => $brand->id,
             'purchase_unit_id' => $this->boxUnit->id,
             'sales_unit_id' => $this->pcsUnit->id,
             'base_unit_id' => $this->pcsUnit->id,
@@ -128,9 +131,10 @@ class GRNFlowTest extends TestCase
             'tax_profile_id' => $tax->id,
         ]);
 
-        $this->graniteVariant = ProductVariant::create([
+        $this->graniteVariant = Product::create([
             'organization_id' => $this->org->id,
-            'product_family_id' => $graniteFamily->id,
+            'category_id' => $graniteCat->id,
+            'brand_id' => $brand->id,
             'purchase_unit_id' => $this->sqftUnit->id,
             'sales_unit_id' => $this->sqftUnit->id,
             'base_unit_id' => $this->sqftUnit->id,

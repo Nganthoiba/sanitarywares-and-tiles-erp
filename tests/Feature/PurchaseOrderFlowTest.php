@@ -8,7 +8,7 @@ use App\Domains\Master\Models\Branch;
 use App\Domains\Master\Models\Supplier;
 use App\Domains\Master\Models\Unit;
 use App\Domains\Master\Models\StorageLocation;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 use App\Domains\Product\Models\UnitConversion;
 use App\Domains\Purchase\Models\PurchaseOrder;
 use App\Domains\Purchase\Models\PurchaseOrderItem;
@@ -35,10 +35,10 @@ class PurchaseOrderFlowTest extends TestCase
     protected Unit $boxUnit;
     protected Unit $sqftUnit;
     protected Unit $slabUnit;
-    protected ProductVariant $tileVariant;
-    protected ProductVariant $sanitaryVariant;
-    protected ProductVariant $graniteVariant;
-    protected ProductVariant $marbleVariant;
+    protected Product $tileVariant;
+    protected Product $sanitaryVariant;
+    protected Product $graniteVariant;
+    protected Product $marbleVariant;
     protected PurchaseOrderService $poService;
     protected GRNService $grnService;
 
@@ -119,18 +119,18 @@ class PurchaseOrderFlowTest extends TestCase
             'slug' => 'tiles-stones',
         ]);
 
-        $family = \App\Domains\Product\Models\ProductFamily::create([
+        $brand = \App\Domains\Master\Models\Brand::create([
             'organization_id' => $this->org->id,
-            'name' => 'General Family',
-            'code' => 'GEN-FAM',
-            'category_id' => $category->id,
-            'tax_profile_id' => $tax->id,
+            'name' => 'Default Test Brand',
+            'slug' => 'default-test-brand',
+            'code' => 'DEF-BRAND',
         ]);
 
         // Tile variant (BOX -> PCS conversion)
-        $this->tileVariant = ProductVariant::create([
+        $this->tileVariant = Product::create([
             'organization_id' => $this->org->id,
-            'product_family_id' => $family->id,
+            'category_id' => $category->id,
+            'brand_id' => $brand->id,
             'tax_profile_id' => $tax->id,
             'sku' => 'TILE-600X600',
             'name' => 'Ceramic Tile 600x600',
@@ -153,9 +153,10 @@ class PurchaseOrderFlowTest extends TestCase
         ]);
 
         // Sanitary variant (PCS -> PCS)
-        $this->sanitaryVariant = ProductVariant::create([
+        $this->sanitaryVariant = Product::create([
             'organization_id' => $this->org->id,
-            'product_family_id' => $family->id,
+            'category_id' => $category->id,
+            'brand_id' => $brand->id,
             'tax_profile_id' => $tax->id,
             'sku' => 'SAN-BASIN',
             'name' => 'Wash Basin',
@@ -169,9 +170,10 @@ class PurchaseOrderFlowTest extends TestCase
         ]);
 
         // Granite variant (SLAB -> SQFT)
-        $this->graniteVariant = ProductVariant::create([
+        $this->graniteVariant = Product::create([
             'organization_id' => $this->org->id,
-            'product_family_id' => $family->id,
+            'category_id' => $category->id,
+            'brand_id' => $brand->id,
             'tax_profile_id' => $tax->id,
             'sku' => 'GRAN-BLACK',
             'name' => 'Black Granite',
@@ -185,9 +187,10 @@ class PurchaseOrderFlowTest extends TestCase
         ]);
 
         // Marble variant (SLAB -> SQFT)
-        $this->marbleVariant = ProductVariant::create([
+        $this->marbleVariant = Product::create([
             'organization_id' => $this->org->id,
-            'product_family_id' => $family->id,
+            'category_id' => $category->id,
+            'brand_id' => $brand->id,
             'tax_profile_id' => $tax->id,
             'sku' => 'MARB-WHITE',
             'name' => 'White Marble',
