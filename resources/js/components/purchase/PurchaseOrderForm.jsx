@@ -326,220 +326,330 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
     }
 
     return (
-        <form onSubmit={handleSubmit} className="animate__animated animate__fadeIn">
-            <div className="d-flex align-items-center justify-content-between mb-4">
-                <div>
-                    <h3 className="fw-bold text-dark">{poId ? 'Modify Draft Purchase Order' : 'Raise New Purchase Order'}</h3>
-                    <p className="text-muted small mb-0">Record raw inventory purchasing agreements, taxes, and supplier delivery terms.</p>
+        <form onSubmit={handleSubmit} id="po-form" className="animate__animated animate__fadeIn">
+            {/* Top Navigation & Action Bar */}
+            <div className="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom">
+                <div className="d-flex align-items-center gap-3">
+                    <button 
+                        type="button" 
+                        className="btn btn-outline-secondary btn-sm rounded-circle d-flex align-items-center justify-content-center" 
+                        style={{ width: '38px', height: '38px' }}
+                        onClick={onBack}
+                        title="Back to Purchase Orders Registry"
+                    >
+                        <i className="fa-solid fa-arrow-left fs-6"></i>
+                    </button>
+                    <div>
+                        <div className="d-flex align-items-center gap-2">
+                            <h3 className="fw-bold text-dark mb-0">
+                                {poId ? 'Modify Purchase Order' : 'Raise New Purchase Order'}
+                            </h3>
+                            <span className={`badge ${poId ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle'} px-2 py-1`}>
+                                {poId ? 'EDIT MODE' : 'NEW DRAFT'}
+                            </span>
+                        </div>
+                        <p className="text-muted small mb-0 mt-1">
+                            Record raw inventory purchasing agreements, taxes, pricing basis, and supplier terms.
+                        </p>
+                    </div>
                 </div>
-                <button type="button" className="btn btn-outline-secondary px-4" onClick={onBack}>
-                    <i className="fa-solid fa-arrow-left me-2"></i> Registry List
-                </button>
+                <div className="d-flex gap-2">
+                    <button type="button" className="btn btn-outline-secondary px-3" onClick={onBack}>
+                        <i className="fa-solid fa-xmark me-1.5"></i> Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        className="btn btn-success px-4 fw-bold shadow-sm"
+                        disabled={saving}
+                    >
+                        {saving ? (
+                            <>
+                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                Saving Order...
+                            </>
+                        ) : (
+                            <>
+                                <i className="fa-solid fa-floppy-disk me-1.5"></i> Save Purchase Order
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {error && (
-                <div className="alert alert-danger" role="alert">
-                    <i className="fa-solid fa-circle-exclamation me-2"></i>
-                    {error}
+                <div className="alert alert-danger d-flex align-items-center mb-4 border-0 shadow-sm" role="alert" style={{ borderRadius: '8px' }}>
+                    <i className="fa-solid fa-circle-exclamation me-2 fs-5"></i>
+                    <div>{error}</div>
                 </div>
             )}
 
-            {/* Part 23: Requisition Workflow Toggle */}
-            <div className="card border-0 shadow-sm p-4 mb-4" style={{ borderRadius: '12px' }}>
-                <h5 className="fw-bold mb-3 text-secondary border-bottom pb-2">Purchase Order Source</h5>
-                <div className="d-flex gap-4 mb-2">
-                    <div className="form-check">
-                        <input
-                            className="form-check-input"
-                            type="radio"
-                            name="poSourceType"
-                            id="sourceDirect"
-                            checked={!usePr}
-                            onChange={() => {
-                                setUsePr(false);
-                                handleRequisitionChange('');
-                            }}
-                            disabled={!!poId}
-                        />
-                        <label className="form-check-label fw-semibold" htmlFor="sourceDirect">
-                            Start New Order (Direct PO)
-                        </label>
-                    </div>
-                    <div className="form-check">
-                        <input
-                            className="form-check-input"
-                            type="radio"
-                            name="poSourceType"
-                            id="sourcePR"
-                            checked={usePr}
-                            onChange={() => setUsePr(true)}
-                            disabled={!!poId}
-                        />
-                        <label className="form-check-label fw-semibold" htmlFor="sourcePR">
-                            From Approved Purchase Requisition
-                        </label>
-                    </div>
-                </div>
-
-                {usePr && (
-                    <div className="row mt-3">
+            {/* 1. PO Origin Selection */}
+            <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: '12px', backgroundColor: '#ffffff' }}>
+                <div className="card-body p-4">
+                    <h6 className="fw-bold text-dark mb-3 d-flex align-items-center">
+                        <i className="fa-solid fa-route text-primary me-2 fs-5"></i>
+                        1. Select Purchase Order Origin
+                    </h6>
+                    
+                    <div className="row g-3">
                         <div className="col-md-6">
-                            <label className="form-label small fw-semibold">Approved Requisition *</label>
+                            <div 
+                                className={`p-3 rounded-3 border transition-all ${!usePr ? 'border-primary bg-primary-subtle bg-opacity-10 shadow-sm' : 'border-light bg-light text-muted'}`}
+                                onClick={() => {
+                                    if (!poId) {
+                                        setUsePr(false);
+                                        handleRequisitionChange('');
+                                    }
+                                }}
+                                style={{ cursor: poId ? 'not-allowed' : 'pointer' }}
+                            >
+                                <div className="d-flex align-items-center justify-content-between">
+                                    <div className="d-flex align-items-center gap-3">
+                                        <div className={`rounded-circle p-2.5 d-flex align-items-center justify-content-center ${!usePr ? 'bg-primary text-white' : 'bg-secondary-subtle text-secondary'}`} style={{ width: '42px', height: '42px' }}>
+                                            <i className="fa-solid fa-cart-flatbed fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <div className="fw-bold text-dark">Direct Purchase Order</div>
+                                            <div className="text-muted small">Create PO directly by selecting supplier & items</div>
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="radio"
+                                        className="form-check-input ms-2"
+                                        name="poSourceType"
+                                        checked={!usePr}
+                                        onChange={() => {}}
+                                        disabled={!!poId}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-md-6">
+                            <div 
+                                className={`p-3 rounded-3 border transition-all ${usePr ? 'border-primary bg-primary-subtle bg-opacity-10 shadow-sm' : 'border-light bg-light text-muted'}`}
+                                onClick={() => {
+                                    if (!poId) setUsePr(true);
+                                }}
+                                style={{ cursor: poId ? 'not-allowed' : 'pointer' }}
+                            >
+                                <div className="d-flex align-items-center justify-content-between">
+                                    <div className="d-flex align-items-center gap-3">
+                                        <div className={`rounded-circle p-2.5 d-flex align-items-center justify-content-center ${usePr ? 'bg-primary text-white' : 'bg-secondary-subtle text-secondary'}`} style={{ width: '42px', height: '42px' }}>
+                                            <i className="fa-solid fa-file-signature fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <div className="fw-bold text-dark">From Approved Requisition</div>
+                                            <div className="text-muted small">Import line items from internal store PR</div>
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="radio"
+                                        className="form-check-input ms-2"
+                                        name="poSourceType"
+                                        checked={usePr}
+                                        onChange={() => {}}
+                                        disabled={!!poId}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {usePr && (
+                        <div className="mt-3 pt-3 border-top">
+                            <div className="row">
+                                <div className="col-md-6">
+                                    <label className="form-label small fw-semibold text-dark">Select Approved Purchase Requisition *</label>
+                                    <select
+                                        className="form-select"
+                                        value={formData.purchase_requisition_id}
+                                        onChange={(e) => handleRequisitionChange(e.target.value)}
+                                        disabled={!!poId}
+                                        required
+                                    >
+                                        <option value="">-- Choose Requisition --</option>
+                                        {requisitions.map(r => (
+                                            <option key={r.id} value={r.id}>
+                                                {r.pr_number} (Requested by: {r.requester?.name || 'PR Client'})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* 2. PO Specifications & Supplier Details */}
+            <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: '12px', backgroundColor: '#ffffff' }}>
+                <div className="card-body p-4">
+                    <h6 className="fw-bold text-dark mb-3 border-bottom pb-2 d-flex align-items-center">
+                        <i className="fa-solid fa-building-columns text-primary me-2 fs-5"></i>
+                        2. Supplier & Order Specifications
+                    </h6>
+                    <div className="row g-3">
+                        <div className="col-md-6">
+                            <label className="form-label small fw-semibold text-dark">Supplier *</label>
                             <select
                                 className="form-select"
-                                value={formData.purchase_requisition_id}
-                                onChange={(e) => handleRequisitionChange(e.target.value)}
-                                disabled={!!poId}
+                                value={formData.supplier_id}
+                                onChange={(e) => handleHeaderChange('supplier_id', e.target.value)}
                                 required
                             >
-                                <option value="">-- Choose Requisition --</option>
-                                {requisitions.map(r => (
-                                    <option key={r.id} value={r.id}>
-                                        {r.pr_number} (Requested by: {r.requester?.name || 'PR Client'})
-                                    </option>
+                                <option value="">-- Select Supplier --</option>
+                                {suppliers.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
                                 ))}
                             </select>
                         </div>
+                        <div className="col-md-6">
+                            <label className="form-label small fw-semibold text-dark">Receiving Branch Location *</label>
+                            <select
+                                className="form-select"
+                                value={formData.branch_id}
+                                onChange={(e) => handleHeaderChange('branch_id', e.target.value)}
+                                required
+                            >
+                                <option value="">-- Select Branch --</option>
+                                {branches.map(b => (
+                                    <option key={b.id} value={b.id}>{b.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="col-md-4">
+                            <label className="form-label small fw-semibold text-dark">PO Number</label>
+                            <input
+                                type="text"
+                                className="form-control font-monospace"
+                                value={formData.po_number}
+                                onChange={(e) => handleHeaderChange('po_number', e.target.value)}
+                                placeholder="Auto-generated if blank"
+                            />
+                        </div>
+                        <div className="col-md-4">
+                            <label className="form-label small fw-semibold text-dark">PO Order Date *</label>
+                            <input
+                                type="date"
+                                className="form-control"
+                                value={formData.po_date}
+                                onChange={(e) => handleHeaderChange('po_date', e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="col-md-4">
+                            <label className="form-label small fw-semibold text-dark">Expected Delivery Date</label>
+                            <input
+                                type="date"
+                                className="form-control"
+                                value={formData.expected_delivery_date}
+                                onChange={(e) => handleHeaderChange('expected_delivery_date', e.target.value)}
+                            />
+                        </div>
                     </div>
-                )}
+
+                    {/* Commercial Terms Accordion */}
+                    <div className="accordion mt-4" id="poDetailsAccordion">
+                        <div className="accordion-item border-light bg-light rounded-3">
+                            <h2 className="accordion-header">
+                                <button className="accordion-button collapsed bg-light text-primary fw-semibold fs-6 py-2.5" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTerms">
+                                    <i className="fa-solid fa-file-contract me-2"></i> Additional Details (Commercial Terms, Ref Code & Remarks)
+                                </button>
+                            </h2>
+                            <div id="collapseTerms" className="accordion-collapse collapse" data-bs-parent="#poDetailsAccordion">
+                                <div className="accordion-body pt-3">
+                                    <div className="row g-3">
+                                        <div className="col-md-6">
+                                            <label className="form-label small fw-semibold">Supplier Quote / Ref Number</label>
+                                            <input
+                                                type="text"
+                                                className="form-control form-control-sm"
+                                                value={formData.reference_number}
+                                                onChange={(e) => handleHeaderChange('reference_number', e.target.value)}
+                                                placeholder="e.g. QUOTE-2026-99"
+                                            />
+                                        </div>
+                                        <div className="col-md-6">
+                                            <label className="form-label small fw-semibold">Payment Terms</label>
+                                            <input
+                                                type="text"
+                                                className="form-control form-control-sm"
+                                                value={formData.payment_terms}
+                                                onChange={(e) => handleHeaderChange('payment_terms', e.target.value)}
+                                                placeholder="e.g. 50% advance, 50% on receipt..."
+                                            />
+                                        </div>
+                                        <div className="col-md-6">
+                                            <label className="form-label small fw-semibold">Delivery / Freight Terms</label>
+                                            <input
+                                                type="text"
+                                                className="form-control form-control-sm"
+                                                value={formData.delivery_terms}
+                                                onChange={(e) => handleHeaderChange('delivery_terms', e.target.value)}
+                                                placeholder="e.g. FOB Destination, Door Delivery..."
+                                            />
+                                        </div>
+                                        <div className="col-md-6">
+                                            <label className="form-label small fw-semibold">Operator Remarks / Internal Notes</label>
+                                            <input
+                                                type="text"
+                                                className="form-control form-control-sm"
+                                                value={formData.remarks}
+                                                onChange={(e) => handleHeaderChange('remarks', e.target.value)}
+                                                placeholder="Internal context, logistics instructions..."
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div className="row g-4">
-                {/* Header Information */}
-                <div className="col-lg-8">
-                    <div className="card border-0 shadow-sm p-4 mb-4" style={{ borderRadius: '12px' }}>
-                        <h5 className="fw-bold mb-3 text-secondary border-bottom pb-2">PO Specifications</h5>
-                        <div className="row g-3">
-                            <div className="col-md-6">
-                                <label className="form-label small fw-semibold">Supplier *</label>
-                                <select
-                                    className="form-select"
-                                    value={formData.supplier_id}
-                                    onChange={(e) => handleHeaderChange('supplier_id', e.target.value)}
-                                    required
-                                >
-                                    <option value="">-- Select Supplier --</option>
-                                    {suppliers.map(s => (
-                                        <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="col-md-6">
-                                <label className="form-label small fw-semibold">Branch Location *</label>
-                                <select
-                                    className="form-select"
-                                    value={formData.branch_id}
-                                    onChange={(e) => handleHeaderChange('branch_id', e.target.value)}
-                                    required
-                                >
-                                    <option value="">-- Select Branch --</option>
-                                    {branches.map(b => (
-                                        <option key={b.id} value={b.id}>{b.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="col-md-6">
-                                <label className="form-label small fw-semibold">PO Number (Leave blank to auto-generate)</label>
-                                <input
-                                    type="text"
-                                    className="form-control font-monospace"
-                                    value={formData.po_number}
-                                    onChange={(e) => handleHeaderChange('po_number', e.target.value)}
-                                    placeholder="e.g. PO-2026-0001"
-                                />
-                            </div>
-                            <div className="col-md-6">
-                                <label className="form-label small fw-semibold">PO Date *</label>
-                                <input
-                                    type="date"
-                                    className="form-control"
-                                    value={formData.po_date}
-                                    onChange={(e) => handleHeaderChange('po_date', e.target.value)}
-                                    required
-                                />
-                            </div>
+            {/* 3. PO Line Items */}
+            <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: '12px', backgroundColor: '#ffffff' }}>
+                <div className="card-body p-4">
+                    <div className="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                        <div>
+                            <h6 className="fw-bold text-dark mb-0 d-flex align-items-center">
+                                <i className="fa-solid fa-list-check text-primary me-2 fs-5"></i>
+                                3. Purchase Order Line Items
+                            </h6>
+                            <span className="text-muted small">Specify item quantities, pricing units, rates, and slab measurements</span>
                         </div>
-
-                        {/* Part 22: Progressive Disclosure for Additional details */}
-                        <details className="mt-4">
-                            <summary className="text-primary fw-semibold cursor-pointer mb-2" style={{ outline: 'none' }}>
-                                ▸ Additional Details
-                            </summary>
-                            <div className="row g-3 pt-2">
-                                <div className="col-md-6">
-                                    <label className="form-label small fw-semibold">Expected Delivery Date</label>
-                                    <input
-                                        type="date"
-                                        className="form-control"
-                                        value={formData.expected_delivery_date}
-                                        onChange={(e) => handleHeaderChange('expected_delivery_date', e.target.value)}
-                                    />
-                                </div>
-                                <div className="col-md-6">
-                                    <label className="form-label small fw-semibold">Supplier Quote/Reference Number</label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        value={formData.reference_number}
-                                        onChange={(e) => handleHeaderChange('reference_number', e.target.value)}
-                                        placeholder="e.g. QUOTE-998"
-                                    />
-                                </div>
-                                <div className="col-md-6">
-                                    <label className="form-label small fw-semibold">Payment Terms</label>
-                                    <textarea
-                                        className="form-control form-control-sm"
-                                        rows="2"
-                                        value={formData.payment_terms}
-                                        onChange={(e) => handleHeaderChange('payment_terms', e.target.value)}
-                                        placeholder="e.g. 50% advance, 50% on receipt..."
-                                    />
-                                </div>
-                                <div className="col-md-6">
-                                    <label className="form-label small fw-semibold">Delivery Terms</label>
-                                    <textarea
-                                        className="form-control form-control-sm"
-                                        rows="2"
-                                        value={formData.delivery_terms}
-                                        onChange={(e) => handleHeaderChange('delivery_terms', e.target.value)}
-                                        placeholder="e.g. FOB Staging Warehouse..."
-                                    />
-                                </div>
-                                <div className="col-md-12">
-                                    <label className="form-label small fw-semibold">Operator Remarks</label>
-                                    <textarea
-                                        className="form-control form-control-sm"
-                                        rows="2"
-                                        value={formData.remarks}
-                                        onChange={(e) => handleHeaderChange('remarks', e.target.value)}
-                                        placeholder="Internal context, logistics info..."
-                                    />
-                                </div>
-                            </div>
-                        </details>
+                        <button type="button" className="btn btn-sm btn-primary px-3 fw-semibold d-flex align-items-center gap-1.5" onClick={handleAddItem}>
+                            <i className="fa-solid fa-plus"></i> Add Line Item
+                        </button>
                     </div>
 
-                    {/* PO Items */}
-                    <div className="card border-0 shadow-sm p-4" style={{ borderRadius: '12px' }}>
-                        <div className="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
-                            <h5 className="fw-bold mb-0 text-secondary">PO Line Items</h5>
-                            <button type="button" className="btn btn-sm btn-dark" onClick={handleAddItem}>
-                                <i className="fa-solid fa-plus me-1 text-warning"></i> Add Item Row
+                    {formData.items.length === 0 ? (
+                        <div className="text-center py-5 border border-dashed rounded-3 bg-light">
+                            <div className="rounded-circle bg-primary-subtle text-primary mx-auto d-flex align-items-center justify-content-center mb-3" style={{ width: '56px', height: '56px' }}>
+                                <i className="fa-solid fa-box-open fs-3"></i>
+                            </div>
+                            <h6 className="fw-bold text-dark">No Items Added to Order</h6>
+                            <p className="text-muted small mb-3">Click below to start adding product items to this purchase order.</p>
+                            <button type="button" className="btn btn-sm btn-outline-primary px-4 fw-semibold" onClick={handleAddItem}>
+                                <i className="fa-solid fa-plus me-1"></i> Add Line Item
                             </button>
                         </div>
-
+                    ) : (
                         <div className="table-responsive">
-                            <table className="table table-bordered table-sm align-middle mb-0">
-                                <thead className="table-light text-uppercase font-monospace" style={{ fontSize: '0.75rem' }}>
+                            <table className="table table-hover align-middle mb-0 border rounded-3 overflow-hidden">
+                                <thead className="table-light text-uppercase font-monospace" style={{ fontSize: '0.75rem', letterSpacing: '0.5px' }}>
                                     <tr>
-                                        <th style={{ width: '28%' }}>Product Variant *</th>
-                                        <th style={{ width: '10%' }}>Qty *</th>
+                                        <th style={{ width: '4%' }} className="text-center">#</th>
+                                        <th style={{ width: '26%' }}>Product Item *</th>
+                                        <th style={{ width: '9%' }} className="text-end">Order Qty *</th>
                                         <th style={{ width: '10%' }}>Order Unit *</th>
-                                        <th style={{ width: '20%' }}>Rate *</th>
-                                        <th style={{ width: '12%' }}>Expected Measurement</th>
-                                        <th style={{ width: '8%' }}>Discount</th>
-                                        <th style={{ width: '8%' }}>Tax %</th>
-                                        <th style={{ width: '4%' }}></th>
+                                        <th style={{ width: '20%' }}>Unit Rate (₹) *</th>
+                                        <th style={{ width: '13%' }}>Expected Area</th>
+                                        <th style={{ width: '7%' }} className="text-end">Disc (₹)</th>
+                                        <th style={{ width: '7%' }} className="text-center">Tax %</th>
+                                        <th style={{ width: '10%' }} className="text-end">Line Total (₹)</th>
+                                        <th style={{ width: '4%' }} className="text-center"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -565,7 +675,7 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                                                 pricingBasis = q * multiplier;
                                                 const fromSymbol = units.find(u => u.id === parseInt(item.unit_id))?.symbol || '';
                                                 const toSymbol = units.find(u => u.id === parseInt(item.pricing_unit_id))?.symbol || '';
-                                                multiplierHint = `${q} ${fromSymbol} = ${pricingBasis.toFixed(2)} ${toSymbol} for pricing`;
+                                                multiplierHint = `${q} ${fromSymbol} = ${pricingBasis.toFixed(2)} ${toSymbol}`;
                                             }
                                         }
 
@@ -574,6 +684,7 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
 
                                         return (
                                             <tr key={index}>
+                                                <td className="text-center fw-bold text-muted small">{index + 1}</td>
                                                 <td>
                                                     <select
                                                         className="form-select form-select-sm"
@@ -581,19 +692,27 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                                                         onChange={(e) => handleItemChange(index, 'product_variant_id', e.target.value)}
                                                         required
                                                     >
-                                                        <option value="">-- Choose Variant --</option>
+                                                        <option value="">-- Choose Item --</option>
                                                         {products.map(p => (
                                                             <option key={p.id} value={p.id}>
                                                                 {p.name} ({p.sku})
                                                             </option>
                                                         ))}
                                                     </select>
+                                                    {product && (
+                                                        <div className="mt-1 d-flex gap-1 align-items-center">
+                                                            <span className={`badge ${isSlab ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-primary-subtle text-primary'} px-1.5 py-0.5`} style={{ fontSize: '0.68rem' }}>
+                                                                {isSlab ? 'MEASURED SLAB' : 'STANDARD'}
+                                                            </span>
+                                                            <span className="text-muted font-monospace" style={{ fontSize: '0.68rem' }}>SKU: {product.sku}</span>
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td>
                                                     <input
                                                         type="number"
                                                         step="0.0001"
-                                                        className="form-control form-control-sm text-end"
+                                                        className="form-control form-control-sm text-end font-monospace"
                                                         value={item.quantity}
                                                         onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                                                         required
@@ -619,12 +738,12 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                                                 </td>
                                                 <td>
                                                     <div className="d-flex align-items-center gap-1">
-                                                        <div className="input-group input-group-sm" style={{ width: '90px' }}>
-                                                            <span className="input-group-text">₹</span>
+                                                        <div className="input-group input-group-sm" style={{ width: '100px' }}>
+                                                            <span className="input-group-text px-1.5">₹</span>
                                                             <input
                                                                 type="number"
                                                                 step="0.01"
-                                                                className="form-control text-end"
+                                                                className="form-control text-end font-monospace px-1.5"
                                                                 value={item.unit_price}
                                                                 onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
                                                                 required
@@ -657,24 +776,27 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                                                 </td>
                                                 <td>
                                                     {isSlab ? (
-                                                        <input
-                                                            type="number"
-                                                            step="0.0001"
-                                                            className="form-control form-control-sm text-end font-monospace"
-                                                            value={item.estimated_pricing_quantity || ''}
-                                                            onChange={(e) => handleItemChange(index, 'estimated_pricing_quantity', e.target.value)}
-                                                            placeholder="Expected Area"
-                                                            required
-                                                        />
+                                                        <div>
+                                                            <input
+                                                                type="number"
+                                                                step="0.0001"
+                                                                className="form-control form-control-sm text-end font-monospace border-warning"
+                                                                value={item.estimated_pricing_quantity || ''}
+                                                                onChange={(e) => handleItemChange(index, 'estimated_pricing_quantity', e.target.value)}
+                                                                placeholder="Est. SQFT"
+                                                                required
+                                                            />
+                                                            <span className="text-muted d-block text-end mt-0.5" style={{ fontSize: '10px' }}>Est. Total Area</span>
+                                                        </div>
                                                     ) : (
-                                                        <span className="text-muted d-block text-center">—</span>
+                                                        <span className="text-muted d-block text-center font-monospace" style={{ fontSize: '0.8rem' }}>—</span>
                                                     )}
                                                 </td>
                                                 <td>
                                                     <input
                                                         type="number"
                                                         step="0.01"
-                                                        className="form-control form-control-sm text-end"
+                                                        className="form-control form-control-sm text-end font-monospace"
                                                         value={item.discount_amount}
                                                         onChange={(e) => handleItemChange(index, 'discount_amount', e.target.value)}
                                                         min="0"
@@ -693,13 +815,17 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                                                         <option value="28">28%</option>
                                                     </select>
                                                 </td>
+                                                <td className="text-end fw-bold font-monospace text-dark">
+                                                    ₹{lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </td>
                                                 <td className="text-center">
                                                     <button
                                                         type="button"
                                                         className="btn btn-link btn-sm text-danger p-0 border-0"
                                                         onClick={() => handleRemoveItem(index)}
+                                                        title="Remove Line Item"
                                                     >
-                                                        <i className="fa-solid fa-trash-can"></i>
+                                                        <i className="fa-solid fa-trash-can fs-6"></i>
                                                     </button>
                                                 </td>
                                             </tr>
@@ -708,48 +834,78 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                                 </tbody>
                             </table>
                         </div>
-                    </div>
+                    )}
                 </div>
+            </div>
 
-                {/* Terms and Financial summary */}
-                <div className="col-lg-4">
-                    <div className="card border-0 shadow-sm bg-light p-4" style={{ borderRadius: '12px' }}>
-                        <h5 className="fw-bold mb-3 text-secondary border-bottom pb-2">Price Summary</h5>
-                        <div className="d-flex justify-content-between mb-2">
-                            <span className="text-muted">Subtotal:</span>
-                            <span className="fw-semibold">₹{totals.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            {/* 4. Financial Summary Dashboard & Save Control */}
+            <div className="card border-0 shadow-sm p-4 mb-4" style={{ borderRadius: '12px', backgroundColor: '#f8fafc' }}>
+                <h6 className="fw-bold text-dark mb-3 border-bottom pb-2 d-flex align-items-center">
+                    <i className="fa-solid fa-calculator text-primary me-2 fs-5"></i>
+                    4. Purchase Order Financial Summary
+                </h6>
+                
+                <div className="row g-4 align-items-center">
+                    <div className="col-lg-7">
+                        <div className="row g-3">
+                            <div className="col-6 col-sm-4">
+                                <div className="p-3 bg-white border rounded-3 text-center shadow-sm">
+                                    <div className="text-muted small mb-1">Total Line Items</div>
+                                    <div className="fw-bold fs-5 text-dark">{formData.items.length} Items</div>
+                                </div>
+                            </div>
+                            <div className="col-6 col-sm-4">
+                                <div className="p-3 bg-white border rounded-3 text-center shadow-sm">
+                                    <div className="text-muted small mb-1">Taxable Subtotal</div>
+                                    <div className="fw-bold fs-5 text-dark">₹{totals.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                </div>
+                            </div>
+                            <div className="col-6 col-sm-4">
+                                <div className="p-3 bg-white border rounded-3 text-center shadow-sm">
+                                    <div className="text-muted small mb-1">GST Tax Total</div>
+                                    <div className="fw-bold fs-5 text-primary">+₹{totals.tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                </div>
+                            </div>
                         </div>
-                        <div className="d-flex justify-content-between mb-2 text-danger">
-                            <span>Discounts:</span>
-                            <span>-₹{totals.discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="d-flex justify-content-between mb-3 text-primary">
-                            <span>GST Tax Total:</span>
-                            <span>+₹{totals.tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        <hr />
-                        <div className="d-flex justify-content-between align-items-center mb-4">
-                            <span className="h6 mb-0 text-dark fw-bold">Grand Total:</span>
-                            <span className="h5 mb-0 fw-bold text-success">₹{totals.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
+                    </div>
 
-                        <button
-                            type="submit"
-                            className="btn btn-success w-100 py-2.5 shadow-sm fw-bold animate__animated animate__pulse animate__infinite"
-                            style={{ animationDuration: '3s' }}
-                            disabled={saving}
-                        >
-                            {saving ? (
-                                <>
-                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                    Saving Draft...
-                                </>
-                            ) : (
-                                <>
-                                    <i className="fa-solid fa-floppy-disk me-2"></i> Save Purchase Order
-                                </>
-                            )}
-                        </button>
+                    <div className="col-lg-5">
+                        <div className="p-3 bg-white border border-success-subtle rounded-3 shadow-sm">
+                            <div className="d-flex justify-content-between mb-2">
+                                <span className="text-muted small">Subtotal:</span>
+                                <span className="fw-semibold small">₹{totals.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="d-flex justify-content-between mb-2 text-danger small">
+                                <span>Total Discounts:</span>
+                                <span>-₹{totals.discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="d-flex justify-content-between mb-2 text-primary small">
+                                <span>GST Tax Total:</span>
+                                <span>+₹{totals.tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                            <hr className="my-2" />
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                                <span className="fw-bold text-dark fs-6">Grand Total:</span>
+                                <span className="fs-4 fw-bold text-success">₹{totals.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="btn btn-success w-100 py-2.5 shadow-sm fw-bold fs-6"
+                                disabled={saving}
+                            >
+                                {saving ? (
+                                    <>
+                                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                        Saving Purchase Order...
+                                    </>
+                                ) : (
+                                    <>
+                                        <i className="fa-solid fa-floppy-disk me-2"></i> Save Purchase Order
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
