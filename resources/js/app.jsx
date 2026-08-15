@@ -12,6 +12,9 @@ import AcceptInvitation from './components/auth/AcceptInvitation';
 import UserManagement from './components/auth/UserManagement';
 import ProductEntry from './components/product/ProductEntry';
 import GRNList from './components/grn/GRNList';
+import CategoryManager from './components/product/CategoryManager';
+import BrandManager from './components/product/BrandManager';
+import ManufacturerManager from './components/product/ManufacturerManager';
 import WarehouseManager from './components/inventory/WarehouseManager';
 import BranchManager from './components/inventory/BranchManager';
 import SupplierManager from './components/grn/SupplierManager';
@@ -195,6 +198,33 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
                                     >
                                         <i className="fa-solid fa-folder-tree me-2" style={{ fontSize: '0.8rem' }}></i>
                                         Families
+                                    </NavLink>
+                                </li>
+                                <li>
+                                    <NavLink 
+                                        to="/products/categories" 
+                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
+                                    >
+                                        <i className="fa-solid fa-sitemap me-2" style={{ fontSize: '0.8rem' }}></i>
+                                        Categories
+                                    </NavLink>
+                                </li>
+                                <li>
+                                    <NavLink 
+                                        to="/products/brands" 
+                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
+                                    >
+                                        <i className="fa-solid fa-tags me-2" style={{ fontSize: '0.8rem' }}></i>
+                                        Brands
+                                    </NavLink>
+                                </li>
+                                <li>
+                                    <NavLink 
+                                        to="/products/manufacturers" 
+                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
+                                    >
+                                        <i className="fa-solid fa-industry me-2" style={{ fontSize: '0.8rem' }}></i>
+                                        Manufacturers
                                     </NavLink>
                                 </li>
                             </ul>
@@ -514,6 +544,9 @@ function App() {
                         <Route path="/products" element={<Navigate to="/products/variants" replace />} />
                         <Route path="/products/variants" element={<ProductEntry key="products-variants" initialSubTab="list" />} />
                         <Route path="/products/families" element={<ProductEntry key="products-families" initialSubTab="families" />} />
+                        <Route path="/products/categories" element={<CategoryManager />} />
+                        <Route path="/products/brands" element={<BrandManager />} />
+                        <Route path="/products/manufacturers" element={<ManufacturerManager />} />
 
                         <Route path="/workflows" element={<WorkflowMonitor />} />
                         <Route path="/bookkeeping" element={<LedgerReports />} />

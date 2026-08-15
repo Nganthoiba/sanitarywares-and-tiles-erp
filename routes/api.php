@@ -17,6 +17,9 @@ use App\Http\Controllers\Api\Master\WarehouseApiController;
 use App\Http\Controllers\Api\Master\BranchApiController;
 use App\Http\Controllers\Api\Master\SupplierApiController;
 use App\Http\Controllers\Api\Master\StorageLocationApiController;
+use App\Http\Controllers\Api\Master\CategoryApiController;
+use App\Http\Controllers\Api\Master\BrandApiController;
+use App\Http\Controllers\Api\Master\ManufacturerApiController;
 
 
 // A simple api route to test whether the api route is working or not
@@ -134,4 +137,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::apiResource('warehouses-crud', WarehouseApiController::class);
     Route::apiResource('suppliers-crud', SupplierApiController::class);
     Route::apiResource('storage-locations-crud', StorageLocationApiController::class);
+    Route::apiResource('categories-crud', CategoryApiController::class);
+    Route::apiResource('brands-crud', BrandApiController::class);
+    Route::apiResource('manufacturers-crud', ManufacturerApiController::class);
 });

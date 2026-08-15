@@ -94,6 +94,31 @@ export default function ProductEntry({ initialSubTab = "list" }) {
         type: "string"
     });
 
+    const [showCategoryModal, setShowCategoryModal] = useState(false);
+    const [categoryForm, setCategoryForm] = useState({
+        name: "",
+        slug: "",
+        parent_id: "",
+        description: "",
+        sort_order: "0"
+    });
+
+    const [showBrandModal, setShowBrandModal] = useState(false);
+    const [brandForm, setBrandForm] = useState({
+        name: "",
+        slug: "",
+        description: ""
+    });
+
+    const [showManufacturerModal, setShowManufacturerModal] = useState(false);
+    const [manufacturerForm, setManufacturerForm] = useState({
+        name: "",
+        phone: "",
+        email: "",
+        website: "",
+        address: ""
+    });
+
     // -------------------------------------------------------------
     // Core Data Loading
     // -------------------------------------------------------------
@@ -494,6 +519,116 @@ export default function ProductEntry({ initialSubTab = "list" }) {
     };
 
     // -------------------------------------------------------------
+    // Inline Category, Brand, Manufacturer Quick Add Handlers
+    // -------------------------------------------------------------
+    const handleQuickAddCategorySubmit = async (e) => {
+        e.preventDefault();
+        setError(null);
+        setLoading(true);
+        try {
+            const token = localStorage.getItem("auth_token");
+            const response = await axios.post("/api/categories-crud", {
+                ...categoryForm,
+                sort_order: parseInt(categoryForm.sort_order, 10) || 0,
+                parent_id: categoryForm.parent_id ? parseInt(categoryForm.parent_id, 10) : null
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const newCat = response.data.category;
+            // Refresh lookup
+            const res = await axios.get("/api/product/form-data", {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setCategories(res.data.categories || []);
+            setProductForm(prev => ({
+                ...prev,
+                category_id: newCat.id.toString()
+            }));
+            setShowCategoryModal(false);
+            setCategoryForm({
+                name: "",
+                slug: "",
+                parent_id: "",
+                description: "",
+                sort_order: "0"
+            });
+            setSuccess("Category created successfully!");
+        } catch (err) {
+            setError(err.response?.data?.message || "Failed to create category.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleQuickAddBrandSubmit = async (e) => {
+        e.preventDefault();
+        setError(null);
+        setLoading(true);
+        try {
+            const token = localStorage.getItem("auth_token");
+            const response = await axios.post("/api/brands-crud", brandForm, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const newBrand = response.data.brand;
+            // Refresh lookup
+            const res = await axios.get("/api/product/form-data", {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setBrands(res.data.brands || []);
+            setProductForm(prev => ({
+                ...prev,
+                brand_id: newBrand.id.toString()
+            }));
+            setShowBrandModal(false);
+            setBrandForm({
+                name: "",
+                slug: "",
+                description: ""
+            });
+            setSuccess("Brand created successfully!");
+        } catch (err) {
+            setError(err.response?.data?.message || "Failed to create brand.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleQuickAddManufacturerSubmit = async (e) => {
+        e.preventDefault();
+        setError(null);
+        setLoading(true);
+        try {
+            const token = localStorage.getItem("auth_token");
+            const response = await axios.post("/api/manufacturers-crud", manufacturerForm, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const newManufacturer = response.data.manufacturer;
+            // Refresh lookup
+            const res = await axios.get("/api/product/form-data", {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setManufacturers(res.data.manufacturers || []);
+            setProductForm(prev => ({
+                ...prev,
+                manufacturer_id: newManufacturer.id.toString()
+            }));
+            setShowManufacturerModal(false);
+            setManufacturerForm({
+                name: "",
+                phone: "",
+                email: "",
+                website: "",
+                address: ""
+            });
+            setSuccess("Manufacturer created successfully!");
+        } catch (err) {
+            setError(err.response?.data?.message || "Failed to create manufacturer.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // -------------------------------------------------------------
     // Define Custom Attribute Modal Handler
     // -------------------------------------------------------------
     const handleAttributeSubmit = async (e) => {
@@ -814,26 +949,52 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                 <div className="row mb-3 align-items-end">
                                     <div className="col-md-4">
                                         <label className="form-label small fw-semibold">Category *</label>
-                                        <select 
-                                            className="form-select form-select-sm" 
-                                            value={productForm.category_id} 
-                                            onChange={(e) => setProductForm({ ...productForm, category_id: e.target.value })} 
-                                            required
-                                        >
-                                            <option value="">Select Category</option>
-                                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                        </select>
+                                        <div className="input-group input-group-sm">
+                                            <select 
+                                                className="form-select" 
+                                                value={productForm.category_id} 
+                                                onChange={(e) => setProductForm({ ...productForm, category_id: e.target.value })} 
+                                                required
+                                            >
+                                                <option value="">Select Category</option>
+                                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            </select>
+                                            <button 
+                                                type="button" 
+                                                className="btn btn-outline-primary"
+                                                onClick={() => {
+                                                    setCategoryForm(prev => ({
+                                                        ...prev,
+                                                        parent_id: ""
+                                                    }));
+                                                    setShowCategoryModal(true);
+                                                }}
+                                                title="Quick add Category"
+                                            >
+                                                <i className="fa-solid fa-plus"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="col-md-4">
                                         <label className="form-label small fw-semibold">Brand</label>
-                                        <select 
-                                            className="form-select form-select-sm" 
-                                            value={productForm.brand_id} 
-                                            onChange={(e) => setProductForm({ ...productForm, brand_id: e.target.value })}
-                                        >
-                                            <option value="">No Brand / Generic</option>
-                                            {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                                        </select>
+                                        <div className="input-group input-group-sm">
+                                            <select 
+                                                className="form-select" 
+                                                value={productForm.brand_id} 
+                                                onChange={(e) => setProductForm({ ...productForm, brand_id: e.target.value })}
+                                            >
+                                                <option value="">No Brand / Generic</option>
+                                                {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                            </select>
+                                            <button 
+                                                type="button" 
+                                                className="btn btn-outline-primary"
+                                                onClick={() => setShowBrandModal(true)}
+                                                title="Quick add Brand"
+                                            >
+                                                <i className="fa-solid fa-plus"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="col-md-4">
                                         <label className="form-label small fw-semibold">Product Family (Optional)</label>
@@ -903,14 +1064,24 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                     </div>
                                     <div className="col-md-6">
                                         <label className="form-label small fw-semibold">Manufacturer</label>
-                                        <select 
-                                            className="form-select form-select-sm" 
-                                            value={productForm.manufacturer_id} 
-                                            onChange={(e) => setProductForm({ ...productForm, manufacturer_id: e.target.value })}
-                                        >
-                                            <option value="">No Manufacturer</option>
-                                            {manufacturers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                                        </select>
+                                        <div className="input-group input-group-sm">
+                                            <select 
+                                                className="form-select" 
+                                                value={productForm.manufacturer_id} 
+                                                onChange={(e) => setProductForm({ ...productForm, manufacturer_id: e.target.value })}
+                                            >
+                                                <option value="">No Manufacturer</option>
+                                                {manufacturers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                            </select>
+                                            <button 
+                                                type="button" 
+                                                className="btn btn-outline-primary"
+                                                onClick={() => setShowManufacturerModal(true)}
+                                                title="Quick add Manufacturer"
+                                            >
+                                                <i className="fa-solid fa-plus"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1634,6 +1805,176 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                     <button type="submit" className="btn btn-primary px-4" disabled={loading}>
                                         {loading ? <span className="spinner-border spinner-border-sm me-2"></span> : null}
                                         Define
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Category Quick Add Modal */}
+            {showCategoryModal && (
+                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1100 }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content shadow-lg border-0" style={{ borderRadius: "12px" }}>
+                            <div className="modal-header border-bottom-0 pt-4 px-4">
+                                <h5 className="modal-title fw-bold fs-5">Quick Add Category</h5>
+                                <button type="button" className="btn-close" onClick={() => setShowCategoryModal(false)}></button>
+                            </div>
+                            <form onSubmit={handleQuickAddCategorySubmit}>
+                                <div className="modal-body px-4">
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Category Name *</label>
+                                        <input 
+                                            type="text" 
+                                            className="form-control" 
+                                            value={categoryForm.name} 
+                                            onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} 
+                                            required 
+                                        />
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Parent Category</label>
+                                        <select 
+                                            className="form-select" 
+                                            value={categoryForm.parent_id} 
+                                            onChange={(e) => setCategoryForm({ ...categoryForm, parent_id: e.target.value })}
+                                        >
+                                            <option value="">None (Top-Level)</option>
+                                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Description</label>
+                                        <textarea 
+                                            className="form-control" 
+                                            rows="3"
+                                            value={categoryForm.description}
+                                            onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
+                                        ></textarea>
+                                    </div>
+                                </div>
+                                <div className="modal-footer border-top-0 pb-4 px-4">
+                                    <button type="button" className="btn btn-secondary px-3" onClick={() => setShowCategoryModal(false)}>Cancel</button>
+                                    <button type="submit" className="btn btn-primary px-4" disabled={loading}>
+                                        {loading ? <span className="spinner-border spinner-border-sm me-2"></span> : null}
+                                        Save Category
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Brand Quick Add Modal */}
+            {showBrandModal && (
+                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1100 }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content shadow-lg border-0" style={{ borderRadius: "12px" }}>
+                            <div className="modal-header border-bottom-0 pt-4 px-4">
+                                <h5 className="modal-title fw-bold fs-5">Quick Add Brand</h5>
+                                <button type="button" className="btn-close" onClick={() => setShowBrandModal(false)}></button>
+                            </div>
+                            <form onSubmit={handleQuickAddBrandSubmit}>
+                                <div className="modal-body px-4">
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Brand Name *</label>
+                                        <input 
+                                            type="text" 
+                                            className="form-control" 
+                                            value={brandForm.name} 
+                                            onChange={(e) => setBrandForm({ ...brandForm, name: e.target.value })} 
+                                            required 
+                                        />
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Description</label>
+                                        <textarea 
+                                            className="form-control" 
+                                            rows="3"
+                                            value={brandForm.description}
+                                            onChange={(e) => setBrandForm({ ...brandForm, description: e.target.value })}
+                                        ></textarea>
+                                    </div>
+                                </div>
+                                <div className="modal-footer border-top-0 pb-4 px-4">
+                                    <button type="button" className="btn btn-secondary px-3" onClick={() => setShowBrandModal(false)}>Cancel</button>
+                                    <button type="submit" className="btn btn-primary px-4" disabled={loading}>
+                                        {loading ? <span className="spinner-border spinner-border-sm me-2"></span> : null}
+                                        Save Brand
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Manufacturer Quick Add Modal */}
+            {showManufacturerModal && (
+                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1100 }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content shadow-lg border-0" style={{ borderRadius: "12px" }}>
+                            <div className="modal-header border-bottom-0 pt-4 px-4">
+                                <h5 className="modal-title fw-bold fs-5">Quick Add Manufacturer</h5>
+                                <button type="button" className="btn-close" onClick={() => setShowManufacturerModal(false)}></button>
+                            </div>
+                            <form onSubmit={handleQuickAddManufacturerSubmit}>
+                                <div className="modal-body px-4">
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Manufacturer Name *</label>
+                                        <input 
+                                            type="text" 
+                                            className="form-control" 
+                                            value={manufacturerForm.name} 
+                                            onChange={(e) => setManufacturerForm({ ...manufacturerForm, name: e.target.value })} 
+                                            required 
+                                        />
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Phone Number</label>
+                                        <input 
+                                            type="text" 
+                                            className="form-control font-monospace" 
+                                            value={manufacturerForm.phone} 
+                                            onChange={(e) => setManufacturerForm({ ...manufacturerForm, phone: e.target.value })} 
+                                        />
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Email Address</label>
+                                        <input 
+                                            type="email" 
+                                            className="form-control" 
+                                            value={manufacturerForm.email} 
+                                            onChange={(e) => setManufacturerForm({ ...manufacturerForm, email: e.target.value })} 
+                                        />
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Website</label>
+                                        <input 
+                                            type="text" 
+                                            className="form-control font-monospace" 
+                                            value={manufacturerForm.website} 
+                                            onChange={(e) => setManufacturerForm({ ...manufacturerForm, website: e.target.value })} 
+                                        />
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Address</label>
+                                        <textarea 
+                                            className="form-control" 
+                                            rows="2"
+                                            value={manufacturerForm.address}
+                                            onChange={(e) => setManufacturerForm({ ...manufacturerForm, address: e.target.value })}
+                                        ></textarea>
+                                    </div>
+                                </div>
+                                <div className="modal-footer border-top-0 pb-4 px-4">
+                                    <button type="button" className="btn btn-secondary px-3" onClick={() => setShowManufacturerModal(false)}>Cancel</button>
+                                    <button type="submit" className="btn btn-primary px-4" disabled={loading}>
+                                        {loading ? <span className="spinner-border spinner-border-sm me-2"></span> : null}
+                                        Save Manufacturer
                                     </button>
                                 </div>
                             </form>
