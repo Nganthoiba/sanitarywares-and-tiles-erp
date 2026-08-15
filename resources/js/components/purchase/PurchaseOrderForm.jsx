@@ -12,10 +12,6 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
     const [units, setUnits] = useState([]);
     const [products, setProducts] = useState([]);
     const [conversions, setConversions] = useState([]);
-    const [requisitions, setRequisitions] = useState([]);
-
-    // Workflow Selection: Direct PO or PR based
-    const [usePr, setUsePr] = useState(false);
 
     // Form states
     const [formData, setFormData] = useState({
@@ -94,7 +90,6 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                 setUnits(res.data.units || []);
                 setProducts(res.data.product_variants || []);
                 setConversions(res.data.unit_conversions || []);
-                setRequisitions(res.data.approved_requisitions || []);
 
                 if (poId) {
                     // Edit Mode: fetch PO details
@@ -102,9 +97,6 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                         headers: { Authorization: `Bearer ${token}` }
                     });
                     const po = poRes.data.data;
-                    if (po.purchase_requisition_id) {
-                        setUsePr(true);
-                    }
                     setFormData({
                         branch_id: po.branch_id || '',
                         supplier_id: po.supplier_id || '',
@@ -137,45 +129,6 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
         };
         fetchContext();
     }, [poId]);
-
-    // Handle requisition selection conversion
-    const handleRequisitionChange = (reqId) => {
-        if (!reqId) {
-            setFormData(prev => ({
-                ...prev,
-                purchase_requisition_id: '',
-                items: []
-            }));
-            return;
-        }
-
-        const selectedPR = requisitions.find(r => r.id === parseInt(reqId));
-        if (!selectedPR) return;
-
-        // Auto-assign items from Requisition
-        const mappedItems = selectedPR.items.map(item => {
-            const variant = products.find(p => p.id === item.product_variant_id);
-            const defaultPrice = variant ? parseFloat(variant.cost_price || 0.0) : 0.0;
-            const uId = item.unit_id || (variant?.purchase_unit_id || variant?.base_unit_id);
-            return {
-                product_variant_id: item.product_variant_id,
-                quantity: parseFloat(item.quantity),
-                unit_id: uId,
-                pricing_unit_id: variant?.purchase_unit_id || variant?.base_unit_id || uId,
-                estimated_pricing_quantity: parseFloat(item.quantity),
-                unit_price: defaultPrice,
-                discount_amount: 0.0,
-                tax_rate: 18.0
-            };
-        });
-
-        setFormData(prev => ({
-            ...prev,
-            purchase_requisition_id: reqId,
-            branch_id: selectedPR.branch_id || prev.branch_id,
-            items: mappedItems
-        }));
-    };
 
     const handleHeaderChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -354,24 +307,8 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                     </div>
                 </div>
                 <div className="d-flex gap-2">
-                    <button type="button" className="btn btn-outline-secondary px-3" onClick={onBack}>
-                        <i className="fa-solid fa-xmark me-1.5"></i> Cancel
-                    </button>
-                    <button
-                        type="submit"
-                        className="btn btn-success px-4 fw-bold shadow-sm"
-                        disabled={saving}
-                    >
-                        {saving ? (
-                            <>
-                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                Saving Order...
-                            </>
-                        ) : (
-                            <>
-                                <i className="fa-solid fa-floppy-disk me-1.5"></i> Save Purchase Order
-                            </>
-                        )}
+                    <button type="button" className="btn btn-outline-secondary px-4 fw-semibold" onClick={onBack}>
+                        <i className="fa-solid fa-arrow-left me-1.5"></i> Back to Registry
                     </button>
                 </div>
             </div>
@@ -383,111 +320,12 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                 </div>
             )}
 
-            {/* 1. PO Origin Selection */}
-            <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: '12px', backgroundColor: '#ffffff' }}>
-                <div className="card-body p-4">
-                    <h6 className="fw-bold text-dark mb-3 d-flex align-items-center">
-                        <i className="fa-solid fa-route text-primary me-2 fs-5"></i>
-                        1. Select Purchase Order Origin
-                    </h6>
-                    
-                    <div className="row g-3">
-                        <div className="col-md-6">
-                            <div 
-                                className={`p-3 rounded-3 border transition-all ${!usePr ? 'border-primary bg-primary-subtle bg-opacity-10 shadow-sm' : 'border-light bg-light text-muted'}`}
-                                onClick={() => {
-                                    if (!poId) {
-                                        setUsePr(false);
-                                        handleRequisitionChange('');
-                                    }
-                                }}
-                                style={{ cursor: poId ? 'not-allowed' : 'pointer' }}
-                            >
-                                <div className="d-flex align-items-center justify-content-between">
-                                    <div className="d-flex align-items-center gap-3">
-                                        <div className={`rounded-circle p-2.5 d-flex align-items-center justify-content-center ${!usePr ? 'bg-primary text-white' : 'bg-secondary-subtle text-secondary'}`} style={{ width: '42px', height: '42px' }}>
-                                            <i className="fa-solid fa-cart-flatbed fs-5"></i>
-                                        </div>
-                                        <div>
-                                            <div className="fw-bold text-dark">Direct Purchase Order</div>
-                                            <div className="text-muted small">Create PO directly by selecting supplier & items</div>
-                                        </div>
-                                    </div>
-                                    <input
-                                        type="radio"
-                                        className="form-check-input ms-2"
-                                        name="poSourceType"
-                                        checked={!usePr}
-                                        onChange={() => {}}
-                                        disabled={!!poId}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="col-md-6">
-                            <div 
-                                className={`p-3 rounded-3 border transition-all ${usePr ? 'border-primary bg-primary-subtle bg-opacity-10 shadow-sm' : 'border-light bg-light text-muted'}`}
-                                onClick={() => {
-                                    if (!poId) setUsePr(true);
-                                }}
-                                style={{ cursor: poId ? 'not-allowed' : 'pointer' }}
-                            >
-                                <div className="d-flex align-items-center justify-content-between">
-                                    <div className="d-flex align-items-center gap-3">
-                                        <div className={`rounded-circle p-2.5 d-flex align-items-center justify-content-center ${usePr ? 'bg-primary text-white' : 'bg-secondary-subtle text-secondary'}`} style={{ width: '42px', height: '42px' }}>
-                                            <i className="fa-solid fa-file-signature fs-5"></i>
-                                        </div>
-                                        <div>
-                                            <div className="fw-bold text-dark">From Approved Requisition</div>
-                                            <div className="text-muted small">Import line items from internal store PR</div>
-                                        </div>
-                                    </div>
-                                    <input
-                                        type="radio"
-                                        className="form-check-input ms-2"
-                                        name="poSourceType"
-                                        checked={usePr}
-                                        onChange={() => {}}
-                                        disabled={!!poId}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {usePr && (
-                        <div className="mt-3 pt-3 border-top">
-                            <div className="row">
-                                <div className="col-md-6">
-                                    <label className="form-label small fw-semibold text-dark">Select Approved Purchase Requisition *</label>
-                                    <select
-                                        className="form-select"
-                                        value={formData.purchase_requisition_id}
-                                        onChange={(e) => handleRequisitionChange(e.target.value)}
-                                        disabled={!!poId}
-                                        required
-                                    >
-                                        <option value="">-- Choose Requisition --</option>
-                                        {requisitions.map(r => (
-                                            <option key={r.id} value={r.id}>
-                                                {r.pr_number} (Requested by: {r.requester?.name || 'PR Client'})
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* 2. PO Specifications & Supplier Details */}
+            {/* 1. PO Specifications & Supplier Details */}
             <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: '12px', backgroundColor: '#ffffff' }}>
                 <div className="card-body p-4">
                     <h6 className="fw-bold text-dark mb-3 border-bottom pb-2 d-flex align-items-center">
                         <i className="fa-solid fa-building-columns text-primary me-2 fs-5"></i>
-                        2. Supplier & Order Specifications
+                        1. Supplier & Order Specifications
                     </h6>
                     <div className="row g-3">
                         <div className="col-md-6">
@@ -615,7 +453,7 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                         <div>
                             <h6 className="fw-bold text-dark mb-0 d-flex align-items-center">
                                 <i className="fa-solid fa-list-check text-primary me-2 fs-5"></i>
-                                3. Purchase Order Line Items
+                                2. Purchase Order Line Items
                             </h6>
                             <span className="text-muted small">Specify item quantities, pricing units, rates, and slab measurements</span>
                         </div>
@@ -842,7 +680,7 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
             <div className="card border-0 shadow-sm p-4 mb-4" style={{ borderRadius: '12px', backgroundColor: '#f8fafc' }}>
                 <h6 className="fw-bold text-dark mb-3 border-bottom pb-2 d-flex align-items-center">
                     <i className="fa-solid fa-calculator text-primary me-2 fs-5"></i>
-                    4. Purchase Order Financial Summary
+                    3. Purchase Order Financial Summary
                 </h6>
                 
                 <div className="row g-4 align-items-center">
