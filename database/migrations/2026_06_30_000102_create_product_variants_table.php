@@ -10,7 +10,8 @@ return new class extends Migration {
         Schema::create('product_variants', function (Blueprint $table) {
             $table->id();
             $table->foreignId('organization_id')->index()->constrained('organizations')->onDelete('cascade');
-            $table->foreignId('product_family_id')->index()->constrained('product_families')->onDelete('cascade');
+            $table->foreignId('product_family_id')->nullable()->index();
+            $table->foreignId('category_id')->nullable()->index()->constrained('categories')->onDelete('cascade');
             $table->foreignId('purchase_unit_id')->index()->constrained('units')->onDelete('cascade');
             $table->foreignId('sales_unit_id')->index()->constrained('units')->onDelete('cascade');
             $table->foreignId('base_unit_id')->index()->constrained('units')->onDelete('cascade');
