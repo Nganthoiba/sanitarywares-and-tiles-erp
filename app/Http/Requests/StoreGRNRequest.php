@@ -44,7 +44,7 @@ class StoreGRNRequest extends FormRequest
                 $variantId = $item['product_variant_id'] ?? null;
                 if (!$variantId) continue;
 
-                $variant = \App\Domains\Product\Models\ProductVariant::find($variantId);
+                $variant = \App\Domains\Product\Models\Product::find($variantId);
                 if (!$variant) continue;
 
                 $hasSlabs = !empty($item['slabs']);

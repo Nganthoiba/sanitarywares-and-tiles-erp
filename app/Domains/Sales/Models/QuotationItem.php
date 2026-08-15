@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Domains\Master\Models\Organization;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 use App\Domains\Master\Models\Unit;
 
 class QuotationItem extends Model {
@@ -27,8 +27,11 @@ class QuotationItem extends Model {
     public function quotation(): BelongsTo {
         return $this->belongsTo(Quotation::class);
     }
+    public function product(): BelongsTo {
+        return $this->belongsTo(Product::class, 'product_variant_id');
+    }
     public function variant(): BelongsTo {
-        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+        return $this->product();
     }
     public function unit(): BelongsTo {
         return $this->belongsTo(Unit::class);

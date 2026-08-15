@@ -12,12 +12,16 @@ use App\Domains\Master\Models\Unit;
 use App\Domains\Master\Models\TaxProfile;
 use App\Domains\Master\Models\Brand;
 use App\Domains\Master\Models\Manufacturer;
+use App\Domains\Master\Models\Category;
 
-class ProductVariant extends Model {
+class Product extends Model {
     use BelongsToOrganization;
     use SoftDeletes;
+
+    protected $table = 'product_variants';
+
     protected $fillable = [
-        'organization_id', 'product_family_id', 'purchase_unit_id', 'sales_unit_id', 'base_unit_id',
+        'organization_id', 'category_id', 'purchase_unit_id', 'sales_unit_id', 'base_unit_id',
         'name', 'sku', 'gtin', 'barcode', 'inventory_behavior', 'tax_profile_id', 'brand_id',
         'manufacturer_id', 'cost_price', 'sale_price', 'is_active'
     ];
@@ -30,8 +34,8 @@ class ProductVariant extends Model {
     public function organization(): BelongsTo {
         return $this->belongsTo(Organization::class);
     }
-    public function family(): BelongsTo {
-        return $this->belongsTo(ProductFamily::class, 'product_family_id');
+    public function category(): BelongsTo {
+        return $this->belongsTo(Category::class);
     }
     public function purchaseUnit(): BelongsTo {
         return $this->belongsTo(Unit::class, 'purchase_unit_id');
@@ -52,6 +56,6 @@ class ProductVariant extends Model {
         return $this->belongsTo(Manufacturer::class);
     }
     public function attributeValues(): HasMany {
-        return $this->hasMany(ProductAttributeValue::class);
+        return $this->hasMany(ProductAttributeValue::class, 'product_variant_id');
     }
 }

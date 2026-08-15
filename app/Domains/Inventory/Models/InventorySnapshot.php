@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Domains\Master\Models\Organization;
 use App\Domains\Master\Models\Warehouse;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 
 class InventorySnapshot extends Model
 {
@@ -30,8 +30,12 @@ class InventorySnapshot extends Model
     {
         return $this->belongsTo(Warehouse::class);
     }
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'product_variant_id');
+    }
     public function variant(): BelongsTo
     {
-        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+        return $this->product();
     }
 }

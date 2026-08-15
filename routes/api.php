@@ -100,10 +100,6 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
 
     // Core Product Catalog & Entry Routes
     Route::get('/product/form-data', [ProductApiController::class, 'getFormData']);
-    Route::get('/product/families', [ProductApiController::class, 'listFamilies']);
-    Route::post('/product/families', [ProductApiController::class, 'storeFamily']);
-    Route::put('/product/families/{id}', [ProductApiController::class, 'updateFamily']);
-    Route::delete('/product/families/{id}', [ProductApiController::class, 'deleteFamily']);
     Route::get('/product/variants', [ProductApiController::class, 'listVariants']);
     Route::post('/product/variants', [ProductApiController::class, 'storeVariant']);
     Route::post('/product/attributes', [ProductApiController::class, 'storeAttribute']);

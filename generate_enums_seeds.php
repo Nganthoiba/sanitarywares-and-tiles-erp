@@ -211,8 +211,7 @@ use App\Domains\Security\Models\Permission;
 use App\Domains\Security\Models\Role;
 use App\Domains\Security\Models\UserRole;
 use App\Domains\Security\Models\UserScope;
-use App\Domains\Product\Models\ProductFamily;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 use App\Domains\Product\Models\ProductAttribute;
 use App\Domains\Product\Models\ProductAttributeValue;
 use App\Domains\Product\Models\UnitConversion;
@@ -412,25 +411,16 @@ class DatabaseSeeder extends Seeder {
         ]);
 
         // 5. Product Domain Setup: Tiles & Granite Slabs
-        // Product 1: Kajaria Royal Tile 600x600 (STANDARD Batch/Box Inventory)
-        $tileFamily = ProductFamily::create([
+        $tileVariant = Product::create([
             'organization_id' => $org->id,
             'category_id' => $tileCat->id,
-            'brand_id' => $kajaria->id,
-            'tax_profile_id' => $gst18->id,
-            'name' => 'Kajaria Royal Series',
-            'code' => 'KAJ-ROY',
-        ]);
-
-        $tileVariant = ProductVariant::create([
-            'organization_id' => $org->id,
-            'product_family_id' => $tileFamily->id,
             'unit_id' => $boxUnit->id,
             'name' => 'Kajaria Royal Gold 600x600 mm',
             'sku' => 'KAJ-ROY-GLD-600',
             'inventory_type' => 'STANDARD',
             'cost_price' => 120.00,
             'sale_price' => 180.00,
+            'brand_id' => $kajaria->id,
         ]);
 
         // Attributes for Tiles
@@ -449,25 +439,16 @@ class DatabaseSeeder extends Seeder {
             'multiplier' => 15.50,
         ]);
 
-        // Product 2: Black Galaxy Granite Slab (SLAB Inventory)
-        $graniteFamily = ProductFamily::create([
+        $graniteSlab = Product::create([
             'organization_id' => $org->id,
             'category_id' => $graniteCat->id,
-            'brand_id' => null,
-            'tax_profile_id' => $gst18->id,
-            'name' => 'Black Galaxy Slabs',
-            'code' => 'BLK-GAL',
-        ]);
-
-        $graniteSlab = ProductVariant::create([
-            'organization_id' => $org->id,
-            'product_family_id' => $graniteFamily->id,
             'unit_id' => $sqftUnit->id,
             'name' => 'Black Galaxy Granite Slab Premium',
             'sku' => 'BLK-GAL-SLAB-P',
             'inventory_type' => 'SLAB',
             'cost_price' => 200.00,
             'sale_price' => 350.00,
+            'brand_id' => $kajaria->id,
         ]);
 
         // 6. Seed Initial Stock Objects

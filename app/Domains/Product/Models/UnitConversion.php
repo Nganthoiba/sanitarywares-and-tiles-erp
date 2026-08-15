@@ -18,8 +18,11 @@ class UnitConversion extends Model {
     public function organization(): BelongsTo {
         return $this->belongsTo(Organization::class);
     }
+    public function product(): BelongsTo {
+        return $this->belongsTo(Product::class, 'product_variant_id');
+    }
     public function variant(): BelongsTo {
-        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+        return $this->product();
     }
     public function fromUnit(): BelongsTo {
         return $this->belongsTo(Unit::class, 'from_unit_id');

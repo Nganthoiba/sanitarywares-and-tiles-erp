@@ -218,7 +218,7 @@ class PurchaseOrderApiController extends Controller
             'suppliers' => \App\Domains\Master\Models\Supplier::where('is_active', true)->orderBy('name')->get(),
             'branches' => \App\Domains\Master\Models\Branch::orderBy('name')->get(),
             'units' => \App\Domains\Master\Models\Unit::where('is_active', true)->orderBy('name')->get(),
-            'product_variants' => \App\Domains\Product\Models\ProductVariant::where('is_active', true)->with(['baseUnit', 'purchaseUnit'])->orderBy('name')->get(),
+            'product_variants' => \App\Domains\Product\Models\Product::where('is_active', true)->with(['baseUnit', 'purchaseUnit'])->orderBy('name')->get(),
             'unit_conversions' => \App\Domains\Product\Models\UnitConversion::where('organization_id', $orgId)->get(),
             'approved_requisitions' => PurchaseRequisition::where('status', 'APPROVED')
                 ->with(['items.variant.purchaseUnit', 'items.variant.baseUnit', 'items.unit', 'requester'])

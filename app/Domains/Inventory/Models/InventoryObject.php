@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Domains\Master\Models\Organization;
 use App\Domains\Master\Models\Warehouse;
 use App\Domains\Master\Models\StorageLocation;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 
 class InventoryObject extends Model
 {
@@ -38,9 +38,13 @@ class InventoryObject extends Model
     {
         return $this->belongsTo(Organization::class);
     }
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'product_variant_id');
+    }
     public function variant(): BelongsTo
     {
-        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+        return $this->product();
     }
     public function warehouse(): BelongsTo
     {

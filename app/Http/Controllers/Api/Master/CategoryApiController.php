@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\Master;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Domains\Master\Models\Category;
-use App\Domains\Product\Models\ProductFamily;
+use App\Domains\Product\Models\Product;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 
@@ -131,11 +131,11 @@ class CategoryApiController extends Controller
             ], 422);
         }
 
-        // Check if linked to product families
-        $hasFamilies = ProductFamily::where('category_id', $category->id)->exists();
-        if ($hasFamilies) {
+        // Check if linked to products
+        $hasProducts = Product::where('category_id', $category->id)->exists();
+        if ($hasProducts) {
             return response()->json([
-                'message' => 'Cannot delete category because it is linked to active product families.'
+                'message' => 'Cannot delete category because it is linked to active products.'
             ], 422);
         }
 

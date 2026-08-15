@@ -4,8 +4,7 @@ namespace App\Http\Controllers\Api\Master;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Domains\Master\Models\Brand;
-use App\Domains\Product\Models\ProductFamily;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 
@@ -109,19 +108,11 @@ class BrandApiController extends Controller
     {
         $brand = Brand::findOrFail($id);
 
-        // Prevent deletion if linked to product families
-        $hasFamilies = ProductFamily::where('brand_id', $brand->id)->exists();
-        if ($hasFamilies) {
+        // Prevent deletion if linked to products
+        $hasProducts = Product::where('brand_id', $brand->id)->exists();
+        if ($hasProducts) {
             return response()->json([
-                'message' => 'Cannot delete brand because it is linked to active product families.'
-            ], 422);
-        }
-
-        // Prevent deletion if linked to product variants
-        $hasVariants = ProductVariant::where('brand_id', $brand->id)->exists();
-        if ($hasVariants) {
-            return response()->json([
-                'message' => 'Cannot delete brand because it is linked to active product variants.'
+                'message' => 'Cannot delete brand because it is linked to active products.'
             ], 422);
         }
 

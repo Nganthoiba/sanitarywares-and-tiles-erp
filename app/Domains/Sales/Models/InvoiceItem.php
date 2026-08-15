@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Domains\Master\Models\Organization;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 
 class InvoiceItem extends Model {
     use BelongsToOrganization;
@@ -29,7 +29,10 @@ class InvoiceItem extends Model {
     public function orderItem(): BelongsTo {
         return $this->belongsTo(SalesOrderItem::class, 'sales_order_item_id');
     }
+    public function product(): BelongsTo {
+        return $this->belongsTo(Product::class, 'product_variant_id');
+    }
     public function variant(): BelongsTo {
-        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+        return $this->product();
     }
 }

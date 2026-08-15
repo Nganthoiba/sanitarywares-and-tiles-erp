@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Domains\Master\Models\Organization;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 use App\Domains\Inventory\Models\InventoryObject;
 
 class GoodsReceiptItem extends Model {
@@ -31,8 +31,11 @@ class GoodsReceiptItem extends Model {
     public function orderItem(): BelongsTo {
         return $this->belongsTo(PurchaseOrderItem::class, 'purchase_order_item_id');
     }
+    public function product(): BelongsTo {
+        return $this->belongsTo(Product::class, 'product_variant_id');
+    }
     public function variant(): BelongsTo {
-        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+        return $this->product();
     }
     public function unit(): BelongsTo {
         return $this->belongsTo(\App\Domains\Master\Models\Unit::class, 'unit_id');

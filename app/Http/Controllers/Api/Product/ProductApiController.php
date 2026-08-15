@@ -14,8 +14,7 @@ use App\Domains\Master\Models\Brand;
 use App\Domains\Master\Models\Unit;
 use App\Domains\Master\Models\TaxProfile;
 use App\Domains\Master\Models\Manufacturer;
-use App\Domains\Product\Models\ProductFamily;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 use App\Domains\Product\Models\ProductAttribute;
 use App\Domains\Product\Models\ProductAttributeValue;
 use App\Domains\Product\Models\UnitConversion;
@@ -36,119 +35,16 @@ class ProductApiController extends Controller
             'tax_profiles' => TaxProfile::where('is_active', true)->orderBy('name')->get(),
             'manufacturers' => Manufacturer::orderBy('name')->get(),
             'attributes' => ProductAttribute::orderBy('name')->get(),
-            'families' => ProductFamily::with(['category', 'brand', 'taxProfile'])->orderBy('name')->get(),
             'inventory_behaviors' => ['STANDARD', 'CONVERTIBLE', 'SLAB', 'SERIAL', 'BATCH', 'BUNDLE', 'ROLL']
         ]);
     }
 
     /**
-     * Create a new Product Family.
-     */
-    public function storeFamily(Request $request)
-    {
-        $orgId = $request->user()->organization_id;
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => [
-                'required',
-                'string',
-                'max:50',
-                Rule::unique('product_families')->where(function ($query) use ($orgId) {
-                    return $query->where('organization_id', $orgId);
-                })
-            ],
-            'category_id' => 'required|exists:categories,id',
-            'brand_id' => 'nullable|exists:brands,id',
-            'tax_profile_id' => 'nullable|exists:tax_profiles,id',
-            'description' => 'nullable|string'
-        ]);
-
-        $family = ProductFamily::create(array_merge($validated, [
-            'organization_id' => $orgId
-        ]));
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Product family created successfully.',
-            'data' => $family->load(['category', 'brand', 'taxProfile'])
-        ], 201);
-    }
-
-    /**
-     * Create a new Product Variant and map custom attributes.
+     * Create a new Product Variant (representing a Product) and map custom attributes.
      */
     public function storeVariant(Request $request)
     {
         $orgId = $request->user()->organization_id;
-
-        // Auto-fill product_family_id from category_id/brand_id if omitted or empty
-        if (!$request->has('product_family_id') || empty($request->input('product_family_id'))) {
-            $request->validate([
-                'category_id' => 'required|exists:categories,id',
-            ]);
-            $categoryId = $request->input('category_id');
-            $brandId = $request->input('brand_id');
-            $taxProfileId = $request->input('tax_profile_id');
-
-            // Find default tax profile if not passed
-            if (!$taxProfileId) {
-                $defaultTax = TaxProfile::where('organization_id', $orgId)->where('is_active', true)->first() 
-                    ?? TaxProfile::where('is_active', true)->first();
-                $taxProfileId = $defaultTax ? $defaultTax->id : null;
-            }
-
-            $category = Category::find($categoryId);
-            $brand = $brandId ? Brand::find($brandId) : null;
-            
-            $cleanCatName = preg_replace('/[^a-zA-Z0-9]/', '', $category->name);
-            $cleanBrandName = $brand ? preg_replace('/[^a-zA-Z0-9]/', '', $brand->name) : '';
-            
-            $familyName = ($brand ? $brand->name . ' ' : '') . $category->name . ' Family';
-            $familyCode = strtoupper(substr($cleanCatName, 0, 3)) . ($brand ? '-' . strtoupper(substr($cleanBrandName, 0, 3)) : '') . '-DFLT';
-            
-            // Limit code length to avoid validation overflow
-            $familyCode = substr($familyCode, 0, 20);
-
-            $family = ProductFamily::where('organization_id', $orgId)
-                ->where('category_id', $categoryId)
-                ->where('brand_id', $brandId)
-                ->first();
-                
-            if (!$family) {
-                $code = $familyCode;
-                $counter = 1;
-                while (ProductFamily::where('organization_id', $orgId)->where('code', $code)->exists()) {
-                    $code = substr($familyCode, 0, 15) . '-' . $counter;
-                    $counter++;
-                }
-                
-                $family = ProductFamily::create([
-                    'organization_id' => $orgId,
-                    'category_id' => $categoryId,
-                    'brand_id' => $brandId,
-                    'tax_profile_id' => $taxProfileId,
-                    'name' => $familyName,
-                    'code' => $code,
-                    'description' => 'System-generated family for uncategorized products.'
-                ]);
-            }
-            
-            $request->merge(['product_family_id' => $family->id]);
-        }
-
-        // Auto-fill brand_id and tax_profile_id from Product Family if omitted
-        if ($request->has('product_family_id')) {
-            $family = ProductFamily::where('organization_id', $orgId)->find($request->input('product_family_id'));
-            if ($family) {
-                if (!$request->has('tax_profile_id') && $family->tax_profile_id) {
-                    $request->merge(['tax_profile_id' => $family->tax_profile_id]);
-                }
-                if (!$request->has('brand_id') && $family->brand_id) {
-                    $request->merge(['brand_id' => $family->brand_id]);
-                }
-            }
-        }
 
         // Auto-fill inventory_behavior and UOMs based on product_type if omitted
         if ($request->has('product_type') || !$request->has('inventory_behavior')) {
@@ -201,7 +97,8 @@ class ProductApiController extends Controller
         }
 
         $validated = $request->validate([
-            'product_family_id' => 'required|exists:product_families,id',
+            'category_id' => 'required|exists:categories,id',
+            'brand_id' => 'required|exists:brands,id',
             'name' => 'required|string|max:255',
             'sku' => [
                 'required',
@@ -218,7 +115,6 @@ class ProductApiController extends Controller
             'sales_unit_id' => 'required|exists:units,id',
             'base_unit_id' => 'required|exists:units,id',
             'tax_profile_id' => 'required|exists:tax_profiles,id',
-            'brand_id' => 'nullable|exists:brands,id',
             'manufacturer_id' => 'nullable|exists:manufacturers,id',
             'cost_price' => 'required|numeric|min:0',
             'sale_price' => 'required|numeric|min:0',
@@ -235,7 +131,7 @@ class ProductApiController extends Controller
         $variant = DB::transaction(function () use ($validated, $orgId) {
             $variantData = collect($validated)->except(['attributes', 'pieces_per_box', 'product_type', 'physical_object', 'measurement_unit'])->toArray();
             
-            $variant = ProductVariant::create(array_merge($variantData, [
+            $variant = Product::create(array_merge($variantData, [
                 'organization_id' => $orgId,
                 'is_active' => $validated['is_active'] ?? true
             ]));
@@ -252,15 +148,15 @@ class ProductApiController extends Controller
             }
 
             if (!empty($validated['pieces_per_box'])) {
-                $boxUnit = \App\Domains\Master\Models\Unit::where('organization_id', $orgId)
+                $boxUnit = Unit::where('organization_id', $orgId)
                     ->where('symbol', 'BOX')
                     ->first();
-                $pcsUnit = \App\Domains\Master\Models\Unit::where('organization_id', $orgId)
+                $pcsUnit = Unit::where('organization_id', $orgId)
                     ->where('symbol', 'PCS')
                     ->first();
 
                 if ($boxUnit && $pcsUnit) {
-                    \App\Domains\Product\Models\UnitConversion::create([
+                    UnitConversion::create([
                         'organization_id' => $orgId,
                         'product_variant_id' => $variant->id,
                         'from_unit_id' => $boxUnit->id,
@@ -275,8 +171,8 @@ class ProductApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Product variant created successfully.',
-            'data' => $variant->load(['family', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute'])
+            'message' => 'Product saved successfully.',
+            'data' => $variant->load(['category', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute'])
         ], 201);
     }
 
@@ -318,88 +214,20 @@ class ProductApiController extends Controller
     }
 
     /**
-     * Retrieve a list of all product families.
-     */
-    public function listFamilies(Request $request)
-    {
-        return response()->json(
-            ProductFamily::with(['category', 'brand', 'taxProfile'])->orderBy('name')->get()
-        );
-    }
-
-    /**
-     * Update an existing Product Family.
-     */
-    public function updateFamily(Request $request, $id)
-    {
-        $orgId = $request->user()->organization_id;
-        $family = ProductFamily::findOrFail($id);
-
-        $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'code' => [
-                'sometimes',
-                'required',
-                'string',
-                'max:50',
-                Rule::unique('product_families')->where(function ($query) use ($orgId) {
-                    return $query->where('organization_id', $orgId);
-                })->ignore($family->id)
-            ],
-            'category_id' => 'sometimes|required|exists:categories,id',
-            'brand_id' => 'nullable|exists:brands,id',
-            'tax_profile_id' => 'nullable|exists:tax_profiles,id',
-            'description' => 'nullable|string'
-        ]);
-
-        $family->update($validated);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Product family updated successfully.',
-            'data' => $family->load(['category', 'brand', 'taxProfile'])
-        ]);
-    }
-
-    /**
-     * Remove the specified Product Family.
-     */
-    public function deleteFamily(Request $request, $id)
-    {
-        $family = ProductFamily::findOrFail($id);
-
-        // Prevent deletion if there are active variants linked to this family
-        $hasVariants = ProductVariant::where('product_family_id', $family->id)->exists();
-        if ($hasVariants) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot delete product family because it is linked to active product variants.'
-            ], 422);
-        }
-
-        $family->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Product family successfully deleted.'
-        ]);
-    }
-
-    /**
      * Retrieve a list of all product variants.
      */
     public function listVariants(Request $request)
     {
         return response()->json(
-            ProductVariant::with(['family', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute'])->orderBy('name')->get()
+            Product::with(['category', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute'])->orderBy('name')->get()
         );
     }
 
     public function showVariant(Request $request, $id)
     {
         $orgId = $request->user()->organization_id;
-        $variant = ProductVariant::where('organization_id', $orgId)
-            ->with(['family.category', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute'])
+        $variant = Product::where('organization_id', $orgId)
+            ->with(['category', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute'])
             ->findOrFail($id);
 
         return response()->json($variant);
@@ -408,75 +236,7 @@ class ProductApiController extends Controller
     public function updateVariant(Request $request, $id)
     {
         $orgId = $request->user()->organization_id;
-        $variant = ProductVariant::where('organization_id', $orgId)->findOrFail($id);
-
-        // Auto-fill product_family_id from category_id/brand_id if omitted or empty
-        if (!$request->has('product_family_id') || empty($request->input('product_family_id'))) {
-            $request->validate([
-                'category_id' => 'required|exists:categories,id',
-            ]);
-            $categoryId = $request->input('category_id');
-            $brandId = $request->input('brand_id');
-            $taxProfileId = $request->input('tax_profile_id');
-
-            // Find default tax profile if not passed
-            if (!$taxProfileId) {
-                $defaultTax = TaxProfile::where('organization_id', $orgId)->where('is_active', true)->first() 
-                    ?? TaxProfile::where('is_active', true)->first();
-                $taxProfileId = $defaultTax ? $defaultTax->id : null;
-            }
-
-            $category = Category::find($categoryId);
-            $brand = $brandId ? Brand::find($brandId) : null;
-            
-            $cleanCatName = preg_replace('/[^a-zA-Z0-9]/', '', $category->name);
-            $cleanBrandName = $brand ? preg_replace('/[^a-zA-Z0-9]/', '', $brand->name) : '';
-            
-            $familyName = ($brand ? $brand->name . ' ' : '') . $category->name . ' Family';
-            $familyCode = strtoupper(substr($cleanCatName, 0, 3)) . ($brand ? '-' . strtoupper(substr($cleanBrandName, 0, 3)) : '') . '-DFLT';
-            
-            // Limit code length to avoid validation overflow
-            $familyCode = substr($familyCode, 0, 20);
-
-            $family = ProductFamily::where('organization_id', $orgId)
-                ->where('category_id', $categoryId)
-                ->where('brand_id', $brandId)
-                ->first();
-                
-            if (!$family) {
-                $code = $familyCode;
-                $counter = 1;
-                while (ProductFamily::where('organization_id', $orgId)->where('code', $code)->exists()) {
-                    $code = substr($familyCode, 0, 15) . '-' . $counter;
-                    $counter++;
-                }
-                
-                $family = ProductFamily::create([
-                    'organization_id' => $orgId,
-                    'category_id' => $categoryId,
-                    'brand_id' => $brandId,
-                    'tax_profile_id' => $taxProfileId,
-                    'name' => $familyName,
-                    'code' => $code,
-                    'description' => 'System-generated family for uncategorized products.'
-                ]);
-            }
-            
-            $request->merge(['product_family_id' => $family->id]);
-        }
-
-        // Auto-fill brand_id and tax_profile_id from Product Family if omitted
-        if ($request->has('product_family_id')) {
-            $family = ProductFamily::where('organization_id', $orgId)->find($request->input('product_family_id'));
-            if ($family) {
-                if (!$request->has('tax_profile_id') && $family->tax_profile_id) {
-                    $request->merge(['tax_profile_id' => $family->tax_profile_id]);
-                }
-                if (!$request->has('brand_id') && $family->brand_id) {
-                    $request->merge(['brand_id' => $family->brand_id]);
-                }
-            }
-        }
+        $variant = Product::where('organization_id', $orgId)->findOrFail($id);
 
         // Auto-fill inventory_behavior and UOMs based on product_type if omitted
         if ($request->has('product_type') || !$request->has('inventory_behavior')) {
@@ -529,7 +289,8 @@ class ProductApiController extends Controller
         }
 
         $validated = $request->validate([
-            'product_family_id' => 'required|exists:product_families,id',
+            'category_id' => 'required|exists:categories,id',
+            'brand_id' => 'required|exists:brands,id',
             'name' => 'required|string|max:255',
             'sku' => [
                 'required',
@@ -546,7 +307,6 @@ class ProductApiController extends Controller
             'sales_unit_id' => 'required|exists:units,id',
             'base_unit_id' => 'required|exists:units,id',
             'tax_profile_id' => 'required|exists:tax_profiles,id',
-            'brand_id' => 'nullable|exists:brands,id',
             'manufacturer_id' => 'nullable|exists:manufacturers,id',
             'cost_price' => 'required|numeric|min:0',
             'sale_price' => 'required|numeric|min:0',
@@ -576,14 +336,14 @@ class ProductApiController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Product updated successfully.',
-            'data' => $variant->load(['family', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute'])
+            'data' => $variant->load(['category', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute'])
         ]);
     }
 
     public function listConversions(Request $request, $id)
     {
         $orgId = $request->user()->organization_id;
-        $variant = ProductVariant::where('organization_id', $orgId)->findOrFail($id);
+        $variant = Product::where('organization_id', $orgId)->findOrFail($id);
         
         $conversions = UnitConversion::where('organization_id', $orgId)
             ->where('product_variant_id', $variant->id)
@@ -596,7 +356,7 @@ class ProductApiController extends Controller
     public function storeConversion(Request $request, $id)
     {
         $orgId = $request->user()->organization_id;
-        $variant = ProductVariant::where('organization_id', $orgId)->findOrFail($id);
+        $variant = Product::where('organization_id', $orgId)->findOrFail($id);
         
         $validated = $request->validate([
             'from_unit_id' => 'required|exists:units,id',
@@ -648,7 +408,7 @@ class ProductApiController extends Controller
     public function getInventorySummary(Request $request, $id)
     {
         $orgId = $request->user()->organization_id;
-        $variant = ProductVariant::where('organization_id', $orgId)->findOrFail($id);
+        $variant = Product::where('organization_id', $orgId)->findOrFail($id);
         
         $onHandCount = \App\Domains\Inventory\Models\InventoryObject::where('organization_id', $orgId)
             ->where('product_variant_id', $variant->id)

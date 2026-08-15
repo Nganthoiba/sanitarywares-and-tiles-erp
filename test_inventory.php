@@ -6,8 +6,7 @@ use App\Domains\Master\Models\Branch;
 use App\Domains\Master\Models\Warehouse;
 use App\Domains\Master\Models\Category;
 use App\Domains\Master\Models\Unit;
-use App\Domains\Product\Models\ProductFamily;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 use App\Domains\Inventory\Models\InventoryObject;
 use App\Domains\Inventory\Models\InventoryMovement;
 use App\Domains\Inventory\Services\ReservationService;
@@ -64,11 +63,12 @@ echo "--- Bootstrapping Laravel for Inventory & Slab Optimization Engine Verific
         'decimal_places' => 4
     ]);
 
-    $pf = ProductFamily::firstOrCreate([
+    $brand = \App\Domains\Master\Models\Brand::firstOrCreate([
         'organization_id' => $org->id,
-        'category_id' => $cat->id,
-        'name' => 'Italian Onyx',
-        'code' => 'ONYX-FAM'
+        'name' => 'Italian Marble Brand'
+    ], [
+        'code' => 'IT-MARB',
+        'is_active' => true
     ]);
 
     $gst18 = \App\Domains\Master\Models\TaxProfile::firstOrCreate([
@@ -81,9 +81,9 @@ echo "--- Bootstrapping Laravel for Inventory & Slab Optimization Engine Verific
         'igst_rate' => 18
     ]);
 
-    $variant = ProductVariant::firstOrCreate([
+    $variant = Product::firstOrCreate([
         'organization_id' => $org->id,
-        'product_family_id' => $pf->id,
+        'category_id' => $cat->id,
         'purchase_unit_id' => $unit->id,
         'sales_unit_id' => $unit->id,
         'base_unit_id' => $unit->id,
@@ -91,6 +91,7 @@ echo "--- Bootstrapping Laravel for Inventory & Slab Optimization Engine Verific
         'sku' => 'GRAN-ONYX-01',
         'inventory_behavior' => 'SLAB',
         'tax_profile_id' => $gst18->id,
+        'brand_id' => $brand->id,
         'cost_price' => 140.0000
     ]);
 

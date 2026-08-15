@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Domains\Master\Models\Organization;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 
 class InventoryReservation extends Model {
     use BelongsToOrganization;
@@ -24,8 +24,11 @@ class InventoryReservation extends Model {
     public function organization(): BelongsTo {
         return $this->belongsTo(Organization::class);
     }
+    public function product(): BelongsTo {
+        return $this->belongsTo(Product::class, 'product_variant_id');
+    }
     public function variant(): BelongsTo {
-        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+        return $this->product();
     }
     public function inventoryObject(): BelongsTo {
         return $this->belongsTo(InventoryObject::class);

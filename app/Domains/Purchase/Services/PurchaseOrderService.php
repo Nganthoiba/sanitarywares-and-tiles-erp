@@ -6,7 +6,7 @@ use App\Domains\Purchase\Models\PurchaseOrder;
 use App\Domains\Purchase\Models\PurchaseOrderItem;
 use App\Domains\Purchase\Models\PurchaseRequisition;
 use Illuminate\Support\Facades\DB;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 use Exception;
 
 class PurchaseOrderService
@@ -314,7 +314,7 @@ class PurchaseOrderService
     /**
      * Retrieve valid units for variant.
      */
-    public function getValidUnitsForVariant(ProductVariant $variant): \Illuminate\Support\Collection
+    public function getValidUnitsForVariant(Product $variant): \Illuminate\Support\Collection
     {
         $units = collect([
             $variant->base_unit_id,
@@ -340,7 +340,7 @@ class PurchaseOrderService
         $calculatedItems = [];
 
         foreach ($items as $item) {
-            $variant = ProductVariant::where('organization_id', $organizationId)->findOrFail($item['product_variant_id']);
+            $variant = Product::where('organization_id', $organizationId)->findOrFail($item['product_variant_id']);
             $qty = (float) $item['quantity'];
             $price = (float) $item['unit_price'];
             $discount = (float) ($item['discount_amount'] ?? 0.0);

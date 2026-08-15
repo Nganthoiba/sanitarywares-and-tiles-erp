@@ -7,7 +7,7 @@ use App\Domains\Inventory\Models\InventoryMovement;
 use App\Domains\Inventory\Models\GraniteSlabDetail;
 use App\Domains\Purchase\Models\GoodsReceiptNote;
 use App\Domains\Purchase\Models\GoodsReceiptItem;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 use App\Domains\Product\Models\UnitConversion;
 use App\Domains\Master\Models\Unit;
 use App\Domains\Inventory\Events\InventoryReceived;
@@ -238,7 +238,7 @@ class InventoryService
             return $this->convertQuantity($quantity, $fromUnitId, $sqftUnit->id, $variantId, $organizationId);
         } catch (\Exception $e) {
             // Check if we can route the conversion through the variant's base unit
-            $variant = ProductVariant::find($variantId);
+            $variant = Product::find($variantId);
             if ($variant && $variant->base_unit_id && $variant->base_unit_id !== $fromUnitId) {
                 try {
                     $baseQty = $this->convertQuantity($quantity, $fromUnitId, $variant->base_unit_id, $variantId, $organizationId);

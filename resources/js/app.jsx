@@ -184,20 +184,11 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
                             <ul className="sidebar-submenu animate__animated animate__fadeIn">
                                 <li>
                                     <NavLink 
-                                        to="/products/variants" 
+                                        to="/products" 
                                         className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
                                     >
                                         <i className="fa-solid fa-list me-2" style={{ fontSize: '0.8rem' }}></i>
                                         All Products
-                                    </NavLink>
-                                </li>
-                                <li>
-                                    <NavLink 
-                                        to="/products/families" 
-                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
-                                    >
-                                        <i className="fa-solid fa-folder-tree me-2" style={{ fontSize: '0.8rem' }}></i>
-                                        Families
                                     </NavLink>
                                 </li>
                                 <li>
@@ -535,9 +526,7 @@ function App() {
                         <Route path="/storage-locations" element={<StorageLocationManager />} />
                         <Route path="/suppliers" element={<SupplierManager />} />
 
-                        <Route path="/products" element={<Navigate to="/products/variants" replace />} />
-                        <Route path="/products/variants" element={<ProductEntry key="products-variants" initialSubTab="list" />} />
-                        <Route path="/products/families" element={<ProductEntry key="products-families" initialSubTab="families" />} />
+                        <Route path="/products" element={<ProductEntry key="products" initialSubTab="list" />} />
                         <Route path="/products/categories" element={<CategoryManager />} />
                         <Route path="/products/brands" element={<BrandManager />} />
                         <Route path="/products/manufacturers" element={<ManufacturerManager />} />

@@ -12,7 +12,7 @@ use App\Domains\Inventory\Services\InventoryService;
 use App\Domains\Accounting\Services\PostingService;
 use App\Domains\Accounting\Models\Account;
 use App\Domains\Accounting\Models\AccountGroup;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
@@ -46,7 +46,7 @@ class GRNService
             // 2. Create Items & Slabs
             if (!empty($data['items'])) {
                 foreach ($data['items'] as $itemData) {
-                    $variant = ProductVariant::findOrFail($itemData['product_variant_id']);
+                    $variant = Product::findOrFail($itemData['product_variant_id']);
                     $hasSlabs = !empty($itemData['slabs']);
 
                     if ($variant->inventory_behavior !== 'SLAB' && $hasSlabs) {
@@ -112,7 +112,7 @@ class GRNService
                 }
 
                 foreach ($data['items'] as $itemData) {
-                    $variant = ProductVariant::findOrFail($itemData['product_variant_id']);
+                    $variant = Product::findOrFail($itemData['product_variant_id']);
                     $hasSlabs = !empty($itemData['slabs']);
 
                     if ($variant->inventory_behavior !== 'SLAB' && $hasSlabs) {

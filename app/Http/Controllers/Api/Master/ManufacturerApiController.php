@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\Master;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Domains\Master\Models\Manufacturer;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 use Illuminate\Validation\Rule;
 
 class ManufacturerApiController extends Controller
@@ -85,11 +85,11 @@ class ManufacturerApiController extends Controller
     {
         $manufacturer = Manufacturer::findOrFail($id);
 
-        // Prevent deletion if linked to product variants
-        $hasVariants = ProductVariant::where('manufacturer_id', $manufacturer->id)->exists();
-        if ($hasVariants) {
+        // Prevent deletion if linked to products
+        $hasProducts = Product::where('manufacturer_id', $manufacturer->id)->exists();
+        if ($hasProducts) {
             return response()->json([
-                'message' => 'Cannot delete manufacturer because it is linked to active product variants.'
+                'message' => 'Cannot delete manufacturer because it is linked to active products.'
             ], 422);
         }
 

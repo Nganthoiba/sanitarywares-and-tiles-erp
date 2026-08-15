@@ -10,7 +10,7 @@ use App\Domains\Master\Models\Supplier;
 use App\Domains\Master\Models\Warehouse;
 use App\Domains\Master\Models\StorageLocation;
 use App\Domains\Master\Models\Unit;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 use App\Domains\Purchase\Models\PurchaseOrder;
 use App\Http\Requests\StoreGRNRequest;
 use App\Http\Requests\UpdateGRNRequest;
@@ -133,7 +133,7 @@ class GRNApiController extends Controller
             'warehouses' => Warehouse::where('is_active', true)->orderBy('name')->get(),
             'storage_locations' => StorageLocation::orderBy('code')->get(),
             'units' => Unit::where('is_active', true)->orderBy('name')->get(),
-            'product_variants' => ProductVariant::where('is_active', true)->with(['baseUnit', 'purchaseUnit'])->orderBy('name')->get(),
+            'product_variants' => Product::where('is_active', true)->with(['baseUnit', 'purchaseUnit'])->orderBy('name')->get(),
             'purchase_orders' => PurchaseOrder::with(['items.variant', 'items.unit', 'supplier'])
                 ->whereIn('status', ['APPROVED', 'OPEN', 'PARTIAL'])
                 ->orderBy('po_number', 'desc')
