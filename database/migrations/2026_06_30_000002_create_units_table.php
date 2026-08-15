@@ -9,15 +9,13 @@ return new class extends Migration {
     {
         Schema::create('units', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organization_id')->index()->constrained('organizations')->onDelete('cascade');
             $table->string('name');
-            $table->string('symbol', 10);
+            $table->string('symbol', 10)->unique();
             $table->string('type')->default('QUANTITY');
             $table->integer('decimal_places')->default(2);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();
-            $table->unique(['organization_id', 'symbol']);
         });
     }
     public function down(): void
