@@ -328,6 +328,64 @@ class ProductApiController extends Controller
     }
 
     /**
+     * Update an existing Product Family.
+     */
+    public function updateFamily(Request $request, $id)
+    {
+        $orgId = $request->user()->organization_id;
+        $family = ProductFamily::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'code' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('product_families')->where(function ($query) use ($orgId) {
+                    return $query->where('organization_id', $orgId);
+                })->ignore($family->id)
+            ],
+            'category_id' => 'sometimes|required|exists:categories,id',
+            'brand_id' => 'nullable|exists:brands,id',
+            'tax_profile_id' => 'nullable|exists:tax_profiles,id',
+            'description' => 'nullable|string'
+        ]);
+
+        $family->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Product family updated successfully.',
+            'data' => $family->load(['category', 'brand', 'taxProfile'])
+        ]);
+    }
+
+    /**
+     * Remove the specified Product Family.
+     */
+    public function deleteFamily(Request $request, $id)
+    {
+        $family = ProductFamily::findOrFail($id);
+
+        // Prevent deletion if there are active variants linked to this family
+        $hasVariants = ProductVariant::where('product_family_id', $family->id)->exists();
+        if ($hasVariants) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot delete product family because it is linked to active product variants.'
+            ], 422);
+        }
+
+        $family->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Product family successfully deleted.'
+        ]);
+    }
+
+    /**
      * Retrieve a list of all product variants.
      */
     public function listVariants(Request $request)

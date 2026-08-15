@@ -79,6 +79,8 @@ export default function ProductEntry({ initialSubTab = "list" }) {
 
     // Modal forms
     const [showFamilyModal, setShowFamilyModal] = useState(false);
+    const [familyModalMode, setFamilyModalMode] = useState('create'); // 'create', 'edit'
+    const [editingFamilyId, setEditingFamilyId] = useState(null);
     const [familyForm, setFamilyForm] = useState({
         name: "",
         code: "",
@@ -468,7 +470,62 @@ export default function ProductEntry({ initialSubTab = "list" }) {
     // -------------------------------------------------------------
     // Inline Family Creation Handler
     // -------------------------------------------------------------
-    const handleContextualFamilySubmit = async (e) => {
+    const handleOpenCreateFamily = () => {
+        setFamilyModalMode('create');
+        setEditingFamilyId(null);
+        setFamilyForm({
+            name: "",
+            code: "",
+            category_id: "",
+            brand_id: "",
+            tax_profile_id: "",
+            description: ""
+        });
+        setError(null);
+        setShowFamilyModal(true);
+    };
+
+    const handleOpenEditFamily = (family) => {
+        setFamilyModalMode('edit');
+        setEditingFamilyId(family.id);
+        setFamilyForm({
+            name: family.name || "",
+            code: family.code || "",
+            category_id: family.category_id ? family.category_id.toString() : "",
+            brand_id: family.brand_id ? family.brand_id.toString() : "",
+            tax_profile_id: family.tax_profile_id ? family.tax_profile_id.toString() : "",
+            description: family.description || ""
+        });
+        setError(null);
+        setShowFamilyModal(true);
+    };
+
+    const handleDeleteFamily = async (family) => {
+        if (!confirm(`Are you sure you want to delete product family "${family.name}"? This action cannot be undone.`)) {
+            return;
+        }
+        setError(null);
+        setSuccess(null);
+        try {
+            const token = localStorage.getItem("auth_token");
+            await axios.delete(`/api/product/families/${family.id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setSuccess("Product family successfully deleted.");
+            
+            // Refresh families list
+            const res = await axios.get("/api/product/form-data", {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setFamilies(res.data.families || []);
+            setSelectedFamilyId("");
+            setFamilyProducts([]);
+        } catch (err) {
+            setError(err.response?.data?.message || "Failed to delete product family.");
+        }
+    };
+
+    const handleFamilyFormSubmit = async (e) => {
         e.preventDefault();
         setError(null);
         setLoading(true);
@@ -476,29 +533,43 @@ export default function ProductEntry({ initialSubTab = "list" }) {
             const token = localStorage.getItem("auth_token");
             const payload = {
                 ...familyForm,
-                // Prefill category and brand context if not manually chosen
+                // Prefill context if not manually chosen
                 category_id: familyForm.category_id || productForm.category_id,
                 brand_id: familyForm.brand_id || productForm.brand_id,
                 tax_profile_id: familyForm.tax_profile_id || productForm.tax_profile_id
             };
-            const response = await axios.post("/api/product/families", payload, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            
+            let response;
+            if (familyModalMode === 'create') {
+                response = await axios.post("/api/product/families", payload, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            } else {
+                response = await axios.put(`/api/product/families/${editingFamilyId}`, payload, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            }
+
             if (response.data.success) {
-                const newFam = response.data.data;
                 // Reload lookups
                 const res = await axios.get("/api/product/form-data", {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setFamilies(res.data.families || []);
                 
-                // Automatically select newly created family
-                setProductForm(prev => ({
-                    ...prev,
-                    product_family_id: newFam.id.toString(),
-                    category_id: newFam.category_id.toString(),
-                    brand_id: newFam.brand_id ? newFam.brand_id.toString() : prev.brand_id
-                }));
+                if (familyModalMode === 'create') {
+                    const newFam = response.data.data;
+                    // Automatically select newly created family
+                    setProductForm(prev => ({
+                        ...prev,
+                        product_family_id: newFam.id.toString(),
+                        category_id: newFam.category_id.toString(),
+                        brand_id: newFam.brand_id ? newFam.brand_id.toString() : prev.brand_id
+                    }));
+                    setSuccess("New Product Family registered successfully!");
+                } else {
+                    setSuccess("Product Family updated successfully!");
+                }
 
                 setShowFamilyModal(false);
                 setFamilyForm({
@@ -509,10 +580,9 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                     tax_profile_id: "",
                     description: ""
                 });
-                setSuccess("New Product Family registered successfully!");
             }
         } catch (err) {
-            setError(err.response?.data?.message || "Failed to create product family.");
+            setError(err.response?.data?.message || "Failed to save product family.");
         } finally {
             setLoading(false);
         }
@@ -1623,7 +1693,15 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                     --------------------------------------------------------- */}
                 {view === "families" && (
                     <div>
-                        <h5 className="fw-bold mb-4 text-dark">Product Family Manager</h5>
+                        <div className="d-flex align-items-center justify-content-between mb-4">
+                            <h5 className="fw-bold mb-0 text-dark">Product Family Manager</h5>
+                            <button className="btn btn-primary btn-sm px-3 shadow-sm" onClick={handleOpenCreateFamily}>
+                                <i className="fa-solid fa-plus me-1"></i> Register Product Family
+                            </button>
+                        </div>
+                        <div className="alert alert-info bg-info-subtle text-info border-0 p-3 mb-4 small animate__animated animate__fadeIn">
+                            <strong>What is a Product Family?</strong> A product family represents a group or series of related products that share common characteristics, such as design line, collections, or base pricing behavior (e.g. <i>Kajaria Eternity Series</i>). Selecting a family inherits category, brand, and default tax configurations, making product variant creation faster and more consistent.
+                        </div>
                         <div className="row">
                             <div className="col-md-5 mb-4">
                                 <div className="card border-0 p-3 bg-white rounded-3 shadow-sm border border-light">
@@ -1649,6 +1727,43 @@ export default function ProductEntry({ initialSubTab = "list" }) {
 
                             <div className="col-md-7 mb-4">
                                 <div className="card border-0 p-3 rounded-3 shadow-sm bg-white border border-light">
+                                    {selectedFamilyId && families.find(f => f.id === selectedFamilyId) && (() => {
+                                        const activeFamily = families.find(f => f.id === selectedFamilyId);
+                                        return (
+                                            <div className="mb-4 p-3 bg-light rounded-3 border border-light">
+                                                <div className="d-flex justify-content-between align-items-start mb-2">
+                                                    <div>
+                                                        <h6 className="fw-bold text-dark mb-1">
+                                                            {activeFamily.name}
+                                                            <span className="badge bg-secondary font-monospace ms-2" style={{ fontSize: '0.75rem' }}>{activeFamily.code}</span>
+                                                        </h6>
+                                                        <p className="text-muted small mb-0">{activeFamily.description || "No description provided."}</p>
+                                                    </div>
+                                                    <div className="d-flex gap-1">
+                                                        <button className="btn btn-xs btn-outline-primary px-2" onClick={() => handleOpenEditFamily(activeFamily)} style={{ fontSize: '0.75rem' }}>
+                                                            <i className="fa-solid fa-pen me-1"></i> Edit
+                                                        </button>
+                                                        <button className="btn btn-xs btn-outline-danger px-2" onClick={() => handleDeleteFamily(activeFamily)} style={{ fontSize: '0.75rem' }}>
+                                                            <i className="fa-solid fa-trash me-1"></i> Delete
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <hr className="my-2 text-muted opacity-25" />
+                                                <div className="row g-2 text-secondary small">
+                                                    <div className="col-sm-4">
+                                                        <strong>Category:</strong> {activeFamily.category?.name || "N/A"}
+                                                    </div>
+                                                    <div className="col-sm-4">
+                                                        <strong>Brand:</strong> {activeFamily.brand?.name || "Generic"}
+                                                    </div>
+                                                    <div className="col-sm-4">
+                                                        <strong>Tax Profile:</strong> {activeFamily.tax_profile?.name || "None"}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
                                     <h6 className="fw-bold mb-3 border-bottom pb-2 text-dark">
                                         Products in Family: {selectedFamilyId ? families.find(f => f.id === selectedFamilyId)?.name : "Select a Family"}
                                     </h6>
@@ -1711,10 +1826,12 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                     <div className="modal-dialog modal-dialog-centered">
                         <div className="modal-content shadow-lg border-0" style={{ borderRadius: "12px" }}>
                             <div className="modal-header border-bottom-0 pt-4 px-4">
-                                <h5 className="modal-title fw-bold fs-5">Create Product Family</h5>
+                                <h5 className="modal-title fw-bold fs-5">
+                                    {familyModalMode === 'create' ? 'Create Product Family' : 'Edit Product Family'}
+                                </h5>
                                 <button type="button" className="btn-close" onClick={() => setShowFamilyModal(false)}></button>
                             </div>
-                            <form onSubmit={handleContextualFamilySubmit}>
+                            <form onSubmit={handleFamilyFormSubmit}>
                                 <div className="modal-body px-4">
                                     <div className="mb-3">
                                         <label className="form-label small fw-semibold">Family Name *</label>
@@ -1739,6 +1856,40 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                         />
                                     </div>
                                     <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Category *</label>
+                                        <select 
+                                            className="form-select" 
+                                            value={familyForm.category_id} 
+                                            onChange={(e) => setFamilyForm({ ...familyForm, category_id: e.target.value })} 
+                                            required
+                                        >
+                                            <option value="">Select Category</option>
+                                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Brand (Optional)</label>
+                                        <select 
+                                            className="form-select" 
+                                            value={familyForm.brand_id} 
+                                            onChange={(e) => setFamilyForm({ ...familyForm, brand_id: e.target.value })}
+                                        >
+                                            <option value="">No Brand / Generic</option>
+                                            {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Tax Profile (Optional)</label>
+                                        <select 
+                                            className="form-select" 
+                                            value={familyForm.tax_profile_id} 
+                                            onChange={(e) => setFamilyForm({ ...familyForm, tax_profile_id: e.target.value })}
+                                        >
+                                            <option value="">Select Tax Profile</option>
+                                            {taxProfiles.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="mb-3">
                                         <label className="form-label small fw-semibold">Description</label>
                                         <textarea 
                                             className="form-control" 
@@ -1753,7 +1904,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                     <button type="button" className="btn btn-secondary px-3" onClick={() => setShowFamilyModal(false)}>Cancel</button>
                                     <button type="submit" className="btn btn-primary px-4" disabled={loading}>
                                         {loading ? <span className="spinner-border spinner-border-sm me-2"></span> : null}
-                                        Create Family
+                                        {familyModalMode === 'create' ? 'Create Family' : 'Save Changes'}
                                     </button>
                                 </div>
                             </form>

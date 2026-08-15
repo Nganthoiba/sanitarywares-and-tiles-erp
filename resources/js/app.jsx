@@ -209,26 +209,20 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
                                         Categories
                                     </NavLink>
                                 </li>
-                                <li>
-                                    <NavLink 
-                                        to="/products/brands" 
-                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
-                                    >
-                                        <i className="fa-solid fa-tags me-2" style={{ fontSize: '0.8rem' }}></i>
-                                        Brands
-                                    </NavLink>
-                                </li>
-                                <li>
-                                    <NavLink 
-                                        to="/products/manufacturers" 
-                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
-                                    >
-                                        <i className="fa-solid fa-industry me-2" style={{ fontSize: '0.8rem' }}></i>
-                                        Manufacturers
-                                    </NavLink>
-                                </li>
                             </ul>
                         )}
+                    </li>
+                    <li className="sidebar-menu-item">
+                        <NavLink to="/products/brands" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                            <i className="fa-solid fa-tags me-3"></i>
+                            <span className="sidebar-text">Brands</span>
+                        </NavLink>
+                    </li>
+                    <li className="sidebar-menu-item">
+                        <NavLink to="/products/manufacturers" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                            <i className="fa-solid fa-industry me-3"></i>
+                            <span className="sidebar-text">Manufacturers</span>
+                        </NavLink>
                     </li>
                     <li className="sidebar-menu-item">
                         <NavLink to="/workflows" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
