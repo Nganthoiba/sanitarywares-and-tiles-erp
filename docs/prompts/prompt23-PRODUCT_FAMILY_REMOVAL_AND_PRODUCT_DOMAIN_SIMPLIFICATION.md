@@ -25,7 +25,7 @@ The existing Product domain currently contains concepts such as:
 - GTIN
 - Barcode
 
-After reviewing the Product Family / Product Variant relationships and the Add Product Wizard UX, we have decided to REMOVE the Product Family concept from the core domain.
+After reviewing the Product Family / Product Variant relationships and the Add New Product Variant UX, we have decided to REMOVE the Product Family concept from the core domain.
 
 ============================================================
 IMPORTANT ARCHITECTURAL DECISION
@@ -652,10 +652,10 @@ that may be an optional Product Attribute.
 But do not make Collection mandatory.
 
 ============================================================
-PART 10 — ADD PRODUCT WIZARD
+PART 10 — Add New Product Variant
 ============================================================
 
-Redesign the Add Product Wizard.
+Redesign the Add New Product Variant.
 
 Remove:
 
@@ -684,7 +684,7 @@ At minimum, the first step should contain:
 PART 11 — CATEGORY FIELD
 ============================================================
 
-The Add Product Wizard should explain Category.
+The Add New Product Variant should explain Category.
 
 Label:
 
@@ -1416,8 +1416,8 @@ API:
 
 FRONTEND:
 
-14. Add Product Wizard contains no Family field.
-15. Add Product Wizard contains mandatory Brand.
+14. Add New Product Variant contains no Family field.
+15. Add New Product Variant contains mandatory Brand.
 16. Category is clearly explained.
 17. Brand is clearly explained.
 18. Product Name is clearly explained.
@@ -1579,7 +1579,7 @@ Before writing code, produce a complete impact analysis containing:
 6. All Product Family foreign keys.
 7. All Product Variant foreign keys.
 8. Existing Product UI.
-9. Existing Add Product Wizard.
+9. Existing Add New Product Variant.
 10. Existing Product APIs.
 11. Existing Product services.
 12. Purchase dependencies.
