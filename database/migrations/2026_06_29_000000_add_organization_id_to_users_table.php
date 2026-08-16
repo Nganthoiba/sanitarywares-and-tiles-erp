@@ -18,7 +18,6 @@ return new class extends Migration
                 //->index()
                 ->constrained('organizations')
                 ->onDelete('cascade');
-            $table->string('invitation_token')->nullable()->after('remember_token');
         });
     }
 

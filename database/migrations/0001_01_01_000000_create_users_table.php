@@ -21,7 +21,9 @@ return new class extends Migration
             $table->string('phone_number')->nullable();
             $table->string('secondary_phone_number')->nullable();
             $table->rememberToken();
-            $table->string('invitation_token')->nullable()->after('remember_token');
+            $table->string('invitation_token')
+                ->nullable()
+                ->comment('After user is created by an admin of the organisation, an invitation token will be sent to the registered email');
             $table->timestamps();
         });
 
