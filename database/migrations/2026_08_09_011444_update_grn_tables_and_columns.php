@@ -42,7 +42,7 @@ return new class extends Migration {
     {
         Schema::dropIfExists('goods_receipt_item_slabs');
 
-
+        /*
         // First check if the table exists or not
         if (Schema::hasTable('goods_receipt_items')) {
             Schema::table('goods_receipt_items', function (Blueprint $table) {
@@ -58,5 +58,6 @@ return new class extends Migration {
                 $table->foreignId('purchase_order_id')->nullable(false)->change();
             });
         }
+        */
     }
 };
