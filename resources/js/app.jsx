@@ -429,17 +429,19 @@ function App() {
     };
 
     const handleLoginSuccess = (data) => {
+        const orgName = data.organization?.name || data.user?.organization?.name || '';
+        const permissions = data.user_permissions || data.user?.permissions || [];
         setUser({
             name: data.user.name,
             email: data.user.email,
-            organizationName: data.user.organization.name,
-            permissions: data.user.permissions
+            organizationName: orgName,
+            permissions: permissions
         });
         localStorage.setItem('auth_token', data.access_token);
         localStorage.setItem('user_name', data.user.name);
         localStorage.setItem('user_email', data.user.email);
-        localStorage.setItem('organization_name', data.user.organization.name);
-        localStorage.setItem('user_permissions', JSON.stringify(data.user.permissions));
+        localStorage.setItem('organization_name', orgName);
+        localStorage.setItem('user_permissions', JSON.stringify(permissions));
         navigate('/inventory');
     };
 
