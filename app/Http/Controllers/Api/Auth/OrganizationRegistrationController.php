@@ -52,6 +52,8 @@ class OrganizationRegistrationController extends Controller
         $user->setRelation('organization', $result['organization']);
         // $permissions = $user->roles->flatMap(fn($r) => $r->permissions)->pluck('slug')->unique()->values();
         // $user->permissions = $permissions;
+        $roles = $user->roles->pluck('name')->unique()->values();
+        $user->roles_list = $roles;
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -60,6 +62,7 @@ class OrganizationRegistrationController extends Controller
             'token_type' => 'Bearer',
             'organization' => $result['organization'],
             'user' => $user,
+            'user_roles' => $roles,
             'user_permissions' => $result['user_permissions'],
         ], 201); // 201 standard HTTP Created status code
     }

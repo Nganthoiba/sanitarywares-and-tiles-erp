@@ -323,6 +323,7 @@ function App() {
                     name: localStorage.getItem('user_name'),
                     email: localStorage.getItem('user_email'),
                     organizationName: localStorage.getItem('organization_name'),
+                    roles: JSON.parse(localStorage.getItem('user_roles') || '[]'),
                     permissions: JSON.parse(localStorage.getItem('user_permissions') || '[]')
                 };
             } catch (e) {
@@ -431,16 +432,19 @@ function App() {
     const handleLoginSuccess = (data) => {
         const orgName = data.organization?.name || data.user?.organization?.name || '';
         const permissions = data.user_permissions || data.user?.permissions || [];
+        const roles = data.user_roles || data.user?.roles || (permissions.includes('master.users.manage') ? ['Administrator'] : []);
         setUser({
             name: data.user.name,
             email: data.user.email,
             organizationName: orgName,
+            roles: roles,
             permissions: permissions
         });
         localStorage.setItem('auth_token', data.access_token);
         localStorage.setItem('user_name', data.user.name);
         localStorage.setItem('user_email', data.user.email);
         localStorage.setItem('organization_name', orgName);
+        localStorage.setItem('user_roles', JSON.stringify(roles));
         localStorage.setItem('user_permissions', JSON.stringify(permissions));
         navigate('/inventory');
     };
@@ -584,7 +588,11 @@ function App() {
                                             </div>
                                             <div className="col-6">
                                                 <span className="text-muted d-block small uppercase font-monospace">User Role</span>
-                                                <strong className="text-dark">{user?.permissions?.includes('administrator') ? 'Administrator' : 'Staff Member'}</strong>
+                                                <strong className="text-dark">
+                                                    {(user?.roles && user.roles.length > 0)
+                                                        ? user.roles.join(', ')
+                                                        : (user?.permissions?.includes('master.users.manage') ? 'Administrator' : 'Staff Member')}
+                                                </strong>
                                             </div>
                                         </div>
                                     </div>

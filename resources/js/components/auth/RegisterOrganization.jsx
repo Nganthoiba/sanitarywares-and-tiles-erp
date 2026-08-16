@@ -87,6 +87,7 @@ export default function RegisterOrganization({ onRegistrationSuccess, onNavigate
             localStorage.setItem('user_name', data.user.name);
             localStorage.setItem('user_email', data.user.email);
             localStorage.setItem('organization_name', data.organization.name);
+            localStorage.setItem('user_roles', JSON.stringify(data.user_roles || data.user?.roles || ['Administrator']));
             localStorage.setItem('user_permissions', JSON.stringify(data.user_permissions));
 
             onRegistrationSuccess(data);

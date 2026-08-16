@@ -33,6 +33,7 @@ export default function Login({ onLoginSuccess, onNavigateToRegister }) {
             localStorage.setItem('user_name', data.user.name);
             localStorage.setItem('user_email', data.user.email);
             localStorage.setItem('organization_name', data.user.organization.name);
+            localStorage.setItem('user_roles', JSON.stringify(data.user.roles || []));
             localStorage.setItem('user_permissions', JSON.stringify(data.user.permissions));
 
             onLoginSuccess(data);

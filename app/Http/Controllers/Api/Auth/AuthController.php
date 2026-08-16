@@ -58,6 +58,7 @@ class AuthController extends Controller
         
         $allowedBranches = $user->scopes->whereNotNull('branch_id')->map(fn($s) => $s->branch)->unique();
         $permissions = $user->roles->flatMap(fn($r) => $r->permissions)->pluck('slug')->unique()->values();
+        $roles = $user->roles->pluck('name')->unique()->values();
 
         return response()->json([
             'access_token' => $token,
@@ -71,6 +72,7 @@ class AuthController extends Controller
                     'name' => $user->organization->name,
                 ],
                 'branches' => $allowedBranches,
+                'roles' => $roles,
                 'permissions' => $permissions
             ]
         ]);
@@ -98,6 +100,7 @@ class AuthController extends Controller
 
         $allowedBranches = $user->scopes->whereNotNull('branch_id')->map(fn($s) => $s->branch)->unique();
         $permissions = $user->roles->flatMap(fn($r) => $r->permissions)->pluck('slug')->unique()->values();
+        $roles = $user->roles->pluck('name')->unique()->values();
 
         return response()->json([
             'id' => $user->id,
@@ -108,6 +111,7 @@ class AuthController extends Controller
                 'name' => $user->organization->name,
             ],
             'branches' => $allowedBranches,
+            'roles' => $roles,
             'permissions' => $permissions
         ]);
     }
