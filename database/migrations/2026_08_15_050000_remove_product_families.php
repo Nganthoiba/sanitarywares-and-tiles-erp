@@ -44,36 +44,40 @@ return new class extends Migration {
             Schema::table('product_variants', function (Blueprint $table) {
                 $table->dropForeign(['brand_id']);
             });
-        } catch (\Exception $e) {
-            // Already dropped or doesn't exist
-        }
+        } catch (\Exception $e) {}
 
-        // 6. Make category_id and brand_id NOT NULL and add the new Brand foreign key constraint
+        // 6. Make category_id and brand_id NOT NULL
         Schema::table('product_variants', function (Blueprint $table) {
             $table->foreignId('category_id')->nullable(false)->change();
             $table->foreignId('brand_id')->nullable(false)->change();
-            
-            // Try setting foreign key, ignore if already set
-            try {
-                $table->foreign('brand_id')->references('id')->on('brands')->onDelete('cascade');
-            } catch (\Exception $e) {}
         });
 
-        // 7. Drop product_family_id index, foreign key constraint and column if they exist
-        Schema::table('product_variants', function (Blueprint $table) {
-            if (Schema::hasColumn('product_variants', 'product_family_id')) {
-                try {
-                    $table->dropIndex(['product_family_id']);
-                } catch (\Exception $e) {}
-                try {
-                    $table->dropIndex(['organization_id', 'product_family_id']);
-                } catch (\Exception $e) {}
-                try {
+        // 7. Drop product_family_id foreign key constraint & indices
+        if (Schema::hasColumn('product_variants', 'product_family_id')) {
+            try {
+                Schema::table('product_variants', function (Blueprint $table) {
                     $table->dropForeign(['product_family_id']);
-                } catch (\Exception $e) {}
-                $table->dropColumn('product_family_id');
-            }
-        });
+                });
+            } catch (\Exception $e) {}
+
+            try {
+                Schema::table('product_variants', function (Blueprint $table) {
+                    $table->dropIndex(['product_family_id']);
+                });
+            } catch (\Exception $e) {}
+
+            try {
+                Schema::table('product_variants', function (Blueprint $table) {
+                    $table->dropIndex(['organization_id', 'product_family_id']);
+                });
+            } catch (\Exception $e) {}
+
+            try {
+                Schema::table('product_variants', function (Blueprint $table) {
+                    $table->dropColumn('product_family_id');
+                });
+            } catch (\Exception $e) {}
+        }
 
         // 8. Drop product_families table
         Schema::dropIfExists('product_families');
