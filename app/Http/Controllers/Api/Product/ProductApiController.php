@@ -29,12 +29,12 @@ class ProductApiController extends Controller
         $orgId = $request->user()->organization_id;
 
         return response()->json([
-            'categories' => Category::where('is_active', true)->orderBy('name')->get(),
-            'brands' => Brand::where('is_active', true)->orderBy('name')->get(),
+            'categories' => Category::where('organization_id', $orgId)->where('is_active', true)->orderBy('name')->get(),
+            'brands' => Brand::where('organization_id', $orgId)->where('is_active', true)->orderBy('name')->get(),
             'units' => Unit::where('is_active', true)->orderBy('name')->get(),
-            'tax_profiles' => TaxProfile::where('is_active', true)->orderBy('name')->get(),
-            'manufacturers' => Manufacturer::orderBy('name')->get(),
-            'attributes' => ProductAttribute::orderBy('name')->get(),
+            'tax_profiles' => TaxProfile::where('organization_id', $orgId)->where('is_active', true)->orderBy('name')->get(),
+            'manufacturers' => Manufacturer::where('organization_id', $orgId)->orderBy('name')->get(),
+            'attributes' => ProductAttribute::where('organization_id', $orgId)->with('unit')->orderBy('name')->get(),
             'inventory_behaviors' => ['STANDARD', 'CONVERTIBLE', 'SLAB', 'SERIAL', 'BATCH', 'BUNDLE', 'ROLL']
         ]);
     }
@@ -56,9 +56,8 @@ class ProductApiController extends Controller
                 ]);
                 
                 if (!$request->has('purchase_unit_id') || !$request->has('sales_unit_id') || !$request->has('base_unit_id')) {
-                    $sqftUnit = Unit::where('organization_id', $orgId)
-                        ->whereIn('symbol', ['SQFT', 'SQ.FT.', 'SQ_FT'])
-                        ->first() ?? Unit::where('organization_id', $orgId)->first();
+                    $sqftUnit = Unit::whereIn('symbol', ['SQFT', 'SQ.FT.', 'SQ_FT', 'sq.ft.', 'sq.m'])
+                        ->first() ?? Unit::first();
                     if ($sqftUnit) {
                         $request->merge([
                             'purchase_unit_id' => $request->input('purchase_unit_id', $sqftUnit->id),
@@ -73,9 +72,8 @@ class ProductApiController extends Controller
                 ]);
                 
                 if (!$request->has('purchase_unit_id') || !$request->has('sales_unit_id') || !$request->has('base_unit_id')) {
-                    $pcsUnit = Unit::where('organization_id', $orgId)
-                        ->whereIn('symbol', ['PCS', 'pcs', 'PC'])
-                        ->first() ?? Unit::where('organization_id', $orgId)->first();
+                    $pcsUnit = Unit::whereIn('symbol', ['PCS', 'pcs', 'PC', 'box'])
+                        ->first() ?? Unit::first();
                     if ($pcsUnit) {
                         $request->merge([
                             'purchase_unit_id' => $request->input('purchase_unit_id', $pcsUnit->id),
@@ -97,8 +95,14 @@ class ProductApiController extends Controller
         }
 
         $validated = $request->validate([
-            'category_id' => 'required|exists:categories,id',
-            'brand_id' => 'required|exists:brands,id',
+            'category_id' => [
+                'required',
+                Rule::exists('categories', 'id')->where('organization_id', $orgId)
+            ],
+            'brand_id' => [
+                'required',
+                Rule::exists('brands', 'id')->where('organization_id', $orgId)
+            ],
             'name' => 'required|string|max:255',
             'sku' => [
                 'required',
@@ -111,11 +115,26 @@ class ProductApiController extends Controller
             'gtin' => 'nullable|string|max:50',
             'barcode' => 'nullable|string|max:50',
             'inventory_behavior' => 'required|string|in:STANDARD,CONVERTIBLE,SLAB,SERIAL,BATCH,BUNDLE,ROLL',
-            'purchase_unit_id' => 'required|exists:units,id',
-            'sales_unit_id' => 'required|exists:units,id',
-            'base_unit_id' => 'required|exists:units,id',
-            'tax_profile_id' => 'required|exists:tax_profiles,id',
-            'manufacturer_id' => 'nullable|exists:manufacturers,id',
+            'purchase_unit_id' => [
+                'required',
+                Rule::exists('units', 'id')
+            ],
+            'sales_unit_id' => [
+                'required',
+                Rule::exists('units', 'id')
+            ],
+            'base_unit_id' => [
+                'required',
+                Rule::exists('units', 'id')
+            ],
+            'tax_profile_id' => [
+                'required',
+                Rule::exists('tax_profiles', 'id')->where('organization_id', $orgId)
+            ],
+            'manufacturer_id' => [
+                'nullable',
+                Rule::exists('manufacturers', 'id')->where('organization_id', $orgId)
+            ],
             'cost_price' => 'required|numeric|min:0',
             'sale_price' => 'required|numeric|min:0',
             'is_active' => 'boolean',
@@ -124,7 +143,10 @@ class ProductApiController extends Controller
             'physical_object' => 'required_if:product_type,MEASURED_MATERIAL|nullable|string|in:SLAB',
             'measurement_unit' => 'required_if:product_type,MEASURED_MATERIAL|nullable|string|in:SQFT,SQ.FT.',
             'attributes' => 'nullable|array',
-            'attributes.*.attribute_id' => 'required|exists:product_attributes,id',
+            'attributes.*.attribute_id' => [
+                'required',
+                Rule::exists('product_attributes', 'id')->where('organization_id', $orgId)
+            ],
             'attributes.*.value' => 'required|string'
         ]);
 
@@ -172,7 +194,7 @@ class ProductApiController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Product saved successfully.',
-            'data' => $variant->load(['category', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute'])
+            'data' => $variant->load(['category', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute.unit'])
         ], 201);
     }
 
@@ -185,7 +207,11 @@ class ProductApiController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|string|in:string,text,number,list'
+            'type' => 'required|string|in:string,text,number,list',
+            'unit_id' => [
+                'nullable',
+                Rule::exists('units', 'id')
+            ]
         ]);
 
         $slug = Str::slug($validated['name']);
@@ -203,14 +229,76 @@ class ProductApiController extends Controller
             'organization_id' => $orgId,
             'name' => $validated['name'],
             'slug' => $slug,
-            'type' => $validated['type']
+            'type' => $validated['type'],
+            'unit_id' => $validated['unit_id'] ?? null,
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Product attribute defined successfully.',
-            'data' => $attr
+            'data' => $attr->load('unit')
         ], 201);
+    }
+
+    /**
+     * Assign or update an attribute value for a specific product.
+     */
+    public function assignProductAttribute(Request $request, $productId)
+    {
+        $orgId = $request->user()->organization_id;
+        $product = Product::where('organization_id', $orgId)->findOrFail($productId);
+
+        $validated = $request->validate([
+            'attribute_id' => [
+                'required',
+                Rule::exists('product_attributes', 'id')->where('organization_id', $orgId)
+            ],
+            'value' => 'required|string'
+        ]);
+
+        $attributeValue = ProductAttributeValue::updateOrCreate(
+            [
+                'organization_id' => $orgId,
+                'product_variant_id' => $product->id,
+                'product_attribute_id' => $validated['attribute_id'],
+            ],
+            [
+                'value' => $validated['value']
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Product attribute assigned successfully.',
+            'data' => $attributeValue->load('attribute.unit')
+        ]);
+    }
+
+    /**
+     * Remove an attribute assignment from a specific product.
+     */
+    public function removeProductAttribute(Request $request, $productId, $attributeId)
+    {
+        $orgId = $request->user()->organization_id;
+        $product = Product::where('organization_id', $orgId)->findOrFail($productId);
+        $attribute = ProductAttribute::where('organization_id', $orgId)->findOrFail($attributeId);
+
+        $deleted = ProductAttributeValue::where('organization_id', $orgId)
+            ->where('product_variant_id', $product->id)
+            ->where('product_attribute_id', $attribute->id)
+            ->delete();
+
+        if (!$deleted) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Attribute assignment not found for this product.'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Attribute specification removed from product successfully.'
+        ]);
     }
 
     /**
@@ -218,8 +306,12 @@ class ProductApiController extends Controller
      */
     public function listVariants(Request $request)
     {
+        $orgId = $request->user()->organization_id;
         return response()->json(
-            Product::with(['category', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute'])->orderBy('name')->get()
+            Product::where('organization_id', $orgId)
+                ->with(['category', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute.unit'])
+                ->orderBy('name')
+                ->get()
         );
     }
 
@@ -227,7 +319,7 @@ class ProductApiController extends Controller
     {
         $orgId = $request->user()->organization_id;
         $variant = Product::where('organization_id', $orgId)
-            ->with(['category', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute'])
+            ->with(['category', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute.unit'])
             ->findOrFail($id);
 
         return response()->json($variant);
@@ -289,8 +381,14 @@ class ProductApiController extends Controller
         }
 
         $validated = $request->validate([
-            'category_id' => 'required|exists:categories,id',
-            'brand_id' => 'required|exists:brands,id',
+            'category_id' => [
+                'required',
+                Rule::exists('categories', 'id')->where('organization_id', $orgId)
+            ],
+            'brand_id' => [
+                'required',
+                Rule::exists('brands', 'id')->where('organization_id', $orgId)
+            ],
             'name' => 'required|string|max:255',
             'sku' => [
                 'required',
@@ -303,16 +401,34 @@ class ProductApiController extends Controller
             'gtin' => 'nullable|string|max:50',
             'barcode' => 'nullable|string|max:50',
             'inventory_behavior' => 'required|string|in:STANDARD,CONVERTIBLE,SLAB,SERIAL,BATCH,BUNDLE,ROLL',
-            'purchase_unit_id' => 'required|exists:units,id',
-            'sales_unit_id' => 'required|exists:units,id',
-            'base_unit_id' => 'required|exists:units,id',
-            'tax_profile_id' => 'required|exists:tax_profiles,id',
-            'manufacturer_id' => 'nullable|exists:manufacturers,id',
+            'purchase_unit_id' => [
+                'required',
+                Rule::exists('units', 'id')->where('organization_id', $orgId)
+            ],
+            'sales_unit_id' => [
+                'required',
+                Rule::exists('units', 'id')->where('organization_id', $orgId)
+            ],
+            'base_unit_id' => [
+                'required',
+                Rule::exists('units', 'id')->where('organization_id', $orgId)
+            ],
+            'tax_profile_id' => [
+                'required',
+                Rule::exists('tax_profiles', 'id')->where('organization_id', $orgId)
+            ],
+            'manufacturer_id' => [
+                'nullable',
+                Rule::exists('manufacturers', 'id')->where('organization_id', $orgId)
+            ],
             'cost_price' => 'required|numeric|min:0',
             'sale_price' => 'required|numeric|min:0',
             'is_active' => 'boolean',
             'attributes' => 'nullable|array',
-            'attributes.*.attribute_id' => 'required|exists:product_attributes,id',
+            'attributes.*.attribute_id' => [
+                'required',
+                Rule::exists('product_attributes', 'id')->where('organization_id', $orgId)
+            ],
             'attributes.*.value' => 'required|string'
         ]);
 
@@ -320,15 +436,23 @@ class ProductApiController extends Controller
             $variantData = collect($validated)->except(['attributes'])->toArray();
             $variant->update($variantData);
 
-            ProductAttributeValue::where('product_variant_id', $variant->id)->delete();
-            if (!empty($validated['attributes'])) {
+            if (isset($validated['attributes'])) {
+                $submittedAttrIds = collect($validated['attributes'])->pluck('attribute_id')->toArray();
+                ProductAttributeValue::where('product_variant_id', $variant->id)
+                    ->whereNotIn('product_attribute_id', $submittedAttrIds)
+                    ->delete();
+
                 foreach ($validated['attributes'] as $attr) {
-                    ProductAttributeValue::create([
-                        'organization_id' => $orgId,
-                        'product_variant_id' => $variant->id,
-                        'product_attribute_id' => $attr['attribute_id'],
-                        'value' => $attr['value']
-                    ]);
+                    ProductAttributeValue::updateOrCreate(
+                        [
+                            'organization_id' => $orgId,
+                            'product_variant_id' => $variant->id,
+                            'product_attribute_id' => $attr['attribute_id']
+                        ],
+                        [
+                            'value' => $attr['value']
+                        ]
+                    );
                 }
             }
         });
@@ -336,7 +460,7 @@ class ProductApiController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Product updated successfully.',
-            'data' => $variant->load(['category', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute'])
+            'data' => $variant->load(['category', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute.unit'])
         ]);
     }
 
