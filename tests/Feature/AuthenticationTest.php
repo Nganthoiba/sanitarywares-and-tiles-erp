@@ -145,4 +145,21 @@ class AuthenticationTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonPath('message', 'The current password you entered is incorrect.');
     }
+
+    public function test_user_cannot_change_password_with_mismatched_confirmation()
+    {
+        $token = $this->user->createToken('test_token')->plainTextToken;
+
+        $response = $this->putJson('/api/profile', [
+            'name' => 'Test User',
+            'email' => 'test@org.com',
+            'current_password' => 'password123',
+            'new_password' => 'newpassword123',
+            'new_password_confirmation' => 'differentpassword'
+        ], [
+            'Authorization' => 'Bearer ' . $token
+        ]);
+
+        $response->assertStatus(422);
+    }
 }

@@ -387,7 +387,7 @@ function App() {
             setSettingsSuccess('');
             setSettingsError('');
         }
-    }, [showSettingsModal, user]);
+    }, [showSettingsModal]);
 
     const handleUpdateProfile = async (e) => {
         e.preventDefault();

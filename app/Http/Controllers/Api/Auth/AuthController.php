@@ -130,7 +130,9 @@ class AuthController extends Controller
 
         if ($request->filled('new_password')) {
             $rules['current_password'] = 'required|string';
-            $rules['new_password'] = 'required|string|min:8|confirmed';
+            $rules['new_password'] = $request->has('new_password_confirmation')
+                ? 'required|string|min:8|confirmed'
+                : 'required|string|min:8';
         }
 
         $request->validate($rules);
