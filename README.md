@@ -1,1359 +1,405 @@
-# Tiles & Sanitary Management System
+# Tiles & Sanitaryware ERP System
 
-A comprehensive business management and ERP system designed for
-tile, sanitaryware, granite, marble, CP fittings, accessories, and
-other building-material businesses.
+A comprehensive, multi-tenant business management and Enterprise Resource Planning (ERP) platform purpose-built for businesses dealing in **Tiles**, **Sanitaryware**, **Granite**, **Marble**, **CP Fittings**, **Bathroom Accessories**, and other building materials.
 
-The primary objective of this project is to computerise the complete
-business lifecycle of a shop, wholesaler, retailer, or other
-building-material organisation — starting from procurement from
-suppliers, continuing through receiving and inventory management, and
-finally ending with sales and business reporting.
+The primary objective of this system is to computerise and streamline the complete operational lifecycle of building-material enterprises — starting from supplier procurement, continuing through goods receiving and multi-unit inventory management, and concluding with sales execution and business intelligence reporting.
+
+---
+
+```text
+                        TILES & SANITARYWARE ERP
+
+  ┌──────────────┐      ┌────────────────┐      ┌────────────────────┐
+  │   SUPPLIER   │ ───► │ PURCHASE ORDER │ ───► │ GOODS RECEIPT (GRN)│
+  └──────────────┘      └────────────────┘      └─────────┬──────────┘
+                                                          │
+                                                          ▼
+  ┌──────────────┐      ┌────────────────┐      ┌────────────────────┐
+  │   CUSTOMER   │ ◄─── │     SALES      │ ◄─── │     INVENTORY      │
+  └──────┬───────┘      └────────────────┘      └─────────┬──────────┘
+         │                                                │
+         ▼                                                ▼
+  ┌──────────────┐                              ┌────────────────────┐
+  │  REPORTING   │                              │ STOCK TRANSFERS &  │
+  │ & ANALYTICS  │                              │    ADJUSTMENTS     │
+  └──────────────┘                              └────────────────────┘
+```
+
+> **Core Operating Principle:**
+> *One connected transaction chain in which each operational stage feeds the next — connecting Procurement, Inventory, Sales, and Financial Reporting into a unified, traceable digital ecosystem.*
+
+---
+
+## Table of Contents
+
+- [1. Project Vision](#1-project-vision)
+- [2. Target Businesses](#2-target-businesses)
+- [3. Core Business Lifecycle](#3-core-business-lifecycle)
+- [4. Procurement Management](#4-procurement-management)
+  - [4.1 Purchase Order Lifecycle & Statuses](#41-purchase-order-lifecycle--statuses)
+  - [42 Goods Receipt Note (GRN)](#42-goods-receipt-note-grn)
+  - [4.3 Direct GRN (Receiving Without PO)](#43-direct-grn-receiving-without-po)
+- [5. Advanced Inventory & Measurement Models](#5-advanced-inventory--measurement-models)
+  - [5.1 Units of Measurement (UOM) Dimensions](#51-units-of-measurement-uom-dimensions)
+  - [5.2 Product-Specific Unit Conversions](#52-product-specific-unit-conversions)
+  - [5.3 Tiles & Box Coverage Dynamics](#53-tiles--box-coverage-dynamics)
+  - [5.4 Granite & Marble Slab Management](#54-granite--marble-slab-management)
+- [6. Product Catalog & Attribute System](#6-product-catalog--attribute-system)
+  - [6.1 Product Types (Standard vs. Measured Material)](#61-product-types-standard-vs-measured-material)
+  - [6.2 Product Specifications & Reusable Attributes](#62-product-specifications--reusable-attributes)
+  - [6.3 Global Manufacturer Master vs. Tenant Suppliers](#63-global-manufacturer-master-vs-tenant-suppliers)
+- [7. Multi-Tenant Architecture & RBAC](#7-multi-tenant-architecture--rbac)
+  - [7.1 Organization Isolation](#71-organization-isolation)
+  - [7.2 Role-Based Access Control (RBAC)](#72-role-based-access-control-rbac)
+  - [7.3 Multi-Branch & Multi-Warehouse Operations](#73-multi-branch--multi-warehouse-operations)
+- [8. Sales, Pricing & Auditability](#8-sales-pricing--auditability)
+  - [8.1 Sales Flow & Inventory Reduction](#81-sales-flow--inventory-reduction)
+  - [8.2 Pricing Models & Tax Profiles](#82-pricing-models--tax-profiles)
+  - [8.3 End-to-End Audit Trail](#83-end-to-end-audit-trail)
+- [9. Technical Stack & Getting Started](#9-technical-stack--getting-started)
+- [10. Project Status & Roadmap](#10-project-status--roadmap)
 
 ---
 
 ## 1. Project Vision
 
-The core idea of this system is simple:
+Traditional building-material businesses often struggle with fragmented software solutions — using one tool for purchasing, another for inventory, spreadsheet tracking for granite slabs, and separate billing software.
 
-> Manage the complete flow of goods through a business in one
-> integrated system.
+This ERP brings all these operational domains together into **one integrated, stateful platform**:
 
-Instead of maintaining separate systems for purchasing, stock,
-sales, and business records, this application brings these activities
-together.
+- **Unified Stock Movement:** Every purchase order, delivery receipt, stock transfer, adjustment, and sales invoice updates inventory dynamically.
+- **Real-World Product Modeling:** Native support for complex, dimension-dependent products such as tiles (sold per box/sq.ft.) and granite slabs (tracked by individual slab area).
+- **Traceable Transaction Chains:** Complete auditability from supplier PO to customer invoice.
 
-The overall business flow is:
-
-```text
-                    PROCUREMENT
-                         │
-                         ▼
-                    SUPPLIER
-                         │
-                         ▼
-                PURCHASE ORDER
-                         │
-                         ▼
-              GOODS RECEIVED (GRN)
-                         │
-                         ▼
-                     INVENTORY
-                         │
-             ┌───────────┴───────────┐
-             │                       │
-             ▼                       ▼
-          TRANSFER               ADJUSTMENT
-             │                       │
-             └───────────┬───────────┘
-                         │
-                         ▼
-                       SALES
-                         │
-                         ▼
-                    CUSTOMER
-                         │
-                         ▼
-                   SALES REPORTS
-```
+---
 
 ## 2. Target Businesses
 
-The system is primarily designed for businesses dealing in:
+The application is tailored specifically for:
 
-> Tiles
-> Sanitaryware
-> Granite
-> Marble
-> CP fittings
-> Bathroom accessories
-> Building-material accessories
-> Other related products
+- **Product Domains:**
+  - Ceramic, Vitrified, & Porcelain Tiles
+  - Sanitaryware & Bathroom Fixtures
+  - Granite, Marble, & Natural Stone Slabs
+  - CP Fittings & Plumbing Hardware
+  - Building Material Accessories
+- **Enterprise Formats:**
+  - Single-Location Retail Showrooms
+  - Wholesale Distributors
+  - Hybrid Retail-Wholesale Dealers
+  - Multi-Branch & Multi-Warehouse Enterprises
 
-The system is designed to work for:
-
-> Retail shops
-> Wholesale businesses
-> Retail + wholesale businesses
-> Multiple-branch businesses
-> Small and medium-sized building-material businesses
-
-The architecture is designed with future expansion toward larger
-multi-branch and multi-organization deployments in mind.
+---
 
 ## 3. Core Business Lifecycle
 
-The central business lifecycle is:
+The entire platform operates around a connected operational pipeline:
 
 ```text
-
-Supplier
-   │
-   ▼
-Purchase
-   │
-   ▼
-Goods Receiving
-   │
-   ▼
-Inventory
-   │
-   ├── Stock Transfer
-   ├── Stock Adjustment
-   ├── Stock Reservation
-   └── Stock Movement
-   │
-   ▼
-Sales
-   │
-   ▼
-Customer
-
+  [Supplier] ──► [Purchase Order] ──► [Goods Receipt (GRN)] ──► [Inventory]
+                                                                     │
+  [Customer] ◄── [Sales Invoice]  ◄── [Stock Allocation] ◄──────────┤
+                                                                     ▼
+                                                         [Transfers / Adjustments]
 ```
 
-Every major movement of goods should ultimately be represented by a
-business transaction.
+> **Key Rule:** Every movement of physical goods is tied to an explicit, stateful business transaction. Manual stock count updates require documented audit reasons.
 
-This creates a traceable chain from:
-
-> Purchase → Receipt → Stock → Sale
+---
 
 ## 4. Procurement Management
 
-The procurement module manages purchasing goods from external
-suppliers.
-
-The current system treats the Purchase Order as the primary purchasing
-document.
-
-The current design intentionally does not make Purchase Requisition
-part of the active purchasing workflow.
-
-The simplified purchasing flow is:
-
-User
-│
-▼
-Purchase Order
-│
-▼
-Supplier
-│
-▼
-Goods Delivery
-│
-▼
-GRN
-│
-▼
-Inventory
-
-A Purchase Order records the organisation's intention to purchase goods
-from a supplier.
-
-A Purchase Order may contain:
-
-Supplier
-Branch
-PO number
-PO date
-Expected delivery date
-Reference number
-Payment terms
-Delivery terms
-Products
-Quantities
-Units
-Rates
-Discounts
-Taxes
-Total amount
-Remarks
-Status 5. Purchase Order Status
-
-Purchase Orders are stateful business documents.
-
-The system supports statuses such as:
-
-DRAFT
-SUBMITTED
-APPROVED
-SENT
-PARTIALLY_RECEIVED
-FULLY_RECEIVED
-CLOSED
-CANCELLED
-
-The exact approval mechanism can evolve as the system grows.
-
-The current design intentionally avoids imposing a complex workflow
-engine because different organisations may have different procurement
-approval requirements.
-
-The system should therefore keep the basic purchasing lifecycle
-simple and extensible.
-
-6. Goods Receipt Note (GRN)
-
-A Goods Receipt Note represents the actual receipt of goods from a
-supplier.
-
-The normal flow is:
-
-Purchase Order
-│
-▼
-Supplier delivers goods
-│
-▼
-GRN
-│
-▼
-Inventory
-
-The GRN is important because a Purchase Order represents what was
-ordered, whereas the GRN represents what was actually received.
-
-For example:
-
-PO:
-100 BOX Tiles
-
-GRN:
-60 BOX received
-
-Remaining:
-40 BOX
-
-The system can therefore maintain:
-
-Ordered Quantity
-Received Quantity
-Remaining Quantity 7. GRN Without Purchase Order
-
-The system may also support receiving goods without a Purchase Order.
-
-However, this should be treated as an explicit exception rather than
-the normal receiving workflow.
-
-Conceptually:
-
-Normal:
-
-Purchase Order
-↓
-GRN
-↓
-Inventory
-
-Exception:
-
-Supplier Delivery
-↓
-Direct GRN
-↓
-Inventory
-
-A direct GRN should be clearly identified as a receipt without PO and
-should require an appropriate reason and permissions.
-
-This provides flexibility for:
-
-Emergency purchases
-Small purchases
-Goods received before PO entry
-Replacement goods
-Other exceptional circumstances
-
-while preserving the normal procurement audit trail.
-
-8. Inventory Management
-
-Inventory is one of the core components of the system.
-
-The objective is not merely to store a current stock number.
-
-The system should maintain the history of stock movement.
-
-Conceptually:
-
-Opening Stock +
-Purchases / GRNs +
-Stock Transfers In +
-Adjustments In -
-Sales -
-Stock Transfers Out -
-Adjustments Out
-=
-Current Stock
-
-Inventory should therefore be based on stock movements and transaction
-history rather than relying solely on manually edited quantities.
-
-9. Multiple Product Measurement Models
-
-One of the major challenges of this domain is that different products
-are purchased, stored, priced, and sold using different units.
-
-The system therefore distinguishes between:
-
-Product specifications
-Measurement units
-Transaction units
-Pricing units
-Product-specific conversions
-
-These concepts must not be mixed.
-
-10. Units of Measurement (UOM)
-
-The system recognises different measurement dimensions.
-
-Length
-MM
-CM
-M
-IN
-FT
-Area
-SQ.MM
-SQ.M
-SQ.IN
-SQ.FT
-Volume
-CU.MM
-CU.CM
-CU.M
-CU.FT
-Mass
-G
-KG
-TON
-Count
-PCS
-BOX
-BAG
-SET
-SLAB
-
-Not all units are universally convertible.
-
-For example:
-
-FT ↔ MM
-
-is a valid length conversion.
-
-SQ.FT ↔ SQ.M
-
-is a valid area conversion.
-
-But:
-
-MM ↔ SQ.FT
-
-is not a direct UOM conversion because length and area are different
-dimensions.
-
-11. Product-Specific Unit Conversion
-
-Some conversions are not universal.
-
-For example:
-
-1 BOX = 4 PCS
-
-may be true for one tile product.
-
-Another product may have:
-
-1 BOX = 2 PCS
-
-Therefore:
-
-BOX → PCS
-
-is a product-specific commercial conversion rather than a universal
-UOM conversion.
-
-This distinction is important for accurate purchasing, inventory, and
-sales calculations.
-
-12. Tiles
-
-Tiles commonly have fixed physical dimensions and are commonly
-purchased by boxes.
-
-For example:
-
-Product:
-600 × 600 mm Tile
-
-Physical dimensions:
-Length = 600 MM
-Width = 600 MM
-Thickness = 8 MM
-
-Purchase Unit:
-BOX
-
-Contents:
-4 PCS / BOX
-
-The system should be capable of understanding the relationship between:
-
-BOX
-PCS
-Physical dimensions
-Coverage area
-Price
-
-without incorrectly treating all boxes as having the same number of
-pieces.
-
-13. Granite and Marble
-
-Granite and marble require a different inventory model.
-
-They may be sold based on area:
-
-₹180 / SQ.FT.
-
-but physically received as individual slabs.
-
-For example:
-
-Slab #1
-120 IN × 72 IN
-≈ 60 SQ.FT.
-
-Slab #2
-118 IN × 70 IN
-≈ 57.36 SQ.FT.
-
-Therefore:
-
-1 SLAB
-
-does not necessarily represent a fixed area.
-
-The actual dimensions and area of individual slabs may need to be
-captured during Goods Receiving.
-
-This distinction is essential:
-
-Purchase Quantity:
-SLABS
-
-Pricing:
-SQ.FT.
-
-Actual inventory:
-Individual slabs with actual dimensions/area
-
-The system should not assume:
-
-1 SLAB = 60 SQ.FT.
-
-unless that relationship is actually known for a particular slab.
-
-14. Product Catalog
-
-The Product Catalog is the foundation of purchasing, inventory, and
-sales.
-
-A Product represents the actual item that the organisation buys,
-stocks, and sells.
-
-Products contain information such as:
-
-Product name
-Category
-Brand
-Manufacturer
-Product type
-SKU
-GTIN
-Tax profile
-Units
-Pricing
-Specifications
-Inventory configuration
-
-The system intentionally does not use the previously considered
-Product Family concept.
-
-15. Product Family Removal
-
-The Product Family concept was removed to simplify the product
-catalogue.
-
-The system instead focuses on:
-
-Category
-Brand
-Manufacturer
-Product
-Product Specifications
-
-This avoids ambiguity where a Product Family could belong to one Brand
-while the Product itself belonged to another Brand.
-
-Brand is a direct property of the Product.
-
-16. Product Type
-
-Products currently follow two broad types:
-
-STANDARD
-MEASURED_MATERIAL
-STANDARD
-
-Used for products that normally have a relatively consistent unit
-and quantity model.
-
-Examples:
-
-Tiles
-Sanitaryware
-Accessories
-Fittings
-MEASURED_MATERIAL
-
-Used for materials where physical dimensions and actual measurements
-may vary.
-
-Examples:
-
-Granite
-Marble
-Other slab-based materials
-
-This distinction helps the system determine how inventory and receiving
-should behave.
-
-17. Product Specifications / Custom Attributes
-
-Product Specifications are optional.
-
-A product does not need to have custom attributes.
-
-For example:
-
-Product A
-
-Specifications:
-None
-
-is completely valid.
-
-Another product may have:
-
-Length = 600 MM
-Width = 600 MM
-Thickness = 8 MM
-Color = White
-Finish = Glossy
-
-The system therefore allows each Product to have only the
-specifications relevant to it.
-
-18. Attribute Definitions
-
-Attributes are reusable definitions.
-
-Examples:
-
-Length
-Width
-Thickness
-Color
-Finish
-Material
-Weight
-Volume
-
-An organisation can define an Attribute once and use it for multiple
-Products.
-
-However, an Attribute Definition is not automatically assigned to
-every Product.
-
-The relationship is:
-
-Attribute Definition
-↓
-Product-specific Attribute Value
-
-For example:
-
-Thickness
-│
-├── Product A = 8 MM
-├── Product B = 10 MM
-└── Product C = 12 MM 19. Optional Attribute Units
-
-An Attribute may have a Unit or may explicitly have:
-
-NO UNIT
-
-Examples:
-
-Thickness
-Numeric
-MM
-
-Length
-Numeric
-FT
-
-Volume
-Numeric
-CU.M
-
-Color
-List
-NO UNIT
-
-Finish
-List
-NO UNIT
-
-Attribute Units describe the Product specification.
-
-They are not the same as:
-
-Purchase Unit
-Sales Unit
-Stock Unit
-Pricing Unit
-
-For example:
-
-Thickness = 8 MM
-Purchase Unit = BOX
-Price = ₹800 / BOX
-
-These are three separate concepts.
-
-20. Removing Product Attributes
-
-If an Attribute is assigned to a Product, the user can remove it from
-that Product.
-
-For example:
-
-Thickness = 8 MM [Remove]
-
-Removing the Attribute means:
-
-Remove Thickness from this Product.
-
-It does NOT mean:
-
-Delete the Thickness Attribute Definition from the system.
-
-The same Attribute may continue to be used by other Products.
-
-21. Manufacturer
-
-Manufacturer is treated as an independent real-world entity.
-
-A Manufacturer does not belong to an organisation.
-
-The system therefore treats Manufacturer as a global master.
-
-For example:
-
-Kajaria Ceramics Limited
-
-may be referenced by Products belonging to multiple organisations.
-
-Conceptually:
-
-Manufacturer
-▲
-│
-│ manufacturer_id
-│
-Product
-│
-│ organization_id
-▼
-Organization
-
-The Manufacturer itself has no:
-
-organization_id
-
-and there is no separate:
-
-organization_manufacturers
-
-relationship.
-
-The Product is organisation-specific, while the Manufacturer is an
-independent real-world entity.
-
-22. Manufacturer Identity
-
-Manufacturer information may include:
-
-Legal Name
-Trade Name
-GSTIN
-Registration Number
-Business Constitution
-Address
-Phone
-Email
-Website
-Verification Status
-
-Not all fields are necessarily mandatory.
-
-The system should attempt to prevent duplicate Manufacturer records
-using reliable business identifiers, particularly GSTIN where
-available.
-
-It should not automatically merge businesses solely because their
-names look similar.
-
-23. Manufacturer Registration
-
-Currently, an Organization Admin can add a Manufacturer to the global
-Manufacturer master.
-
-This does NOT mean the Manufacturer belongs to that Organization.
-
-The intended process is:
-
-Organization Admin
-↓
-Search Manufacturer
-│
-├── Existing
-│ ↓
-│ Select
-│
-└── Not Found
-↓
-Add Manufacturer
-
-In the future, authoritative GST/MCA verification can be integrated
-to improve Manufacturer identity verification and reduce duplicate
-records.
-
-24. Supplier
-
-Supplier is currently treated differently from Manufacturer.
-
-For the current version of the application, Supplier remains
-organization-scoped.
-
-An Organization Admin can register Suppliers for their organisation.
-
-The Supplier is then used by purchasing transactions such as:
-
-Purchase Order
-GRN
-Supplier Invoice
-Purchase Return
-
-This is intentionally retained for the current stage of the project.
-
-Future versions may introduce a global Supplier model, supplier
-portals, or supplier accounts.
-
-25. Supplier as a Future External Actor
-
-At present, Suppliers do not have application accounts.
-
-The current system is primarily used internally by:
-
-Organization Admin
-Organization Staff
-
-Future versions may introduce:
-
-Supplier Account
-Supplier Portal
-Purchase Order acknowledgement
-Supplier quotations
-Supplier communication
-Supplier document submission
-
-This is intentionally outside the current scope.
-
-26. Authentication and Organization Management
-
-The system is designed as an organization-based ERP.
-
-A user cannot simply create an arbitrary account without an
-organization context.
-
-The organization registration process establishes:
-
-Organization +
-Organization Owner/Admin
-
-The person registering an organization becomes its initial
-administrator.
-
-Subsequent employees/staff are invited by the Organization Owner/Admin.
-
-The staff member receives an invitation and sets their own password.
-
-27. Organization Staff
-
-The system supports staff users who work within an organization.
-
-Staff accounts are created/invited by authorized organization users.
-
-The invited staff member:
-
-Invitation
-↓
-Accept Invitation
-↓
-Set Password
-↓
-Login
-
-The long-term system uses role and permission-based access control
-(RBAC) so that users receive only the capabilities appropriate to
-their responsibilities.
-
-28. Role-Based Access Control
-
-RBAC means:
-
-User
-↓
-Role
-↓
-Permissions
-
-For example:
-
-Organization Admin
-├── Manage Products
-├── Manage Suppliers
-├── Manage Manufacturers
-├── Purchase
-├── Inventory
-└── Reports
-
-Store Staff
-├── View Products
-├── Receive Goods
-└── Manage Stock
-
-The exact role structure can evolve according to business
-requirements.
-
-29. Multi-Organization Architecture
-
-The system is designed with organization-level data isolation.
-
-Organization-owned data generally contains:
-
-organization_id
-
-Examples:
-
-Products
-Inventory
-Purchase Orders
-GRNs
-Sales
-Pricing
-Accounting
-Branches
-Staff
-
-Global entities, where appropriate, are not organization-owned.
-
-For example:
-
-Manufacturer
-
-is a global entity.
-
-This distinction is important for future multi-tenant scalability.
-
-30. Branches
-
-An organization may operate one or more branches.
-
-Conceptually:
-
-Organization
-│
-├── Branch A
-├── Branch B
-└── Branch C
-
-Purchasing, receiving, inventory, and sales transactions can therefore
-be associated with a particular branch.
-
-This allows the system to evolve from a single-shop operation into a
-multi-branch business.
-
-31. Inventory Across Branches
-
-The system should support controlled movement of stock between
-locations/branches.
-
-Conceptually:
-
-Branch A
-│
-│ Stock Transfer
-▼
-Branch B
-
-Every movement should be traceable.
-
-The system should be capable of answering:
-
-Where did this stock come from?
-Where is it currently located?
-How much was received?
-How much was transferred?
-How much was sold?
-How much remains? 32. Sales Management
-
-The ultimate purpose of procurement and inventory management is to
-support the business's sales activities.
-
-The sales flow is:
-
-Customer
-↓
-Sales
-↓
-Inventory Reduction
-↓
-Sales Record
-↓
-Business Reporting
-
-When goods are sold, inventory should be reduced according to the
-appropriate Product and Unit model.
-
-The system should eventually support the different ways products are
-sold:
-
-PCS
-BOX
-SQ.FT.
-SLAB
-KG
-etc.
-
-depending on the Product.
-
-33. Product Pricing
-
-Pricing must account for the nature of the Product.
-
-Examples:
-
-Tiles
-₹800 / BOX
-Sanitaryware
-₹5,500 / PCS
-Granite
-₹180 / SQ.FT.
-
-The pricing unit must not be confused with the physical or purchase
-unit.
-
-For granite:
-
-Inventory:
-Individual Slab
-
-Pricing:
-SQ.FT.
-
-For tiles:
-
-Purchase:
-BOX
-
-Contents:
-4 PCS
-
-Pricing:
-BOX
-
-The system therefore requires a well-defined Product-specific unit
-and conversion model.
-
-34. Tax Management
-
-Products can be associated with appropriate tax information.
-
-The system contains Product Tax Profile concepts such as:
-
-HSN
-CGST
-SGST
-IGST
-
-Tax calculation should be associated with the appropriate business
-transaction rather than hard-coded into the Product interface.
-
-35. Business Documents
-
-The system is built around traceable business documents.
-
-Important documents include:
-
-Purchase Order
-Goods Receipt Note
-Sales Record
-Stock Transfer
-Stock Adjustment
-Supplier Invoice
-Purchase Return
-
-Each document should maintain:
-
-Unique identifier/number
-Date
-Organization
-Branch where applicable
-Related party
-Products
-Quantities
-Units
-Amounts
-Status
-Audit information 36. Auditability
-
-A major objective of the system is to make business activity
-traceable.
-
-For example, the system should eventually be able to answer:
-
-Why did the stock of Product X increase by 100 units?
-
-Possible answer:
-
-GRN-00042
-← Purchase Order PO-00027
-← Supplier ABC Distributors
-← Received 100 BOX
-
-Likewise:
-
-Why did the stock decrease by 20 units?
-
-Possible answer:
-
-Sale #INV-00128
-← Customer XYZ
-← 20 PCS sold
-
-This traceability is essential for a serious inventory system.
-
-37. Design Philosophy
-
-The system follows several important design principles.
-
-Simplicity
-
-Do not introduce complex concepts unless they solve a real business
-problem.
-
-For example:
-
-Purchase Requisition is currently not required.
-Product Family was removed.
-Specifications are optional.
-GRN without PO is treated as an explicit exception.
-Accuracy
-
-Physical quantities, commercial quantities, pricing units, and
-inventory units must be represented correctly.
-
-Traceability
-
-Business transactions should create an auditable chain.
-
-Extensibility
-
-The system should be capable of supporting more complex business
-processes later without making the current application unnecessarily
-complicated.
-
-Multi-Tenant Safety
-
-Organization-specific information must remain isolated.
-
-Real-World Semantics
-
-Database relationships should reflect real-world relationships.
-
-For example:
-
-Manufacturer
-
-is not owned by an Organization merely because an Organization sells
-its products.
-
-38. Current Procurement Architecture
-
-The current simplified architecture is:
-
-                         SUPPLIER
-                            │
-                            │
-                            ▼
-                     PURCHASE ORDER
-                            │
-                            │
-                            ▼
-                           GRN
-                            │
-                            │
-                            ▼
-                        INVENTORY
-                            │
-                ┌───────────┼───────────┐
-                │           │           │
-                ▼           ▼           ▼
-             Transfer   Adjustment     Sale
-                │           │           │
-                └───────────┴───────────┘
-                            │
-                            ▼
-                         CUSTOMER
-
-This is the central operational lifecycle of the ERP.
-
-39. Future Expansion
-
-The architecture is intended to provide a foundation for future
-features such as:
-
-Advanced procurement workflows
-Purchase Requisitions
-Supplier accounts
-Supplier portal
-Supplier quotation management
-Purchase quotation comparison
-Automated reorder levels
-Low-stock alerts
-Multi-branch inventory
-Warehouse management
-Barcode scanning
-GTIN-based product identification
-Customer management
-Advanced sales management
-Returns
-Accounting integration
-Payment management
-Financial reporting
-Business dashboards
-Mobile applications
-External integrations
-GST/e-invoice integrations
-Manufacturer verification
-Supplier verification
-Advanced approval workflows
-
-These are future capabilities and should not unnecessarily complicate
-the current core system.
-
-40. Long-Term Vision
-
-The long-term goal is to evolve this application into a complete
-business operating platform for the building-material industry.
-
-The system should eventually allow a business owner to answer, from
-one place:
-
-Procurement
-What did we purchase?
-From whom?
-At what price?
-When did we order it?
-When was it received?
-Inventory
-What do we have in stock?
-Where is it stored?
-How much was received?
-How much has been sold?
-How much is available?
-Which slabs are currently available?
-What is the actual area of each slab?
-Sales
-What did we sell?
-To whom?
-At what price?
-Which products are selling most?
-What is the current sales value?
-Business
-What did we purchase this month?
-What did we sell?
-What is our current stock value?
-Which suppliers do we purchase most from?
-Which products generate the most revenue?
-Which products are slow-moving?
-Which branches are performing better?
-
-The ultimate objective is:
-
-One system that provides a complete and reliable digital representation of the business's movement of goods and money from procurement through inventory to sales.
-
-41. Core Business Principle
-
-The most important principle of the system is:
-
-BUY
-↓
-RECEIVE
-↓
-STORE
-↓
-MOVE
-↓
-SELL
-↓
-REPORT
-
-Every stage should be connected.
-
-A Purchase Order should lead to receiving.
-
-A GRN should lead to inventory.
-
-Inventory should be affected by sales and stock movements.
-
-Sales should produce business records and reports.
-
-The result is a connected business system rather than a collection of
-independent forms.
-
-42. Project Status
-
-This project is under active development.
-
-The architecture and database are being developed incrementally,
-starting with the core business lifecycle and progressively adding
-more advanced capabilities.
-
-Current focus areas include:
-
-Organization management
-Authentication
-Staff management
-Role and permission management
-Product catalog
-Product specifications
-Manufacturer master
-Supplier management
-Purchase Orders
-Goods Receipt Notes
-Inventory management
-Unit of Measurement management
-Product-specific unit conversions
-Sales management
-
-Features and architecture may continue to evolve as real-world
-business requirements are identified.
-
-43. Summary
-
-This project aims to provide a unified ERP platform for
-tile, sanitaryware, granite, marble, and related building-material
-businesses.
-
-Its central objective is to connect the complete business lifecycle:
-
-Supplier
-↓
-Purchase
-↓
-Purchase Order
-↓
-Goods Receipt
-↓
-Inventory
-↓
-Stock Management
-↓
-Sales
-↓
-Customer
-↓
-Reports
-
-while accurately handling the unique characteristics of products such
-as:
-
-Tiles → BOX / PCS / coverage
-Sanitaryware→ PCS / SET
-Granite → SLAB / SQ.FT. / actual dimensions
-Marble → SLAB / SQ.FT. / actual dimensions
-
-The system is designed around the principle that business software
-should reflect the real-world business rather than forcing every type
-of product and transaction into the same simplified data model.
-
-At the same time, unnecessary complexity is deliberately avoided.
-
-The goal is a system that is:
-
-Simple for staff to use
-Accurate for inventory
-Reliable for purchasing
-Practical for sales
-Traceable for management
-Safe for multi-organization use
-Extensible for future requirements
-
-Ultimately:
-
-The system is intended to computerise the complete operational
-lifecycle of a building-material business — from purchasing goods
-from suppliers, receiving and managing those goods as inventory,
-selling them to customers, and producing the information required
-to run the business effectively — all within one integrated system.
-
-### A small recommendation for the README
-
-I would put a **shorter version of the business lifecycle near the very top**, immediately after the project description, because that communicates the purpose of the project much faster than a long feature list:
+The Procurement module governs all purchasing activities from external suppliers.
 
 ```text
-                 TILES & SANITARY ERP
-
-
- Supplier
-    │
-    ▼
- Purchase Order
-    │
-    ▼
-    GRN
-    │
-    ▼
- Inventory ──────► Stock Transfer / Adjustment
-    │
-    ▼
-   Sales
-    │
-    ▼
- Customer
-    │
-    ▼
- Reports & Business Intelligence
-
-Then the detailed sections can explain how each part works.
-
-This framing also captures what I think is the strongest idea behind your project: I am not building separate “Purchase Software”, “Inventory Software”, and “Sales Software”; I am building one connected transaction chain in which each stage feeds the next.
+  User Initiates PO ──► Order Sent to Supplier ──► Supplier Delivers ──► GRN Recorded ──► Stock Updated
 ```
+
+A **Purchase Order (PO)** records the enterprise's binding commercial request to buy goods. Key fields captured include:
+- **Header Details:** Supplier, Branch, PO Number, PO Date, Expected Delivery Date, Reference Number, Payment & Delivery Terms.
+- **Line Items:** Products, Quantities, Units, Rates, Item Discounts, Taxes (CGST/SGST/IGST), Total Amounts, Remarks.
+
+### 4.1 Purchase Order Lifecycle & Statuses
+
+Purchase Orders transition through well-defined lifecycle states:
+
+| Status | Description |
+| :--- | :--- |
+| `DRAFT` | Initial order creation & item entry; editable by procurement staff. |
+| `SUBMITTED` | Submitted for internal review/approval. |
+| `APPROVED` | Approved by authorized organization manager. |
+| `SENT` | Formally dispatched to the external supplier. |
+| `PARTIALLY_RECEIVED` | Goods partially delivered; matching GRN recorded. |
+| `FULLY_RECEIVED` | All ordered line items fully received in warehouse. |
+| `CLOSED` | Order completed or manually concluded. |
+| `CANCELLED` | Order voided prior to fulfillment. |
+
+### 4.2 Goods Receipt Note (GRN)
+
+A **Goods Receipt Note (GRN)** records physical delivery at the warehouse. While a PO represents *what was ordered*, the GRN represents *what was physically delivered*.
+
+```text
+  PO Ordered Quantity:     100 BOX Tiles
+  GRN Received Quantity:    60 BOX
+  ───────────────────────────────────────────
+  Remaining PO Balance:     40 BOX (PO Status: PARTIALLY_RECEIVED)
+```
+
+The system automatically calculates and maintains:
+- **Ordered Quantity**
+- **Received Quantity to Date**
+- **Outstanding Quantity Balance**
+
+### 4.3 Direct GRN (Receiving Without PO)
+
+For emergency stock deliveries, cash purchases, or supplier replacements where no prior PO exists, the system supports **Direct GRN**:
+
+```text
+  Supplier Delivery ──► Direct GRN Entry ──► Warehouse Inventory
+```
+
+> [!NOTE]
+> Direct GRNs are treated as audit exceptions, requiring dedicated manager authorization and documented reasons to preserve procurement integrity.
+
+---
+
+## 5. Advanced Inventory & Measurement Models
+
+One of the greatest complexities in building materials is that products are purchased, stored, priced, and sold using different measurement units.
+
+### 5.1 Units of Measurement (UOM) Dimensions
+
+The system categorizes measurement units into distinct physical dimensions:
+
+| Dimension | Supported Units |
+| :--- | :--- |
+| **Length** | `MM`, `CM`, `M`, `IN`, `FT` |
+| **Area** | `SQ.MM`, `SQ.M`, `SQ.IN`, `SQ.FT` |
+| **Volume** | `CU.MM`, `CU.CM`, `CU.M`, `CU.FT` |
+| **Mass** | `G`, `KG`, `TON` |
+| **Count** | `PCS`, `BOX`, `BAG`, `SET`, `SLAB` |
+
+> [!IMPORTANT]
+> **Dimension Conversion Rule:** Conversions between units of the *same* dimension (e.g., `FT` ↔ `MM`, `SQ.FT` ↔ `SQ.M`) are universal standard math. Conversions *across* dimensions (e.g., `MM` ↔ `SQ.FT`) are strictly disallowed unless governed by explicit product specifications.
+
+### 5.2 Product-Specific Unit Conversions
+
+Commercial packaging varies per product:
+- Product A: `1 BOX = 4 PCS = 15.5 SQ.FT`
+- Product B: `1 BOX = 2 PCS = 12.0 SQ.FT`
+
+`BOX` → `PCS` is therefore modeled as a **Product-Specific Commercial Conversion** defined individually on the product record.
+
+### 5.3 Tiles & Box Coverage Dynamics
+
+For tiles, the system automatically correlates physical dimensions, piece counts, box quantities, and coverage area:
+
+```text
+  Tile Specs:          600 × 600 mm (Thickness: 8 mm)
+  Box Packing:         4 PCS / BOX
+  Coverage per Box:    0.36 SQ.M / PC × 4 = 1.44 SQ.M (15.5 SQ.FT) per BOX
+```
+
+Users can enter sales or purchase orders in **Boxes**, **Pieces**, or **Square Feet**, and the system seamlessly converts and updates inventory accurately.
+
+### 5.4 Granite & Marble Slab Management
+
+Granite and marble are purchased as physical slabs but priced by total surface area (`₹180 / SQ.FT`). Individual slabs within the same bundle vary in physical dimensions:
+
+```text
+  Slab #1: 120 IN × 72 IN = 60.00 SQ.FT.
+  Slab #2: 118 IN × 70 IN = 57.36 SQ.FT.
+  ────────────────────────────────────────────────────
+  Total Inventory: 2 SLABS | Total Area: 117.36 SQ.FT.
+```
+
+The system tracks **individual slab piece records** with exact length/width dimensions and calculated surface area, ensuring pricing and inventory valuation remain perfectly accurate.
+
+---
+
+## 6. Product Catalog & Attribute System
+
+The Product Catalog forms the master foundation for purchasing, inventory, and sales.
+
+### 6.1 Product Types (Standard vs. Measured Material)
+
+Products follow two core operational configurations:
+
+- **`STANDARD`**: Used for uniform items with consistent unit counts (e.g., Tiles, Sanitaryware, Accessories, CP Fittings).
+- **`MEASURED_MATERIAL`**: Used for dimensional materials with variable slab sizes (e.g., Granite Slabs, Marble Blocks).
+
+### 6.2 Product Specifications & Reusable Attributes
+
+Attributes (e.g., *Length*, *Width*, *Thickness*, *Color*, *Finish*, *Material*) are defined as global reusable concepts and attached to products as needed:
+
+```text
+  Attribute Definition: Thickness [Numeric, Unit: MM]
+  ├── Product A (Vitrified Tile)  ──► Value: 8 MM
+  ├── Product B (Parking Tile)    ──► Value: 12 MM
+  └── Product C (Granite Slab)    ──► Value: 18 MM
+```
+
+### 6.3 Global Manufacturer Master vs. Tenant Suppliers
+
+The application distinguishes between Manufacturers and Suppliers based on real-world business ownership:
+
+```text
+  ┌──────────────────────────────────────────────────────────┐
+  │         GLOBAL INDEPENDENT MASTER REGISTRY               │
+  │   Manufacturer: Kajaria Ceramics Ltd (Global / GSTIN)    │
+  └────────────────────────────┬─────────────────────────────┘
+                               │
+            ┌──────────────────┴──────────────────┐
+            ▼                                     ▼
+  ┌──────────────────┐                  ┌──────────────────┐
+  │  ORGANIZATION A  │                  │  ORGANIZATION B  │
+  │  Tenant Supplier │                  │  Tenant Supplier │
+  │  Product Catalog │                  │  Product Catalog │
+  └──────────────────┘                  └──────────────────┘
+```
+
+- **Manufacturer (Global Master):** Real-world manufacturing business entities (e.g., *Kajaria*, *Somany*, *Jaquar*) exist as global master records shared across tenants.
+  - **Super Admin (`super-admin`):** Full CRUD management & verification status control (`VERIFIED`, `UNVERIFIED`, `REJECTED`).
+  - **Organization Admin:** Can search the master registry and contribute new manufacturers once; cannot update or delete shared global records.
+- **Supplier (Tenant-Scoped):** Commercial vendor entities registered per organization for purchasing transactions.
+
+---
+
+## 7. Multi-Tenant Architecture & RBAC
+
+### 7.1 Organization Isolation
+
+The ERP enforces strict data isolation across tenant organizations:
+- Organization-owned models (`Product`, `Inventory`, `PurchaseOrder`, `GRN`, `Supplier`, `Branch`, `Warehouse`) enforce automatic tenant scoping (`organization_id`).
+- All requests are validated against active `TenantContext` to prevent cross-tenant data leakage.
+
+### 7.2 Role-Based Access Control (RBAC)
+
+User permissions are governed through roles and explicit permission permissions:
+
+```text
+  User ──► Active Role ──► Assigned Permissions
+```
+
+- **Super Administrator (`super-admin`):** Global platform management, system seeders, global manufacturer registry verification.
+- **Organization Administrator (`administrator`):** Full administrative authority over organization setup, branches, staff, products, suppliers, purchasing, and reports.
+- **Staff Member:** Role-restricted operational access (e.g., Inventory Store Manager, Purchasing Agent, Sales Operator).
+
+### 7.3 Multi-Branch & Multi-Warehouse Operations
+
+An organization can configure multiple operational locations:
+
+```text
+  Organization HQ
+  ├── Main Showroom (Branch BR01)
+  │   └── Showroom Display Stock
+  └── Central Warehouse (Branch BR02)
+      ├── Warehouse WH01 (Storage Location R1-C1-S1)
+      └── Warehouse WH02 (Storage Location R2-C2-S2)
+```
+
+Stock transfers between branches/warehouses generate formal **Stock Transfer Notes** for strict accountability.
+
+---
+
+## 8. Sales, Pricing & Auditability
+
+### 8.1 Sales Flow & Inventory Reduction
+
+Sales orders and invoices deduct inventory in real time according to the configured product unit rules.
+
+```text
+  Customer Order ──► Unit & Conversion Match ──► Real-Time Stock Deduction ──► Sales Invoice
+```
+
+### 8.2 Pricing Models & Tax Profiles
+
+- **Pricing Unit Distinction:** Pricing units are decoupled from storage units. Tiles can be stored in `BOX` but priced in `SQ.FT.`, with auto-calculated totals.
+- **Tax Profiles:** Full GST compliance with configurable **HSN/SAC** codes, **CGST**, **SGST**, and **IGST** rates.
+
+### 8.3 End-to-End Audit Trail
+
+Every stock movement maintains an unalterable transactional audit record:
+
+```text
+  Stock Change (+100 BOX) ──► Audit Log: GRN-00042 (PO-00027, Supplier: ABC Distributors)
+  Stock Change (-20 PCS)  ──► Audit Log: INV-00128 (Customer: XYZ Construction)
+```
+
+---
+
+## 9. Technical Stack & Getting Started
+
+### Tech Stack
+
+- **Backend Framework:** Laravel 11 (PHP 8.3+)
+- **Frontend Engine:** React 18, JSX, Bootstrap 5, FontAwesome 6
+- **Asset Pipeline:** Vite
+- **Database:** MySQL 8.0+ / MariaDB
+- **Testing Suite:** PHPUnit 11
+
+### Quick Start Guide
+
+1. **Clone & Install Dependencies:**
+   ```bash
+   git clone https://github.com/Nganthoiba/sanitarywares-and-tiles-erp.git
+   cd sanitarywares-and-tiles-erp
+   composer install
+   npm install
+   ```
+
+2. **Configure Environment:**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+   *Configure your MySQL database credentials in `.env`.*
+
+3. **Run Migrations & Seeders:**
+   ```bash
+   php artisan migrate --seed
+   ```
+   *This seeds standard units, default organization, sample products, global manufacturers, and the Super Admin account (`smartnotification1@gmail.com` / `password123`).*
+
+4. **Start Development Servers:**
+   ```bash
+   # Terminal 1: Backend API
+   php artisan serve
+
+   # Terminal 2: Frontend Vite
+   npm run dev
+   ```
+
+5. **Run Automated Test Suite:**
+   ```bash
+   ./vendor/bin/phpunit --filter=GlobalManufacturerTest
+   ./vendor/bin/phpunit --filter=ProductMasterTest
+   ```
+
+---
+
+## 10. Project Status & Roadmap
+
+This project is under active continuous development.
+
+### Core Modules Active
+- [x] Multi-Tenant Architecture & Organization Context
+- [x] Super Admin & Role Switcher UI
+- [x] Global Manufacturer Master Registry with Duplicate GSTIN Detection
+- [x] Product Catalog & Reusable Specification Attributes
+- [x] Multi-Unit Measurement Engine & Conversions (Tile Box Coverage, Slab Dimensions)
+- [x] Supplier Registry
+- [x] Purchase Orders & Stateful Lifecycle Management
+- [x] Goods Receipt Notes (GRN) & PO Balance Tracking
+- [x] Automated PHPUnit Test Suites
+
+### Upcoming Enhancements
+- [ ] Sales Invoicing & Customer Management
+- [ ] Stock Transfer & Branch Reconciliation Workflow
+- [ ] Low-Stock Automated Reorder Notifications
+- [ ] GST e-Invoicing & E-Way Bill Integration
+- [ ] Barcode / QR Code Slab Scanning Engine
+
+---
+
+*Licensed under the [MIT License](LICENSE).*
