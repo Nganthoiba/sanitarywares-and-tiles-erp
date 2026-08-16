@@ -309,7 +309,7 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
                             >
                                 <i className="fa-solid fa-user-gear text-primary"></i>
                                 <span className="fw-semibold">{user?.name || 'User'}</span>
-                                <span className="badge bg-warning-subtle text-primary border border-primary-subtle rounded-pill ms-1" style={{ fontSize: '0.7rem' }}>
+                                <span className="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill ms-1" style={{ fontSize: '0.7rem' }}>
                                     {user?.activeRole?.name || (typeof user?.roles?.[0] === 'object' ? user?.roles?.[0]?.name : (user?.roles?.[0] || 'Role'))}
                                 </span>
                             </button>
