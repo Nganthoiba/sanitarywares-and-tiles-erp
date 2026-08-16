@@ -364,12 +364,14 @@ function App() {
     const [profileEmail, setProfileEmail] = useState('');
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [settingsSuccess, setSettingsSuccess] = useState('');
     const [settingsError, setSettingsError] = useState('');
     const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
-    // const [logoutSuccess, setLogoutSuccess] = useState('');
-    // const [logoutError, setLogoutError] = useState('');
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     useEffect(() => {
@@ -378,6 +380,10 @@ function App() {
             setProfileEmail(user.email || '');
             setCurrentPassword('');
             setNewPassword('');
+            setConfirmPassword('');
+            setShowCurrentPassword(false);
+            setShowNewPassword(false);
+            setShowConfirmPassword(false);
             setSettingsSuccess('');
             setSettingsError('');
         }
@@ -387,6 +393,22 @@ function App() {
         e.preventDefault();
         setSettingsError('');
         setSettingsSuccess('');
+
+        if (newPassword || confirmPassword) {
+            if (!currentPassword) {
+                setSettingsError('Please enter your current password to change password.');
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                setSettingsError('New password and confirm password do not match.');
+                return;
+            }
+            if (newPassword.length < 8) {
+                setSettingsError('New password must be at least 8 characters long.');
+                return;
+            }
+        }
+
         setIsUpdatingProfile(true);
 
         try {
@@ -401,7 +423,8 @@ function App() {
                     name: profileName,
                     email: profileEmail,
                     current_password: currentPassword || undefined,
-                    new_password: newPassword || undefined
+                    new_password: newPassword || undefined,
+                    new_password_confirmation: confirmPassword || undefined
                 })
             });
 
@@ -423,13 +446,13 @@ function App() {
             localStorage.setItem('user_name', data.user.name);
             localStorage.setItem('user_email', data.user.email);
 
-            console.log(data);
-
             setSettingsSuccess(data.message || 'Profile updated successfully!');
-
-            console.log("After setting success:", settingSuccess);
             setCurrentPassword('');
             setNewPassword('');
+            setConfirmPassword('');
+            setShowCurrentPassword(false);
+            setShowNewPassword(false);
+            setShowConfirmPassword(false);
         } catch (err) {
             setSettingsError(err.message);
         } finally {
@@ -665,24 +688,67 @@ function App() {
                                     </h6>
                                     <div className="mb-3">
                                         <label className="form-label fw-semibold small">Current Password</label>
-                                        <input 
-                                            type="password" 
-                                            className="form-control" 
-                                            placeholder="Verify current password"
-                                            value={currentPassword} 
-                                            onChange={(e) => setCurrentPassword(e.target.value)} 
-                                            required={!!newPassword}
-                                        />
+                                        <div className="input-group">
+                                            <input 
+                                                type={showCurrentPassword ? "text" : "password"} 
+                                                className="form-control" 
+                                                placeholder="Verify current password"
+                                                value={currentPassword} 
+                                                onChange={(e) => setCurrentPassword(e.target.value)} 
+                                                required={!!newPassword || !!confirmPassword}
+                                            />
+                                            <button 
+                                                type="button" 
+                                                className="btn btn-outline-secondary"
+                                                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                                tabIndex="-1"
+                                                title={showCurrentPassword ? "Hide password" : "Show password"}
+                                            >
+                                                <i className={`fa-solid ${showCurrentPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="mb-3">
                                         <label className="form-label fw-semibold small">New Password</label>
-                                        <input 
-                                            type="password" 
-                                            className="form-control" 
-                                            placeholder="Min. 8 characters"
-                                            value={newPassword} 
-                                            onChange={(e) => setNewPassword(e.target.value)} 
-                                        />
+                                        <div className="input-group">
+                                            <input 
+                                                type={showNewPassword ? "text" : "password"} 
+                                                className="form-control" 
+                                                placeholder="Min. 8 characters"
+                                                value={newPassword} 
+                                                onChange={(e) => setNewPassword(e.target.value)} 
+                                            />
+                                            <button 
+                                                type="button" 
+                                                className="btn btn-outline-secondary"
+                                                onClick={() => setShowNewPassword(!showNewPassword)}
+                                                tabIndex="-1"
+                                                title={showNewPassword ? "Hide password" : "Show password"}
+                                            >
+                                                <i className={`fa-solid ${showNewPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold small">Confirm New Password</label>
+                                        <div className="input-group">
+                                            <input 
+                                                type={showConfirmPassword ? "text" : "password"} 
+                                                className="form-control" 
+                                                placeholder="Re-enter new password"
+                                                value={confirmPassword} 
+                                                onChange={(e) => setConfirmPassword(e.target.value)} 
+                                            />
+                                            <button 
+                                                type="button" 
+                                                className="btn btn-outline-secondary"
+                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                tabIndex="-1"
+                                                title={showConfirmPassword ? "Hide password" : "Show password"}
+                                            >
+                                                <i className={`fa-solid ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="modal-footer border-top-0 pb-4 px-4">
