@@ -13,6 +13,11 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('organization_id')
+                ->nullable()
+                //->index()
+                ->constrained('organizations')
+                ->onDelete('cascade');
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
@@ -21,6 +26,7 @@ return new class extends Migration
             $table->string('phone_number')->nullable();
             $table->string('secondary_phone_number')->nullable();
             $table->rememberToken();
+            $table->string('invitation_token')->nullable()->after('remember_token');
             $table->timestamps();
         });
 

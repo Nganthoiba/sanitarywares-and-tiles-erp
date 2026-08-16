@@ -1,13 +1,19 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
-    public function up(): void {
+    public function up(): void
+    {
         Schema::create('roles', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organization_id')->index()->constrained('organizations')->onDelete('cascade');
+            //$table->foreignId('organization_id')->index()->constrained('organizations')->nullabe()->onDelete('cascade');
+            $table->foreignId('organization_id')
+                ->nullable()
+                ->constrained('organizations')
+                ->onDelete('cascade');
             $table->string('name');
             $table->string('slug');
             $table->boolean('is_system')->default(false);
@@ -16,7 +22,8 @@ return new class extends Migration {
             $table->unique(['organization_id', 'slug']);
         });
     }
-    public function down(): void {
+    public function down(): void
+    {
         Schema::dropIfExists('roles');
     }
 };
