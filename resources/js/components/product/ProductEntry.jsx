@@ -73,10 +73,15 @@ export default function ProductEntry({ initialSubTab = "list" }) {
 
 
     const [showTypeGuide, setShowTypeGuide] = useState(false);
+    const [assignedAttributeIds, setAssignedAttributeIds] = useState([]);
     const [showAttrModal, setShowAttrModal] = useState(false);
+    const [showAddExistingAttrModal, setShowAddExistingAttrModal] = useState(false);
+    const [selectedExistingAttrId, setSelectedExistingAttrId] = useState("");
+    const [attrToRemove, setAttrToRemove] = useState(null);
     const [attributeForm, setAttributeForm] = useState({
         name: "",
-        type: "string"
+        type: "string",
+        unit_id: ""
     });
 
     const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -180,6 +185,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
     const navigateToCreate = () => {
         setError(null);
         setSuccess(null);
+        setAssignedAttributeIds([]);
         setProductForm({
             id: null,
             name: "",
@@ -241,13 +247,16 @@ export default function ProductEntry({ initialSubTab = "list" }) {
             });
             const p = res.data;
             
-            // Map attribute values to object key-value
+            // Map attribute values to object key-value and track assigned attribute IDs
             const mappedAttrs = {};
+            const assignedIds = [];
             if (p.attribute_values) {
                 p.attribute_values.forEach(av => {
                     mappedAttrs[av.product_attribute_id] = av.value;
+                    assignedIds.push(av.product_attribute_id);
                 });
             }
+            setAssignedAttributeIds(assignedIds);
 
             setProductForm({
                 id: p.id,
@@ -402,12 +411,12 @@ export default function ProductEntry({ initialSubTab = "list" }) {
         setSuccess(null);
         setLoading(true);
 
-        // Map specifications to array structure expected by backend API
-        const mappedAttributes = Object.entries(productForm.attributes)
-            .filter(([_, val]) => val && val.trim() !== "")
-            .map(([attrId, val]) => ({
-                attribute_id: parseInt(attrId),
-                value: val
+        // Map assigned specifications to array structure expected by backend API
+        const mappedAttributes = assignedAttributeIds
+            .filter(attrId => productForm.attributes[attrId] !== undefined && productForm.attributes[attrId] !== null && String(productForm.attributes[attrId]).trim() !== "")
+            .map(attrId => ({
+                attribute_id: parseInt(attrId, 10),
+                value: String(productForm.attributes[attrId]).trim()
             }));
 
         const submissionData = {
@@ -560,7 +569,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
     };
 
     // -------------------------------------------------------------
-    // Define Custom Attribute Modal Handler
+    // Custom Attribute Handlers
     // -------------------------------------------------------------
     const handleAttributeSubmit = async (e) => {
         e.preventDefault();
@@ -568,20 +577,60 @@ export default function ProductEntry({ initialSubTab = "list" }) {
         setLoading(true);
         try {
             const token = localStorage.getItem("auth_token");
-            const response = await axios.post("/api/product/attributes", attributeForm, {
+            const payload = {
+                name: attributeForm.name,
+                type: attributeForm.type,
+                unit_id: attributeForm.unit_id ? parseInt(attributeForm.unit_id, 10) : null
+            };
+            const response = await axios.post("/api/product/attributes", payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (response.data.success) {
-                setSuccess(`Custom specification attribute "${attributeForm.name}" registered successfully.`);
-                setAttributeForm({ name: "", type: "string" });
+                const newAttr = response.data.data;
+                setSuccess(`Custom specification attribute "${attributeForm.name}" defined successfully.`);
+                setAttributeForm({ name: "", type: "string", unit_id: "" });
                 setShowAttrModal(false);
                 await loadFormData();
+                if (newAttr && newAttr.id) {
+                    setAssignedAttributeIds(prev => Array.from(new Set([...prev, newAttr.id])));
+                }
             }
         } catch (err) {
             setError(err.response?.data?.message || "Failed to register custom attribute.");
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleAddExistingAttributeSubmit = (e) => {
+        e.preventDefault();
+        if (!selectedExistingAttrId) return;
+        const attrId = parseInt(selectedExistingAttrId, 10);
+        setAssignedAttributeIds(prev => Array.from(new Set([...prev, attrId])));
+        setSelectedExistingAttrId("");
+        setShowAddExistingAttrModal(false);
+    };
+
+    const confirmRemoveAttribute = async () => {
+        if (!attrToRemove) return;
+        const attrId = attrToRemove.id;
+        try {
+            if (productForm.id) {
+                const token = localStorage.getItem("auth_token");
+                await axios.delete(`/api/products/${productForm.id}/attributes/${attrId}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            }
+        } catch (err) {
+            // Log/ignore errors on disassociate
+        }
+        setAssignedAttributeIds(prev => prev.filter(id => id !== attrId));
+        setProductForm(prev => {
+            const updatedAttrs = { ...prev.attributes };
+            delete updatedAttrs[attrId];
+            return { ...prev, attributes: updatedAttrs };
+        });
+        setAttrToRemove(null);
     };
 
     // -------------------------------------------------------------
@@ -627,9 +676,6 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                     <p className="text-muted small mb-0">Manage products, physical specifications, commercial profiles and conversions</p>
                 </div>
                 <div className="d-flex gap-2">
-                    <button className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" onClick={() => setShowAttrModal(true)}>
-                        <i className="fa-solid fa-tags"></i> Define Attribute
-                    </button>
                     <button className="btn btn-sm btn-secondary d-flex align-items-center gap-1" onClick={() => { loadFormData(); loadProducts(); }}>
                         <i className="fa-solid fa-rotate"></i> Sync
                     </button>
@@ -809,7 +855,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                 <div className="modal-header border-bottom pb-3 pt-4 px-4 bg-light">
                                     <h5 className="modal-title fw-bold text-dark d-flex align-items-center mb-0">
                                         <i className="fa-solid fa-cube text-primary me-2 fs-4"></i>
-                                        {productForm.id ? "Edit Product Specifications" : "Add Product Wizard"}
+                                        {productForm.id ? "Edit Product Specifications" : "Add New Product Variant"}
                                     </h5>
                                     <button type="button" className="btn-close" onClick={navigateToList}></button>
                                 </div>
@@ -1141,29 +1187,81 @@ export default function ProductEntry({ initialSubTab = "list" }) {
 
                             {/* Section 6: Dynamic Specifications */}
                             <div className="mb-4">
-                                <h6 className="text-primary fw-bold mb-3 border-bottom pb-2">6. Specifications / Custom Attributes</h6>
-                                {attributes.length === 0 ? (
-                                    <p className="text-muted small">No custom specifications attributes registered. Define custom attributes from the top right button if needed.</p>
+                                <div className="d-flex justify-content-between align-items-center mb-2 border-bottom pb-2">
+                                    <div>
+                                        <h6 className="text-primary fw-bold mb-0">6. Specifications / Custom Attributes — Optional</h6>
+                                        <small className="text-muted">Add product-specific specifications only when they are relevant to this product.</small>
+                                    </div>
+                                    <button 
+                                        type="button" 
+                                        className="btn btn-xs btn-outline-primary d-flex align-items-center gap-1 py-1.5 px-2.5" 
+                                        style={{ fontSize: "0.75rem" }}
+                                        onClick={() => setShowAttrModal(true)}
+                                    >
+                                        <i className="fa-solid fa-plus"></i> Define New Attribute
+                                    </button>
+                                </div>
+
+                                {assignedAttributeIds.length === 0 ? (
+                                    <div className="p-4 bg-light rounded-3 border border-dashed text-center my-3">
+                                        <i className="fa-solid fa-sliders text-muted fs-3 mb-2 d-block"></i>
+                                        <p className="fw-semibold text-dark mb-1">No specifications have been added.</p>
+                                        <p className="text-muted small mb-3">Add specifications only if this product requires them.</p>
+                                        <button 
+                                            type="button" 
+                                            className="btn btn-sm btn-outline-primary px-3" 
+                                            onClick={() => setShowAddExistingAttrModal(true)}
+                                        >
+                                            <i className="fa-solid fa-plus me-1"></i> Add Existing Attribute
+                                        </button>
+                                    </div>
                                 ) : (
-                                    <div className="row g-3">
-                                        {attributes.map(attr => (
-                                            <div key={attr.id} className="col-md-4">
-                                                <label className="form-label small">{attr.name}</label>
-                                                <input 
-                                                    type={attr.type === "number" ? "number" : "text"} 
-                                                    className="form-control form-control-sm" 
-                                                    placeholder={`Enter ${attr.name.toLowerCase()}`}
-                                                    value={productForm.attributes[attr.id] || ""}
-                                                    onChange={(e) => setProductForm({
-                                                        ...productForm,
-                                                        attributes: {
-                                                            ...productForm.attributes,
-                                                            [attr.id]: e.target.value
-                                                        }
-                                                    })}
-                                                />
-                                            </div>
-                                        ))}
+                                    <div>
+                                        <div className="row g-3">
+                                            {attributes.filter(attr => assignedAttributeIds.includes(attr.id)).map(attr => (
+                                                <div key={attr.id} className="col-md-4">
+                                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                                        <label className="form-label small mb-0 fw-semibold text-dark">{attr.name}</label>
+                                                        <div className="d-flex align-items-center gap-1">
+                                                            <span className="badge bg-light text-secondary border small" style={{ fontSize: "0.65rem" }}>
+                                                                {attr.unit ? `${attr.unit.name} (${attr.unit.symbol})` : "NO UNIT"}
+                                                            </span>
+                                                            <button 
+                                                                type="button" 
+                                                                className="btn p-0 text-danger border-0 ms-1" 
+                                                                style={{ fontSize: "0.75rem", background: "none" }}
+                                                                title={`Remove ${attr.name} from product`}
+                                                                onClick={() => setAttrToRemove(attr)}
+                                                            >
+                                                                <i className="fa-solid fa-xmark"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <input 
+                                                        type={attr.type === "number" ? "number" : "text"} 
+                                                        className="form-control form-control-sm" 
+                                                        placeholder={attr.unit ? `Enter ${attr.name.toLowerCase()} in ${attr.unit.symbol}` : `Enter ${attr.name.toLowerCase()}`}
+                                                        value={productForm.attributes[attr.id] || ""}
+                                                        onChange={(e) => setProductForm({
+                                                            ...productForm,
+                                                            attributes: {
+                                                                ...productForm.attributes,
+                                                                [attr.id]: e.target.value
+                                                            }
+                                                        })}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="mt-3">
+                                            <button 
+                                                type="button" 
+                                                className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                                                onClick={() => setShowAddExistingAttrModal(true)}
+                                            >
+                                                <i className="fa-solid fa-plus"></i> Add Existing Attribute
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -1575,15 +1673,132 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                             <option value="list">List / Collection</option>
                                         </select>
                                     </div>
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Specification Unit</label>
+                                        <select 
+                                            className="form-select" 
+                                            value={attributeForm.unit_id} 
+                                            onChange={(e) => setAttributeForm({ ...attributeForm, unit_id: e.target.value })} 
+                                        >
+                                            <option value="">NO UNIT</option>
+                                            <optgroup label="Length Dimensions">
+                                                {units.filter(u => (u.dimension_category || u.type) === 'LENGTH' || ['MM', 'CM', 'M', 'IN', 'FT'].includes(u.symbol?.toUpperCase())).map(u => (
+                                                    <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>
+                                                ))}
+                                            </optgroup>
+                                            <optgroup label="Area Dimensions">
+                                                {units.filter(u => (u.dimension_category || u.type) === 'AREA' || ['SQ.MM', 'SQ.CM', 'SQ.M', 'SQ.IN', 'SQ.FT', 'SQFT', 'SQ.FT.'].includes(u.symbol?.toUpperCase())).map(u => (
+                                                    <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>
+                                                ))}
+                                            </optgroup>
+                                            <optgroup label="Volume Dimensions">
+                                                {units.filter(u => (u.dimension_category || u.type) === 'VOLUME' || ['L', 'LTR', 'LITRE', 'LITER', 'CU.MM', 'CU.CM', 'CU.M', 'CU.FT'].includes(u.symbol?.toUpperCase())).map(u => (
+                                                    <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>
+                                                ))}
+                                            </optgroup>
+                                            <optgroup label="Mass / Weight Dimensions">
+                                                {units.filter(u => (u.dimension_category || u.type) === 'MASS' || ['G', 'GM', 'GRAM', 'KG', 'TON', 'MT'].includes(u.symbol?.toUpperCase())).map(u => (
+                                                    <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>
+                                                ))}
+                                            </optgroup>
+                                        </select>
+                                        <small className="text-muted extra-small d-block mt-1">Select physical measurement unit (e.g., Millimeter, Foot, Square Foot, Cubic Meter) or leave as NO UNIT.</small>
+                                    </div>
                                 </div>
                                 <div className="modal-footer border-top-0 pb-4 px-4">
                                     <button type="button" className="btn btn-secondary px-3" onClick={() => setShowAttrModal(false)}>Cancel</button>
                                     <button type="submit" className="btn btn-primary px-4" disabled={loading}>
                                         {loading ? <span className="spinner-border spinner-border-sm me-2"></span> : null}
-                                        Define
+                                        Define & Add
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* -------------------------------------------------------------
+                MODAL: ADD EXISTING ATTRIBUTE TO PRODUCT
+                ------------------------------------------------------------- */}
+            {showAddExistingAttrModal && (
+                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1110 }}>
+                    <div className="modal-dialog modal-dialog-centered modal-sm">
+                        <div className="modal-content shadow-lg border-0" style={{ borderRadius: "12px" }}>
+                            <div className="modal-header border-bottom-0 pt-4 px-4">
+                                <h5 className="modal-title fw-bold fs-5">Add Existing Attribute</h5>
+                                <button type="button" className="btn-close" onClick={() => setShowAddExistingAttrModal(false)}></button>
+                            </div>
+                            {attributes.filter(a => !assignedAttributeIds.includes(a.id)).length === 0 ? (
+                                <div className="modal-body px-4 py-3 text-center">
+                                    <p className="text-muted small mb-3">All registered attribute definitions are already assigned to this product, or none exist yet.</p>
+                                    <button 
+                                        type="button" 
+                                        className="btn btn-sm btn-primary px-3"
+                                        onClick={() => {
+                                            setShowAddExistingAttrModal(false);
+                                            setShowAttrModal(true);
+                                        }}
+                                    >
+                                        <i className="fa-solid fa-plus me-1"></i> Define New Attribute
+                                    </button>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleAddExistingAttributeSubmit}>
+                                    <div className="modal-body px-4">
+                                        <div className="mb-3">
+                                            <label className="form-label small fw-semibold">Select Organization Attribute *</label>
+                                            <select 
+                                                className="form-select" 
+                                                value={selectedExistingAttrId} 
+                                                onChange={(e) => setSelectedExistingAttrId(e.target.value)} 
+                                                required
+                                            >
+                                                <option value="">Choose Attribute...</option>
+                                                {attributes.filter(a => !assignedAttributeIds.includes(a.id)).map(a => (
+                                                    <option key={a.id} value={a.id}>
+                                                        {a.name} ({a.unit ? `${a.unit.name} (${a.unit.symbol})` : "NO UNIT"})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="modal-footer border-top-0 pb-4 px-4">
+                                        <button type="button" className="btn btn-secondary px-3" onClick={() => setShowAddExistingAttrModal(false)}>Cancel</button>
+                                        <button type="submit" className="btn btn-primary px-4" disabled={!selectedExistingAttrId}>
+                                            Add Specification
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* -------------------------------------------------------------
+                MODAL: REMOVE ATTRIBUTE CONFIRMATION
+                ------------------------------------------------------------- */}
+            {attrToRemove && (
+                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1150 }}>
+                    <div className="modal-dialog modal-dialog-centered modal-sm">
+                        <div className="modal-content shadow-lg border-0" style={{ borderRadius: "12px" }}>
+                            <div className="modal-header border-bottom-0 pt-4 px-4">
+                                <h5 className="modal-title fw-bold fs-6 text-danger d-flex align-items-center gap-2">
+                                    <i className="fa-solid fa-triangle-exclamation"></i> Remove Specification?
+                                </h5>
+                                <button type="button" className="btn-close" onClick={() => setAttrToRemove(null)}></button>
+                            </div>
+                            <div className="modal-body px-4 py-2">
+                                <p className="small mb-2">Remove <strong>"{attrToRemove.name}"</strong> from this product?</p>
+                                <p className="text-muted small mb-0" style={{ fontSize: "0.75rem" }}>
+                                    This will remove the specification from this product. It will not delete the Attribute Definition.
+                                </p>
+                            </div>
+                            <div className="modal-footer border-top-0 pb-4 px-4 pt-3">
+                                <button type="button" className="btn btn-sm btn-secondary px-3" onClick={() => setAttrToRemove(null)}>Cancel</button>
+                                <button type="button" className="btn btn-sm btn-danger px-3" onClick={confirmRemoveAttribute}>Remove</button>
+                            </div>
                         </div>
                     </div>
                 </div>

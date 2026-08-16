@@ -103,6 +103,10 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::get('/product/variants', [ProductApiController::class, 'listVariants']);
     Route::post('/product/variants', [ProductApiController::class, 'storeVariant']);
     Route::post('/product/attributes', [ProductApiController::class, 'storeAttribute']);
+    Route::post('/products/{productId}/attributes', [ProductApiController::class, 'assignProductAttribute']);
+    Route::post('/product/variants/{productId}/attributes', [ProductApiController::class, 'assignProductAttribute']);
+    Route::delete('/products/{productId}/attributes/{attributeId}', [ProductApiController::class, 'removeProductAttribute']);
+    Route::delete('/product/variants/{productId}/attributes/{attributeId}', [ProductApiController::class, 'removeProductAttribute']);
     Route::get('/product/variants/{id}', [ProductApiController::class, 'showVariant']);
     Route::put('/product/variants/{id}', [ProductApiController::class, 'updateVariant']);
     Route::get('/product/variants/{id}/conversions', [ProductApiController::class, 'listConversions']);
