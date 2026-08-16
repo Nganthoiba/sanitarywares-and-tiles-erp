@@ -539,7 +539,16 @@ export default function ProductEntry({ initialSubTab = "list" }) {
         setLoading(true);
         try {
             const token = localStorage.getItem("auth_token");
-            const response = await axios.post("/api/manufacturers-crud", manufacturerForm, {
+            const payload = {
+                legal_name: manufacturerForm.legal_name || manufacturerForm.name,
+                trade_name: manufacturerForm.trade_name || undefined,
+                gstin: manufacturerForm.gstin || undefined,
+                phone: manufacturerForm.phone || undefined,
+                email: manufacturerForm.email || undefined,
+                website: manufacturerForm.website || undefined,
+                address: manufacturerForm.address || undefined
+            };
+            const response = await axios.post("/api/manufacturers-crud", payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const newManufacturer = response.data.manufacturer;
@@ -554,13 +563,15 @@ export default function ProductEntry({ initialSubTab = "list" }) {
             }));
             setShowManufacturerModal(false);
             setManufacturerForm({
-                name: "",
+                legal_name: "",
+                trade_name: "",
+                gstin: "",
                 phone: "",
                 email: "",
                 website: "",
                 address: ""
             });
-            setSuccess("Manufacturer created successfully!");
+            setSuccess("Manufacturer added to global master successfully!");
         } catch (err) {
             setError(err.response?.data?.message || "Failed to create manufacturer.");
         } finally {
@@ -1915,13 +1926,34 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                             <form onSubmit={handleQuickAddManufacturerSubmit}>
                                 <div className="modal-body px-4">
                                     <div className="mb-3">
-                                        <label className="form-label small fw-semibold">Manufacturer Name *</label>
+                                        <label className="form-label small fw-semibold">Legal Name *</label>
                                         <input 
                                             type="text" 
                                             className="form-control" 
-                                            value={manufacturerForm.name} 
-                                            onChange={(e) => setManufacturerForm({ ...manufacturerForm, name: e.target.value })} 
+                                            placeholder="e.g. Kajaria Ceramics Limited"
+                                            value={manufacturerForm.legal_name || manufacturerForm.name || ""} 
+                                            onChange={(e) => setManufacturerForm({ ...manufacturerForm, legal_name: e.target.value, name: e.target.value })} 
                                             required 
+                                        />
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Trade Name</label>
+                                        <input 
+                                            type="text" 
+                                            className="form-control" 
+                                            placeholder="e.g. Kajaria"
+                                            value={manufacturerForm.trade_name || ""} 
+                                            onChange={(e) => setManufacturerForm({ ...manufacturerForm, trade_name: e.target.value })} 
+                                        />
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">GSTIN</label>
+                                        <input 
+                                            type="text" 
+                                            className="form-control font-monospace" 
+                                            placeholder="e.g. 27AAACK1234F1Z5"
+                                            value={manufacturerForm.gstin || ""} 
+                                            onChange={(e) => setManufacturerForm({ ...manufacturerForm, gstin: e.target.value })} 
                                         />
                                     </div>
                                     <div className="mb-3">

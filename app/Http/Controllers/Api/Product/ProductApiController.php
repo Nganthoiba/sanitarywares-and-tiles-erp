@@ -33,7 +33,7 @@ class ProductApiController extends Controller
             'brands' => Brand::where('organization_id', $orgId)->where('is_active', true)->orderBy('name')->get(),
             'units' => Unit::where('is_active', true)->orderBy('name')->get(),
             'tax_profiles' => TaxProfile::where('organization_id', $orgId)->where('is_active', true)->orderBy('name')->get(),
-            'manufacturers' => Manufacturer::where('organization_id', $orgId)->orderBy('name')->get(),
+            'manufacturers' => Manufacturer::where('is_active', true)->orderBy('legal_name')->get(),
             'attributes' => ProductAttribute::where('organization_id', $orgId)->with('unit')->orderBy('name')->get(),
             'inventory_behaviors' => ['STANDARD', 'CONVERTIBLE', 'SLAB', 'SERIAL', 'BATCH', 'BUNDLE', 'ROLL']
         ]);

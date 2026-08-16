@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             UnitSeeder::class,                  // Global organization-independent units
             OrganizationAndUserSeeder::class,   // Tenants, Users, Roles, Warehouses
+            SuperAdminSeeder::class,            // Super Admin User (smartnotification1@gmail.com)
             TaxProfileSeeder::class,            // Tax profiles
             CategorySeeder::class,              // Product categories
             BrandSeeder::class,                 // Brands

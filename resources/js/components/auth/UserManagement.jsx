@@ -562,7 +562,7 @@ export default function UserManagement() {
                             <div className="modal-body">
                                 <div className="mb-3">
                                     <label className="form-label small fw-semibold">Employee Name</label>
-                                    <input type="text" name="name" className="form-control" value={inviteForm.name} onChange={handleFormChange} placeholder="e.g. Rahul Sharma" required />
+                                    <input type="text" name="name" className="form-control" value={inviteForm.name} onChange={handleFormChange} placeholder="e.g. Saikhom Manimatum" required />
                                 </div>
                                 <div className="mb-3">
                                     <label className="form-label small fw-semibold">Email Address</label>
@@ -625,7 +625,7 @@ export default function UserManagement() {
                                             className="form-control" 
                                             value={editForm.name} 
                                             onChange={handleEditFormChange} 
-                                            placeholder="e.g. Rahul Sharma" 
+                                            placeholder="e.g. Saikhom Manimatum" 
                                             required 
                                         />
                                     </div>
