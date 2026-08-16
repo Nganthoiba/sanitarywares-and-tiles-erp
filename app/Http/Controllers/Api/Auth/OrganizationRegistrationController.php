@@ -47,14 +47,20 @@ class OrganizationRegistrationController extends Controller
 
         $result = $this->registrationService->register($orgData, $userData);
 
-        $token = $result['user']->createToken('auth_token')->plainTextToken;
+        $user = $result['user'];
+        $user->load('roles.permissions');
+        $user->setRelation('organization', $result['organization']);
+        // $permissions = $user->roles->flatMap(fn($r) => $r->permissions)->pluck('slug')->unique()->values();
+        // $user->permissions = $permissions;
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'message' => 'Organization and Owner Account created successfully.',
             'access_token' => $token,
             'token_type' => 'Bearer',
             'organization' => $result['organization'],
-            'user' => $result['user']
+            'user' => $user,
+            'user_permissions' => $result['user_permissions'],
         ], 201); // 201 standard HTTP Created status code
     }
 }

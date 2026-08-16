@@ -112,7 +112,7 @@ class OrganizationRegistrationService
                 }
             }
 
-            // 4. Create Default Administrator Role & Assign Permissions
+            // 4. Create Or Update Default Administrator Role for the organization & Assign Permissions
             $adminRole = Role::create([
                 'organization_id' => $org->id,
                 'name' => 'Administrator',
@@ -129,7 +129,7 @@ class OrganizationRegistrationService
             $branch = Branch::create([
                 'organization_id' => $org->id,
                 'name' => $org->name . ' Main Branch',
-                'code' => 'HQ-01',
+                'code' => 'HQ-' . $org->code . '-01',
                 'email' => $org->email,
                 'phone' => $org->phone,
                 'address' => $org->address
@@ -140,7 +140,7 @@ class OrganizationRegistrationService
                 'organization_id' => $org->id,
                 'branch_id' => $branch->id,
                 'name' => 'Central Warehouse',
-                'code' => 'WH-01',
+                'code' => 'WH-' . $org->code . '-01',
                 'type' => 'MAIN',
                 'is_active' => true,
                 'address' => $branch->address
@@ -154,11 +154,43 @@ class OrganizationRegistrationService
                 'warehouse_id' => $warehouse->id
             ]);
 
+            /*
+            I want to get user_permission in an array like this
+            $user_permissions = [
+                'master.organizations.view',
+                'master.organizations.update',
+                'master.branches.manage',
+                'master.warehouses.manage',
+                'master.users.manage',
+                'inventory.stock.view',
+                'inventory.transfer.execute',
+                'inventory.adjustment.approve',
+                'inventory.count.manage',
+                'purchase.requisitions.manage',
+                'purchase.orders.create',
+                'purchase.orders.approve',
+                'sales.orders.manage',
+                'sales.invoice.cancel',
+                'accounting.accounts.manage',
+                'accounting.journal.post',
+                'workflow.definition.manage'
+            ]
+
+                from the $defaultPermissions variable
+            
+            */
+
+            $user_permissions = [];
+            foreach ($defaultPermissions as $key => $value) {
+                $user_permissions = array_merge($user_permissions, array_keys($value));
+            }
+
             return [
                 'organization' => $org,
                 'user' => $user,
                 'branch' => $branch,
-                'warehouse' => $warehouse
+                'warehouse' => $warehouse,
+                'user_permissions' => $user_permissions,
             ];
         });
     }

@@ -80,30 +80,14 @@ export default function RegisterOrganization({ onRegistrationSuccess, onNavigate
                 throw new Error(data.message || 'Registration failed');
             }
 
+            console.log(data);
+
             // Save token and user details to localStorage
             localStorage.setItem('auth_token', data.access_token);
             localStorage.setItem('user_name', data.user.name);
             localStorage.setItem('user_email', data.user.email);
             localStorage.setItem('organization_name', data.organization.name);
-            localStorage.setItem('user_permissions', JSON.stringify([
-                'master.organizations.view',
-                'master.organizations.update',
-                'master.branches.manage',
-                'master.warehouses.manage',
-                'master.users.manage',
-                'inventory.stock.view',
-                'inventory.transfer.execute',
-                'inventory.adjustment.approve',
-                'inventory.count.manage',
-                'purchase.requisitions.manage',
-                'purchase.orders.create',
-                'purchase.orders.approve',
-                'sales.orders.manage',
-                'sales.invoice.cancel',
-                'accounting.accounts.manage',
-                'accounting.journal.post',
-                'workflow.definition.manage'
-            ]));
+            localStorage.setItem('user_permissions', JSON.stringify(data.user_permissions));
 
             onRegistrationSuccess(data);
         } catch (err) {
