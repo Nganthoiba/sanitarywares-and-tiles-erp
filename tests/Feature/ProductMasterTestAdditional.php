@@ -73,7 +73,6 @@ class ProductMasterTestAdditional extends TestCase
 
 
         $this->pcsUnit = Unit::create([
-            'organization_id' => $this->org->id,
             'name' => 'Piece',
             'symbol' => 'PCS',
             'type' => 'QUANTITY',
@@ -81,15 +80,13 @@ class ProductMasterTestAdditional extends TestCase
         ]);
 
         $this->sqftUnit = Unit::create([
-            'organization_id' => $this->org->id,
             'name' => 'Square Feet',
             'symbol' => 'SQFT',
-            'type' => 'AREA',
-            'decimal_places' => 2,
+            'type' => 'MEASUREMENT',
+            'decimal_places' => 3,
         ]);
 
         $this->boxUnit = Unit::create([
-            'organization_id' => $this->org->id,
             'name' => 'Box',
             'symbol' => 'BOX',
             'type' => 'QUANTITY',

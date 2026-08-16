@@ -76,7 +76,6 @@ class ProductMasterTest extends TestCase
 
         // 4. Create standard units in Database
         $this->pcsUnit = Unit::create([
-            'organization_id' => $this->org->id,
             'name' => 'Piece',
             'symbol' => 'PCS',
             'type' => 'QUANTITY',
@@ -84,11 +83,10 @@ class ProductMasterTest extends TestCase
         ]);
 
         $this->sqftUnit = Unit::create([
-            'organization_id' => $this->org->id,
             'name' => 'Square Feet',
             'symbol' => 'SQFT',
-            'type' => 'AREA',
-            'decimal_places' => 2,
+            'type' => 'MEASUREMENT',
+            'decimal_places' => 3,
         ]);
 
         // 5. Create dynamic attribute
@@ -561,7 +559,6 @@ class ProductMasterTest extends TestCase
 
         // Create unit conversion (e.g. 1 Box = 10 Sqft)
         $box = Unit::create([
-            'organization_id' => $this->org->id,
             'name' => 'Box',
             'symbol' => 'BOX',
             'type' => 'QUANTITY',

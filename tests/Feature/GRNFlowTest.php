@@ -82,9 +82,9 @@ class GRNFlowTest extends TestCase
         ]);
 
         // Units
-        $this->boxUnit = Unit::create(['organization_id' => $this->org->id, 'name' => 'Box', 'symbol' => 'BOX', 'type' => 'QUANTITY']);
-        $this->pcsUnit = Unit::create(['organization_id' => $this->org->id, 'name' => 'Piece', 'symbol' => 'PCS', 'type' => 'QUANTITY']);
-        $this->sqftUnit = Unit::create(['organization_id' => $this->org->id, 'name' => 'Square Feet', 'symbol' => 'SQFT', 'type' => 'AREA']);
+        $this->boxUnit = Unit::create(['name' => 'Box', 'symbol' => 'BOX', 'type' => 'QUANTITY']);
+        $this->pcsUnit = Unit::create(['name' => 'Piece', 'symbol' => 'PCS', 'type' => 'QUANTITY']);
+        $this->sqftUnit = Unit::create(['name' => 'Square Feet', 'symbol' => 'SQFT', 'type' => 'MEASUREMENT']);
 
         // Tax profile
         $tax = \App\Domains\Master\Models\TaxProfile::create([

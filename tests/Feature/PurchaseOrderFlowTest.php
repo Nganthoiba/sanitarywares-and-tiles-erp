@@ -76,28 +76,24 @@ class PurchaseOrderFlowTest extends TestCase
 
         // Create UOMs
         $this->pcsUnit = Unit::create([
-            'organization_id' => $this->org->id,
             'name' => 'Piece',
             'symbol' => 'PCS',
             'type' => 'QUANTITY',
         ]);
 
         $this->boxUnit = Unit::create([
-            'organization_id' => $this->org->id,
             'name' => 'Box',
             'symbol' => 'BOX',
             'type' => 'QUANTITY',
         ]);
 
         $this->sqftUnit = Unit::create([
-            'organization_id' => $this->org->id,
             'name' => 'Square Foot',
             'symbol' => 'SQFT',
-            'type' => 'AREA',
+            'type' => 'MEASUREMENT',
         ]);
 
         $this->slabUnit = Unit::create([
-            'organization_id' => $this->org->id,
             'name' => 'Slab',
             'symbol' => 'SLAB',
             'type' => 'QUANTITY',
