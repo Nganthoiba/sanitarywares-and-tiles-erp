@@ -15,10 +15,10 @@ class TaxProfileSeeder extends Seeder
         if (!$org) return;
 
         $profiles = [
-            ['id' => 1, 'name' => 'GST 18%', 'hsn_code' => '6907', 'cgst_rate' => 9.00, 'sgst_rate' => 9.00, 'igst_rate' => 18.00, 'is_active' => true],
-            ['id' => 2, 'name' => 'GST 28%', 'hsn_code' => '6910', 'cgst_rate' => 14.00, 'sgst_rate' => 14.00, 'igst_rate' => 28.00, 'is_active' => true],
-            ['id' => 3, 'name' => 'GST 12%', 'hsn_code' => '6802', 'cgst_rate' => 6.00, 'sgst_rate' => 6.00, 'igst_rate' => 12.00, 'is_active' => true],
-            ['id' => 4, 'name' => 'GST 5%', 'hsn_code' => '2523', 'cgst_rate' => 2.50, 'sgst_rate' => 2.50, 'igst_rate' => 5.00, 'is_active' => true],
+            ['id' => 1, 'organization_id' => $org->id, 'name' => 'GST 18%', 'hsn_code' => '6907', 'cgst_rate' => 9.00, 'sgst_rate' => 9.00, 'igst_rate' => 18.00, 'is_active' => true],
+            ['id' => 2, 'organization_id' => $org->id, 'name' => 'GST 28%', 'hsn_code' => '6910', 'cgst_rate' => 14.00, 'sgst_rate' => 14.00, 'igst_rate' => 28.00, 'is_active' => true],
+            ['id' => 3, 'organization_id' => $org->id, 'name' => 'GST 12%', 'hsn_code' => '6802', 'cgst_rate' => 6.00, 'sgst_rate' => 6.00, 'igst_rate' => 12.00, 'is_active' => true],
+            ['id' => 4, 'organization_id' => $org->id, 'name' => 'GST 5%', 'hsn_code' => '2523', 'cgst_rate' => 2.50, 'sgst_rate' => 2.50, 'igst_rate' => 5.00, 'is_active' => true],
         ];
 
         /*
