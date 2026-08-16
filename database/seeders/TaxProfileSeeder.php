@@ -30,7 +30,7 @@ class TaxProfileSeeder extends Seeder
         }
         */
 
-        TaxProfile::upsert($profiles, ['id'], ['name', 'hsn_code', 'cgst_rate', 'sgst_rate', 'igst_rate', 'is_active']);
+        TaxProfile::upsert($profiles, ['id'], ['organization_id', 'name', 'hsn_code', 'cgst_rate', 'sgst_rate', 'igst_rate', 'is_active']);
         AutoIncrement::resetIndex('tax_profiles', 'id');
     }
 }
