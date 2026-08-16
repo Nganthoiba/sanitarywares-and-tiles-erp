@@ -730,7 +730,7 @@ function App() {
             {/* User Profile & Settings Modal */}
             {showSettingsModal && (
                 <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1050 }}>
-                    <div className="modal-dialog modal-dialog-centered">
+                    <div className="modal-dialog modal-lg modal-dialog-centered">
                         <div className="modal-content shadow-lg border-0" style={{ borderRadius: '12px' }}>
                             <div className="modal-header border-bottom-0 pt-4 px-4">
                                 <h5 className="modal-title fw-bold fs-5">Account Settings</h5>
@@ -752,18 +752,19 @@ function App() {
                                     )}
 
                                     {/* User Details Read-only Context */}
-                                    <div className="mb-4 p-3 bg-light rounded-3" style={{ fontSize: '0.85rem' }}>
+                                    <div className="mb-4" style={{ fontSize: '0.85rem' }}>
                                         <div className="row g-2">
-                                            <div className="col-6">
+                                            <div className="col-6 bg-light rounded-3 p-2">
                                                 <span className="text-muted d-block small uppercase font-monospace">Organization</span>
                                                 <strong className="text-dark">{user?.organizationName || 'N/A'}</strong>
                                             </div>
-                                            <div className="col-6">
+
+                                            <div className="col-6 bg-light rounded-3 p-2">
                                                 <span className="text-muted d-block small uppercase font-monospace">User Role</span>
                                                 <strong className="text-dark">
-                                                    {(user?.roles && user.roles.length > 0)
-                                                        ? user.roles.join(', ')
-                                                        : (user?.permissions?.includes('master.users.manage') ? 'Administrator' : 'Staff Member')}
+                                                    {user?.activeRole?.name || (user?.roles && user.roles.length > 0
+                                                        ? user.roles.map(r => typeof r === 'object' ? r.name : r).join(', ')
+                                                        : (user?.permissions?.includes('master.users.manage') ? 'Administrator' : 'Staff Member'))}
                                                 </strong>
                                             </div>
                                         </div>
