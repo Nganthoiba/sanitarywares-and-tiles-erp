@@ -84,5 +84,18 @@ class OrganizationRegistrationTest extends TestCase
         $this->assertNotNull($scope);
         $this->assertEquals($branch->id, $scope->branch_id);
         $this->assertEquals($warehouse->id, $scope->warehouse_id);
+
+        // Assert newly registered user token can authenticate to protected endpoints
+        $token = $response->json('access_token');
+        $grnResponse = $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/grn');
+
+        $grnResponse->assertStatus(200);
+
+        $userResponse = $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/user');
+
+        $userResponse->assertStatus(200)
+            ->assertJsonPath('email', 'jayesh@apex.com');
     }
 }
