@@ -309,7 +309,7 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
                             >
                                 <i className="fa-solid fa-user-gear text-primary"></i>
                                 <span className="fw-semibold">{user?.name || 'User'}</span>
-                                <span className="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill ms-1" style={{ fontSize: '0.7rem' }}>
+                                <span className="badge bg-warning-subtle text-primary border border-primary-subtle rounded-pill ms-1" style={{ fontSize: '0.7rem' }}>
                                     {user?.activeRole?.name || (typeof user?.roles?.[0] === 'object' ? user?.roles?.[0]?.name : (user?.roles?.[0] || 'Role'))}
                                 </span>
                             </button>
@@ -729,146 +729,202 @@ function App() {
 
             {/* User Profile & Settings Modal */}
             {showSettingsModal && (
-                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1050 }}>
-                    <div className="modal-dialog modal-lg modal-dialog-centered">
-                        <div className="modal-content shadow-lg border-0" style={{ borderRadius: '12px' }}>
-                            <div className="modal-header border-bottom-0 pt-4 px-4">
-                                <h5 className="modal-title fw-bold fs-5">Account Settings</h5>
+                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)', zIndex: 1050 }}>
+                    <div className="modal-dialog modal-xl modal-dialog-centered">
+                        <div className="modal-content shadow-lg border-0" style={{ borderRadius: '16px', overflow: 'hidden' }}>
+                            {/* Modal Header */}
+                            <div className="modal-header border-bottom bg-gradient p-4" style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' }}>
+                                <div className="d-flex align-items-center gap-3">
+                                    <div className="rounded-circle d-flex justify-content-center align-items-center font-monospace fw-bold shadow-sm" style={{ width: '48px', height: '48px', fontSize: '1.2rem', backgroundColor: 'var(--accent-color, #3b82f6)', color: '#ffffff', border: '2px solid rgba(255,255,255,0.2)' }}>
+                                        {user?.name?.substring(0, 2).toUpperCase() || 'US'}
+                                    </div>
+                                    <div>
+                                        <h5 className="modal-title fw-bold mb-0" style={{ fontSize: '1.15rem' }}>Account Settings</h5>
+                                        <div className="text-muted small" style={{ fontSize: '0.8rem' }}>Manage your profile information, and credentials</div>
+                                    </div>
+                                </div>
                                 <button type="button" className="btn-close" onClick={() => setShowSettingsModal(false)} aria-label="Close"></button>
                             </div>
+
                             <form onSubmit={handleUpdateProfile}>
-                                <div className="modal-body px-4">
+                                <div className="modal-body p-4 bg-light-subtle">
                                     {settingsSuccess && (
-                                        <div className="alert alert-success d-flex align-items-center py-2 animate__animated animate__fadeIn" role="alert">
-                                            <i className="fa-solid fa-circle-check me-2"></i>
-                                            <div>{settingsSuccess}</div>
+                                        <div className="alert alert-success d-flex align-items-center py-2.5 px-3 mb-4 shadow-sm border-0 rounded-3 animate__animated animate__fadeIn" role="alert">
+                                            <i className="fa-solid fa-circle-check fs-5 me-2 text-success"></i>
+                                            <div className="fw-medium">{settingsSuccess}</div>
                                         </div>
                                     )}
                                     {settingsError && (
-                                        <div className="alert alert-danger d-flex align-items-center py-2 animate__animated animate__fadeIn" role="alert">
-                                            <i className="fa-solid fa-circle-exclamation me-2"></i>
-                                            <div>{settingsError}</div>
+                                        <div className="alert alert-danger d-flex align-items-center py-2.5 px-3 mb-4 shadow-sm border-0 rounded-3 animate__animated animate__fadeIn" role="alert">
+                                            <i className="fa-solid fa-circle-exclamation fs-5 me-2 text-danger"></i>
+                                            <div className="fw-medium">{settingsError}</div>
                                         </div>
                                     )}
 
-                                    {/* User Details Read-only Context */}
-                                    <div className="mb-4" style={{ fontSize: '0.85rem' }}>
-                                        <div className="row g-2">
-                                            <div className="col-6 bg-light rounded-3 p-2">
-                                                <span className="text-muted d-block small uppercase font-monospace">Organization</span>
-                                                <strong className="text-dark">{user?.organizationName || 'N/A'}</strong>
+                                    <div className="row g-4">
+                                        {/* Left Column: User Card & Organization Context */}
+                                        <div className="col-md-4">
+                                            <div className="card border-0 shadow-sm rounded-3 h-100 bg-white">
+                                                <div className="card-body p-3.5 text-center">
+                                                    <div className="mx-auto rounded-circle d-flex justify-content-center align-items-center mb-3 font-monospace fw-bold shadow-sm" style={{ width: '64px', height: '64px', fontSize: '1.5rem', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', color: '#fff' }}>
+                                                        {user?.name?.substring(0, 2).toUpperCase() || 'US'}
+                                                    </div>
+                                                    <h6 className="fw-bold text-dark mb-1" style={{ fontSize: '0.95rem' }}>{user?.name}</h6>
+                                                    <div className="text-muted small text-break mb-3" style={{ fontSize: '0.78rem' }}>{user?.email}</div>
+                                                    
+                                                    <div className="p-2.5 bg-light rounded-3 text-start mb-3" style={{ fontSize: '0.8rem' }}>
+                                                        <div className="text-muted small uppercase font-monospace mb-1" style={{ fontSize: '0.68rem', letterSpacing: '0.5px' }}>Organization</div>
+                                                        <div className="fw-bold text-dark">{user?.organizationName || 'N/A'}</div>
+                                                    </div>
+
+                                                    <div className="p-2.5 bg-light rounded-3 text-start" style={{ fontSize: '0.8rem' }}>
+                                                        <div className="text-muted small uppercase font-monospace mb-1" style={{ fontSize: '0.68rem', letterSpacing: '0.5px' }}>Active Role</div>
+                                                        <span className="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill py-1 px-2.5" style={{ fontSize: '0.75rem' }}>
+                                                            <i className="fa-solid fa-user-shield me-1"></i>
+                                                            {user?.activeRole?.name || (user?.roles && user.roles.length > 0
+                                                                ? (typeof user.roles[0] === 'object' ? user.roles[0].name : user.roles[0])
+                                                                : (user?.permissions?.includes('master.users.manage') ? 'Administrator' : 'Staff Member'))}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </div>
+                                        </div>
 
-                                            <div className="col-6 bg-light rounded-3 p-2">
-                                                <span className="text-muted d-block small uppercase font-monospace">User Role</span>
-                                                <strong className="text-dark">
-                                                    {user?.activeRole?.name || (user?.roles && user.roles.length > 0
-                                                        ? user.roles.map(r => typeof r === 'object' ? r.name : r).join(', ')
-                                                        : (user?.permissions?.includes('master.users.manage') ? 'Administrator' : 'Staff Member'))}
-                                                </strong>
+                                        {/* Right Column: Edit Profile & Password Form */}
+                                        <div className="col-md-8">
+                                            <div className="card border-0 shadow-sm rounded-3 bg-white p-3">
+                                                {/* Profile Details Section */}
+                                                <div className="d-flex align-items-center mb-3 pb-2 border-bottom">
+                                                    <i className="fa-solid fa-id-card me-2 text-primary"></i>
+                                                    <h6 className="fw-bold mb-0 text-dark" style={{ fontSize: '0.9rem' }}>Profile Information</h6>
+                                                </div>
+
+                                                <div className="mb-3">
+                                                    <label className="form-label fw-semibold small text-secondary">Full Name</label>
+                                                    <div className="input-group">
+                                                        <span className="input-group-text bg-light border-end-0 text-muted"><i className="fa-solid fa-user"></i></span>
+                                                        <input 
+                                                            type="text" 
+                                                            className="form-control border-start-0" 
+                                                            value={profileName} 
+                                                            onChange={(e) => setProfileName(e.target.value)} 
+                                                            required 
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="mb-3">
+                                                    <label className="form-label fw-semibold small text-secondary">Email Address</label>
+                                                    <div className="input-group">
+                                                        <span className="input-group-text bg-light border-end-0 text-muted"><i className="fa-solid fa-envelope"></i></span>
+                                                        <input 
+                                                            type="email" 
+                                                            className="form-control border-start-0" 
+                                                            value={profileEmail} 
+                                                            onChange={(e) => setProfileEmail(e.target.value)} 
+                                                            required 
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Password Change Section */}
+                                                <div className="d-flex align-items-center mt-4 mb-3 pb-2 border-bottom">
+                                                    <i className="fa-solid fa-key me-2 text-primary"></i>
+                                                    <h6 className="fw-bold mb-0 text-dark" style={{ fontSize: '0.9rem' }}>Security & Password</h6>
+                                                </div>
+
+                                                <div className="mb-3">
+                                                    <label className="form-label fw-semibold small text-secondary">Current Password</label>
+                                                    <div className="input-group">
+                                                        <span className="input-group-text bg-light border-end-0 text-muted"><i className="fa-solid fa-lock"></i></span>
+                                                        <input 
+                                                            type={showCurrentPassword ? "text" : "password"} 
+                                                            className="form-control border-start-0 border-end-0" 
+                                                            placeholder="Verify current password"
+                                                            value={currentPassword} 
+                                                            onChange={(e) => setCurrentPassword(e.target.value)} 
+                                                            required={!!newPassword || !!confirmPassword}
+                                                        />
+                                                        <button 
+                                                            type="button" 
+                                                            className="btn btn-outline-secondary border-start-0"
+                                                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                                            tabIndex="-1"
+                                                            title={showCurrentPassword ? "Hide password" : "Show password"}
+                                                        >
+                                                            <i className={`fa-solid ${showCurrentPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="row g-3">
+                                                    <div className="col-md-6">
+                                                        <label className="form-label fw-semibold small text-secondary">New Password</label>
+                                                        <div className="input-group">
+                                                            <span className="input-group-text bg-light border-end-0 text-muted"><i className="fa-solid fa-key"></i></span>
+                                                            <input 
+                                                                type={showNewPassword ? "text" : "password"} 
+                                                                className="form-control border-start-0 border-end-0" 
+                                                                placeholder="Min. 8 chars"
+                                                                value={newPassword} 
+                                                                onChange={(e) => setNewPassword(e.target.value)} 
+                                                            />
+                                                            <button 
+                                                                type="button" 
+                                                                className="btn btn-outline-secondary border-start-0"
+                                                                onClick={() => setShowNewPassword(!showNewPassword)}
+                                                                tabIndex="-1"
+                                                                title={showNewPassword ? "Hide password" : "Show password"}
+                                                            >
+                                                                <i className={`fa-solid ${showNewPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="col-md-6">
+                                                        <label className="form-label fw-semibold small text-secondary">Confirm New Password</label>
+                                                        <div className="input-group">
+                                                            <span className="input-group-text bg-light border-end-0 text-muted"><i className="fa-solid fa-check-double"></i></span>
+                                                            <input 
+                                                                type={showConfirmPassword ? "text" : "password"} 
+                                                                className="form-control border-start-0 border-end-0" 
+                                                                placeholder="Re-enter new password"
+                                                                value={confirmPassword} 
+                                                                onChange={(e) => setConfirmPassword(e.target.value)} 
+                                                            />
+                                                            <button 
+                                                                type="button" 
+                                                                className="btn btn-outline-secondary border-start-0"
+                                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                                tabIndex="-1"
+                                                                title={showConfirmPassword ? "Hide password" : "Show password"}
+                                                            >
+                                                                <i className={`fa-solid ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Edit Details */}
-                                    <div className="mb-3">
-                                        <label className="form-label fw-semibold small">Full Name</label>
-                                        <input 
-                                            type="text" 
-                                            className="form-control" 
-                                            value={profileName} 
-                                            onChange={(e) => setProfileName(e.target.value)} 
-                                            required 
-                                        />
-                                    </div>
-                                    <div className="mb-3">
-                                        <label className="form-label fw-semibold small">Email Address</label>
-                                        <input 
-                                            type="email" 
-                                            className="form-control" 
-                                            value={profileEmail} 
-                                            onChange={(e) => setProfileEmail(e.target.value)} 
-                                            required 
-                                        />
-                                    </div>
-
-                                    <hr className="my-4 text-muted opacity-25" />
-
-                                    <h6 className="fw-bold mb-3" style={{ fontSize: '0.9rem' }}>
-                                        <i className="fa-solid fa-key me-2 text-muted"></i>Change Password
-                                    </h6>
-                                    <div className="mb-3">
-                                        <label className="form-label fw-semibold small">Current Password</label>
-                                        <div className="input-group">
-                                            <input 
-                                                type={showCurrentPassword ? "text" : "password"} 
-                                                className="form-control" 
-                                                placeholder="Verify current password"
-                                                value={currentPassword} 
-                                                onChange={(e) => setCurrentPassword(e.target.value)} 
-                                                required={!!newPassword || !!confirmPassword}
-                                            />
-                                            <button 
-                                                type="button" 
-                                                className="btn btn-outline-secondary"
-                                                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                                                tabIndex="-1"
-                                                title={showCurrentPassword ? "Hide password" : "Show password"}
-                                            >
-                                                <i className={`fa-solid ${showCurrentPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="mb-3">
-                                        <label className="form-label fw-semibold small">New Password</label>
-                                        <div className="input-group">
-                                            <input 
-                                                type={showNewPassword ? "text" : "password"} 
-                                                className="form-control" 
-                                                placeholder="Min. 8 characters"
-                                                value={newPassword} 
-                                                onChange={(e) => setNewPassword(e.target.value)} 
-                                            />
-                                            <button 
-                                                type="button" 
-                                                className="btn btn-outline-secondary"
-                                                onClick={() => setShowNewPassword(!showNewPassword)}
-                                                tabIndex="-1"
-                                                title={showNewPassword ? "Hide password" : "Show password"}
-                                            >
-                                                <i className={`fa-solid ${showNewPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="mb-3">
-                                        <label className="form-label fw-semibold small">Confirm New Password</label>
-                                        <div className="input-group">
-                                            <input 
-                                                type={showConfirmPassword ? "text" : "password"} 
-                                                className="form-control" 
-                                                placeholder="Re-enter new password"
-                                                value={confirmPassword} 
-                                                onChange={(e) => setConfirmPassword(e.target.value)} 
-                                            />
-                                            <button 
-                                                type="button" 
-                                                className="btn btn-outline-secondary"
-                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                tabIndex="-1"
-                                                title={showConfirmPassword ? "Hide password" : "Show password"}
-                                            >
-                                                <i className={`fa-solid ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-                                            </button>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="modal-footer border-top-0 pb-4 px-4">
-                                    <button type="button" className="btn btn-secondary px-3" onClick={() => setShowSettingsModal(false)}>Close</button>
-                                    <button type="submit" className="btn btn-primary px-4" disabled={isUpdatingProfile}>
+
+                                <div className="modal-footer border-top bg-light px-4 py-3">
+                                    <button type="button" className="btn btn-light px-4 fw-medium text-secondary" onClick={() => setShowSettingsModal(false)}>
+                                        Close
+                                    </button>
+                                    <button type="submit" className="btn btn-primary px-4 fw-medium d-flex align-items-center shadow-sm" disabled={isUpdatingProfile}>
                                         {isUpdatingProfile ? (
-                                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                        ) : null}
-                                        Save Changes
+                                            <>
+                                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                                Saving...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <i className="fa-solid fa-floppy-disk me-2"></i>
+                                                Save Changes
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             </form>
