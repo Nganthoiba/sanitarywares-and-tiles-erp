@@ -28,7 +28,7 @@ class OrganizationScope implements Scope
 
         // 2. Fall back to active authenticated user organization
         if (Auth::check()) {
-            $builder->where($model->getTable() . '.organization_id', auth()->user()->organization_id);
+            $builder->where($model->getTable() . '.organization_id', Auth::user()->organization_id);
             return;
         }
 
