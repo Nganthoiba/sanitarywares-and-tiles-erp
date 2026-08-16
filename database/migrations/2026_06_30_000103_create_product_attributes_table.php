@@ -11,6 +11,7 @@ return new class extends Migration {
             $table->string('name');
             $table->string('slug');
             $table->string('type')->default('string'); // text, number, list, etc.
+            $table->foreignId('unit_id')->nullable()->index()->constrained('units')->onDelete('set null');
             $table->timestamps();
             $table->softDeletes();
             $table->unique(['organization_id', 'slug']);
