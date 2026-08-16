@@ -39,6 +39,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
+    Route::post('/switch-role', [AuthController::class, 'switchRole']);
 
     // User Management (restricted to users with 'master.users.manage' permission)
     Route::middleware(['permission:master.users.manage'])->group(function () {

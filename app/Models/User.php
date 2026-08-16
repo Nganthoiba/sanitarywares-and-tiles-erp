@@ -22,6 +22,7 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'organization_id',
+        'default_role_id',
         'name',
         'email',
         'password',
@@ -30,8 +31,6 @@ class User extends Authenticatable
 
     /**
      * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
      */
     protected $hidden = [
         'password',
@@ -49,6 +48,11 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function defaultRole(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Domains\Security\Models\Role::class, 'default_role_id');
     }
 
     public function roles(): \Illuminate\Database\Eloquent\Relations\BelongsToMany

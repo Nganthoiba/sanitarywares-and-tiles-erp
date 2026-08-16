@@ -53,28 +53,10 @@ class AuthController extends Controller
         // Create Sanctum Token
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Load relations and build initial context
-        $user->load(['roles.permissions', 'scopes.branch', 'scopes.warehouse']);
-        
-        $allowedBranches = $user->scopes->whereNotNull('branch_id')->map(fn($s) => $s->branch)->unique();
-        $permissions = $user->roles->flatMap(fn($r) => $r->permissions)->pluck('slug')->unique()->values();
-        $roles = $user->roles->pluck('name')->unique()->values();
-
         return response()->json([
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'organization' => [
-                    'id' => $user->organization->id,
-                    'name' => $user->organization->name,
-                ],
-                'branches' => $allowedBranches,
-                'roles' => $roles,
-                'permissions' => $permissions
-            ]
+            'user' => $this->buildUserContext($user)
         ]);
     }
 
@@ -95,25 +77,100 @@ class AuthController extends Controller
      */
     public function user(Request $request)
     {
-        $user = $request->user();
-        $user->load(['roles.permissions', 'scopes.branch', 'scopes.warehouse']);
+        return response()->json($this->buildUserContext($request->user()));
+    }
 
-        $allowedBranches = $user->scopes->whereNotNull('branch_id')->map(fn($s) => $s->branch)->unique();
-        $permissions = $user->roles->flatMap(fn($r) => $r->permissions)->pluck('slug')->unique()->values();
-        $roles = $user->roles->pluck('name')->unique()->values();
+    /**
+     * Switch default/active role for the authenticated user.
+     */
+    public function switchRole(Request $request)
+    {
+        $request->validate([
+            'role_id' => 'required|integer|exists:roles,id',
+        ]);
+
+        $user = $request->user();
+        $roleId = (int) $request->input('role_id');
+
+        if ($user->organization) {
+            $context = App::make(TenantContext::class);
+            $context->setUser($user);
+            $context->setOrganization($user->organization);
+        }
+
+        $user->load('roles');
+
+        $assignedRole = $user->roles->firstWhere('id', $roleId);
+        if (!$assignedRole) {
+            return response()->json([
+                'message' => 'You are not assigned to this role in your organization.'
+            ], 403);
+        }
+
+        $user->default_role_id = $roleId;
+        $user->save();
+
+        $userData = $this->buildUserContext($user);
 
         return response()->json([
+            'message' => "Switched active role to {$assignedRole->name}.",
+            'user' => $userData
+        ]);
+    }
+
+    /**
+     * Helper to resolve and build user auth context (roles, default_role, permissions).
+     */
+    protected function buildUserContext(User $user): array
+    {
+        if ($user->organization) {
+            $context = App::make(TenantContext::class);
+            $context->setUser($user);
+            $context->setOrganization($user->organization);
+        }
+
+        $user->load(['roles.permissions', 'defaultRole.permissions', 'scopes.branch', 'scopes.warehouse']);
+
+        if (!$user->default_role_id && $user->roles->isNotEmpty()) {
+            $user->default_role_id = $user->roles->first()->id;
+            $user->save();
+            $user->load('defaultRole.permissions');
+        }
+
+        $allRoles = $user->roles;
+        $activeRole = $user->defaultRole ?? $allRoles->first();
+
+        $allowedBranches = $user->scopes->whereNotNull('branch_id')->map(fn($s) => $s->branch)->unique()->values();
+        $allPermissions = $allRoles->flatMap(fn($r) => $r->permissions)->pluck('slug')->unique()->values();
+        $activePermissions = $activeRole ? $activeRole->permissions->pluck('slug')->unique()->values() : collect();
+
+        $formattedRoles = $allRoles->map(fn($r) => [
+            'id' => $r->id,
+            'name' => $r->name,
+            'slug' => $r->slug,
+            'is_default' => $r->id === ($activeRole->id ?? null),
+        ])->values();
+
+        return [
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'default_role_id' => $user->default_role_id,
             'organization' => [
-                'id' => $user->organization->id,
-                'name' => $user->organization->name,
+                'id' => $user->organization->id ?? null,
+                'name' => $user->organization->name ?? null,
             ],
             'branches' => $allowedBranches,
-            'roles' => $roles,
-            'permissions' => $permissions
-        ]);
+            'roles' => $formattedRoles,
+            'roles_list' => $allRoles->pluck('name')->unique()->values(),
+            'active_role' => $activeRole ? [
+                'id' => $activeRole->id,
+                'name' => $activeRole->name,
+                'slug' => $activeRole->slug,
+            ] : null,
+            'permissions' => $allPermissions,
+            'active_permissions' => $activePermissions,
+        ];
     }
 
     /**

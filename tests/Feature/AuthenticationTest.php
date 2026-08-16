@@ -162,4 +162,31 @@ class AuthenticationTest extends TestCase
 
         $response->assertStatus(422);
     }
+
+    public function test_user_can_switch_active_role()
+    {
+        // Create second role in user's organization
+        $secondaryRole = \App\Domains\Security\Models\Role::create([
+            'organization_id' => $this->org->id,
+            'name' => 'Store Manager',
+            'slug' => 'store-manager',
+            'is_system' => false
+        ]);
+
+        $this->user->roles()->attach($secondaryRole->id, ['organization_id' => $this->org->id]);
+
+        $token = $this->user->createToken('test_token')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson('/api/switch-role', [
+                'role_id' => $secondaryRole->id
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('user.default_role_id', $secondaryRole->id)
+            ->assertJsonPath('user.active_role.name', 'Store Manager');
+
+        $this->user->refresh();
+        $this->assertEquals($secondaryRole->id, $this->user->default_role_id);
+    }
 }

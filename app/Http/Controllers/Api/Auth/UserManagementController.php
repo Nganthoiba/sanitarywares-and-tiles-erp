@@ -82,6 +82,7 @@ class UserManagementController extends Controller
         $user = DB::transaction(function () use ($request, $orgId) {
             $user = User::create([
                 'organization_id' => $orgId,
+                'default_role_id' => $request->input('role_id'),
                 'name' => $request->input('name'),
                 'email' => $request->input('email'),
                 'password' => Hash::make($request->input('password')),
@@ -140,6 +141,8 @@ class UserManagementController extends Controller
 
             if ($request->has('role_id')) {
                 $user->roles()->syncWithPivotValues([$request->input('role_id')], ['organization_id' => $user->organization_id]);
+                $user->default_role_id = $request->input('role_id');
+                $user->save();
             }
 
             if ($request->has('branch_id') || $request->has('warehouse_id')) {

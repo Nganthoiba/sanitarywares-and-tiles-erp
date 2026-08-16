@@ -94,6 +94,8 @@ class OrganizationRegistrationService
 
             // 5. Assign Administrator Role to the Owner User
             $user->roles()->attach($adminRole->id, ['organization_id' => $org->id]);
+            $user->default_role_id = $adminRole->id;
+            $user->save();
 
             // 6. Create Default Branch
             $branch = Branch::create([

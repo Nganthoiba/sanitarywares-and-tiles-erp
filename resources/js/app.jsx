@@ -39,7 +39,7 @@ function GuestRoute({ user }) {
     return <Outlet />;
 }
 
-function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontSize, theme, toggleTheme, setShowSettingsModal, setShowLogoutModal }) {
+function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontSize, theme, toggleTheme, setShowSettingsModal, setShowLogoutModal, handleSwitchRole }) {
     const location = useLocation();
 
     // Determine default menu open states based on the current path (for browser refresh / direct entry)
@@ -283,7 +283,7 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
                                 <button type="button" className={`btn btn-outline-secondary py-0.5 px-2 ${fontSize === 16.5 ? 'active' : ''}`} onClick={() => setFontSize(16.5)} style={{ fontSize: '11px' }}>L</button>
                             </div>
                         </li>
-                        <li className="nav-item d-flex align-items-center me-4">
+                        <li className="nav-item d-flex align-items-center me-3">
                             <button 
                                 className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 py-1 px-3" 
                                 onClick={toggleTheme}
@@ -296,8 +296,75 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
                                 )}
                             </button>
                         </li>
-                        <li className="nav-item">
-                            <span className="d-none nav-link font-monospace text-muted" style={{ fontSize: '0.85rem' }}>Status: Production API Connected</span>
+
+                        {/* User & Role Switcher Button */}
+                        <li className="nav-item dropdown">
+                            <button 
+                                className="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-2 py-1 px-3 shadow-sm"
+                                type="button"
+                                id="userRoleDropdown"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
+                                style={{ fontSize: '0.8rem', borderRadius: '20px' }}
+                            >
+                                <i className="fa-solid fa-user-gear text-primary"></i>
+                                <span className="fw-semibold">{user?.name || 'User'}</span>
+                                <span className="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill ms-1" style={{ fontSize: '0.7rem' }}>
+                                    {user?.activeRole?.name || (typeof user?.roles?.[0] === 'object' ? user?.roles?.[0]?.name : (user?.roles?.[0] || 'Role'))}
+                                </span>
+                            </button>
+                            
+                            <ul className="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 p-2" aria-labelledby="userRoleDropdown" style={{ minWidth: '260px', borderRadius: '12px', zIndex: 1060 }}>
+                                <li className="px-3 py-2 bg-light rounded-3 mb-2">
+                                    <div className="fw-bold text-dark" style={{ fontSize: '0.85rem' }}>{user?.name}</div>
+                                    <div className="text-muted small" style={{ fontSize: '0.75rem' }}>{user?.email}</div>
+                                    <div className="text-muted small font-monospace mt-1" style={{ fontSize: '0.7rem' }}>Org: {user?.organizationName || 'N/A'}</div>
+                                </li>
+
+                                <li><hr className="dropdown-divider my-1" /></li>
+
+                                <li className="dropdown-header text-uppercase font-monospace fw-bold text-muted" style={{ fontSize: '0.68rem', letterSpacing: '0.5px' }}>
+                                    Switch Role
+                                </li>
+
+                                {user?.roles && user.roles.length > 0 ? (
+                                    user.roles.map((r, index) => {
+                                        const roleObj = typeof r === 'object' ? r : { id: index + 1, name: r };
+                                        const isActive = (user?.activeRole?.id === roleObj.id) || (user?.default_role_id === roleObj.id) || (roleObj.is_default);
+                                        return (
+                                            <li key={roleObj.id || index}>
+                                                <button 
+                                                    className={`dropdown-item d-flex align-items-center justify-content-between rounded-2 py-2 px-3 ${isActive ? 'active bg-primary text-white' : ''}`}
+                                                    onClick={() => roleObj.id && handleSwitchRole && handleSwitchRole(roleObj.id)}
+                                                    disabled={isActive}
+                                                    style={{ fontSize: '0.82rem' }}
+                                                >
+                                                    <span>
+                                                        <i className={`fa-solid ${isActive ? 'fa-circle-check me-2' : 'fa-user-tag me-2 opacity-50'}`}></i>
+                                                        {roleObj.name}
+                                                    </span>
+                                                    {isActive && <span className="badge bg-white text-primary rounded-pill ms-2" style={{ fontSize: '0.65rem' }}>Active</span>}
+                                                </button>
+                                            </li>
+                                        );
+                                    })
+                                ) : (
+                                    <li className="px-3 py-1 text-muted small">No assigned roles</li>
+                                )}
+
+                                <li><hr className="dropdown-divider my-1" /></li>
+
+                                <li>
+                                    <button className="dropdown-item text-secondary py-1.5 px-3 rounded-2" onClick={() => setShowSettingsModal(true)} style={{ fontSize: '0.82rem' }}>
+                                        <i className="fa-solid fa-gear me-2"></i> Account Settings
+                                    </button>
+                                </li>
+                                <li>
+                                    <button className="dropdown-item text-danger py-1.5 px-3 rounded-2" onClick={() => setShowLogoutModal(true)} style={{ fontSize: '0.82rem' }}>
+                                        <i className="fa-solid fa-right-from-bracket me-2"></i> Logout
+                                    </button>
+                                </li>
+                            </ul>
                         </li>
                     </ul>
                 </nav>
@@ -323,6 +390,8 @@ function App() {
                     name: localStorage.getItem('user_name'),
                     email: localStorage.getItem('user_email'),
                     organizationName: localStorage.getItem('organization_name'),
+                    default_role_id: localStorage.getItem('default_role_id') ? parseInt(localStorage.getItem('default_role_id')) : null,
+                    activeRole: JSON.parse(localStorage.getItem('user_active_role') || 'null'),
                     roles: JSON.parse(localStorage.getItem('user_roles') || '[]'),
                     permissions: JSON.parse(localStorage.getItem('user_permissions') || '[]')
                 };
@@ -460,14 +529,52 @@ function App() {
         }
     };
 
+    const handleSwitchRole = async (roleId) => {
+        try {
+            const response = await fetch('/api/switch-role', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                },
+                body: JSON.stringify({ role_id: roleId })
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to switch role.');
+            }
+
+            setUser(prev => ({
+                ...prev,
+                default_role_id: data.user.default_role_id,
+                activeRole: data.user.active_role,
+                roles: data.user.roles,
+                permissions: data.user.permissions
+            }));
+
+            if (data.user.default_role_id) localStorage.setItem('default_role_id', data.user.default_role_id.toString());
+            if (data.user.active_role) localStorage.setItem('user_active_role', JSON.stringify(data.user.active_role));
+            localStorage.setItem('user_roles', JSON.stringify(data.user.roles));
+            localStorage.setItem('user_permissions', JSON.stringify(data.user.permissions));
+        } catch (err) {
+            console.error("Error switching role:", err);
+        }
+    };
+
     const handleLoginSuccess = (data) => {
         const orgName = data.organization?.name || data.user?.organization?.name || '';
         const permissions = data.user_permissions || data.user?.permissions || [];
-        const roles = data.user_roles || data.user?.roles || (permissions.includes('master.users.manage') ? ['Administrator'] : []);
+        const roles = data.user?.roles || data.user_roles || (permissions.includes('master.users.manage') ? [{ id: 1, name: 'Administrator', slug: 'administrator' }] : []);
+        const activeRole = data.user?.active_role || (roles.length > 0 ? (typeof roles[0] === 'object' ? roles[0] : { id: 1, name: roles[0] }) : null);
+
         setUser({
             name: data.user.name,
             email: data.user.email,
             organizationName: orgName,
+            default_role_id: data.user.default_role_id,
+            activeRole: activeRole,
             roles: roles,
             permissions: permissions
         });
@@ -475,6 +582,8 @@ function App() {
         localStorage.setItem('user_name', data.user.name);
         localStorage.setItem('user_email', data.user.email);
         localStorage.setItem('organization_name', orgName);
+        if (data.user.default_role_id) localStorage.setItem('default_role_id', data.user.default_role_id.toString());
+        if (activeRole) localStorage.setItem('user_active_role', JSON.stringify(activeRole));
         localStorage.setItem('user_roles', JSON.stringify(roles));
         localStorage.setItem('user_permissions', JSON.stringify(permissions));
         navigate('/inventory');
@@ -515,6 +624,7 @@ function App() {
                             toggleTheme={toggleTheme} 
                             setShowSettingsModal={setShowSettingsModal} 
                             setShowLogoutModal={setShowLogoutModal}
+                            handleSwitchRole={handleSwitchRole}
                         />
                     }>
                         <Route path="/dashboard" element={<Navigate to="/inventory" replace />} />

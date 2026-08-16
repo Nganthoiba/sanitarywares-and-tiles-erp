@@ -45,6 +45,7 @@ class UserInvitationController extends Controller
             // Create user
             $user = User::create([
                 'organization_id' => $orgId,
+                'default_role_id' => $request->input('role_id'),
                 'name' => $request->input('name'),
                 'email' => $request->input('email'),
                 'password' => Hash::make(Str::random(16)), // Temporary password
