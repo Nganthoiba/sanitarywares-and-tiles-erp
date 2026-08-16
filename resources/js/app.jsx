@@ -39,7 +39,7 @@ function GuestRoute({ user }) {
     return <Outlet />;
 }
 
-function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontSize, theme, toggleTheme, setShowSettingsModal }) {
+function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontSize, theme, toggleTheme, setShowSettingsModal, setShowLogoutModal }) {
     const location = useLocation();
 
     // Determine default menu open states based on the current path (for browser refresh / direct entry)
@@ -260,7 +260,7 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
                             <button className="btn btn-xs btn-link text-secondary p-1 shadow-none border-0 bg-transparent" onClick={() => setShowSettingsModal(true)} title="Profile Settings">
                                 <i className="fa-solid fa-gear"></i>
                             </button>
-                            <button className="btn btn-xs btn-link text-danger p-1 shadow-none border-0 bg-transparent" onClick={handleLogout} title="Logout">
+                            <button className="btn btn-xs btn-link text-danger p-1 shadow-none border-0 bg-transparent" onClick={() => setShowLogoutModal(true)} title="Logout">
                                 <i className="fa-solid fa-right-from-bracket"></i>
                             </button>
                         </div>
@@ -367,6 +367,10 @@ function App() {
     const [settingsSuccess, setSettingsSuccess] = useState('');
     const [settingsError, setSettingsError] = useState('');
     const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+    // const [logoutSuccess, setLogoutSuccess] = useState('');
+    // const [logoutError, setLogoutError] = useState('');
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     useEffect(() => {
         if (showSettingsModal && user) {
@@ -419,7 +423,11 @@ function App() {
             localStorage.setItem('user_name', data.user.name);
             localStorage.setItem('user_email', data.user.email);
 
+            console.log(data);
+
             setSettingsSuccess(data.message || 'Profile updated successfully!');
+
+            console.log("After setting success:", settingSuccess);
             setCurrentPassword('');
             setNewPassword('');
         } catch (err) {
@@ -450,6 +458,7 @@ function App() {
     };
 
     const handleLogout = () => {
+        setIsLoggingOut(true);
         localStorage.clear();
         setUser(null);
         navigate('/login');
@@ -482,6 +491,7 @@ function App() {
                             theme={theme} 
                             toggleTheme={toggleTheme} 
                             setShowSettingsModal={setShowSettingsModal} 
+                            setShowLogoutModal={setShowLogoutModal}
                         />
                     }>
                         <Route path="/dashboard" element={<Navigate to="/inventory" replace />} />
@@ -554,6 +564,35 @@ function App() {
                 {/* Catch-all fallback */}
                 <Route path="*" element={<Navigate to={user ? "/inventory" : "/"} replace />} />
             </Routes>
+            {/* Showing logout confirmation modal */}
+            {showLogoutModal && (
+                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1050 }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content shadow-lg border-0" style={{ borderRadius: '12px' }}>
+                            <div className="modal-header border-bottom-0 pt-4 px-4">
+                                <h5 className="modal-title fw-bold fs-5">Logout Confirmation</h5>
+                                <button type="button" className="btn-close" onClick={() => setShowLogoutModal(false)} aria-label="Close"></button>
+                            </div>
+                            <form onSubmit={handleLogout}>
+                                <div className="modal-body px-4"> 
+                                    <h6 className="fw-bold mb-3" style={{ fontSize: '0.9rem' }}>
+                                        <i className="fa-solid fa-right-from-bracket me-2 text-muted"></i>Are you sure to logout?
+                                    </h6>
+                                </div>
+                                <div className="modal-footer border-top-0 pb-4 px-4">
+                                    <button type="button" className="btn btn-secondary px-3" onClick={() => setShowLogoutModal(false)}>Cancel</button>
+                                    <button type="submit" className="btn btn-danger px-4" disabled={isLoggingOut}>
+                                        {isUpdatingProfile ? (
+                                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                        ) : null}
+                                        Logout
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* User Profile & Settings Modal */}
             {showSettingsModal && (
