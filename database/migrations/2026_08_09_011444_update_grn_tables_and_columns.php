@@ -5,7 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
-    public function up(): void {
+    public function up(): void
+    {
         // 1. Modify goods_receipt_notes table
         Schema::table('goods_receipt_notes', function (Blueprint $table) {
             $table->foreignId('purchase_order_id')->nullable()->change();
@@ -19,12 +20,9 @@ return new class extends Migration {
             $table->foreignId('unit_id')->nullable()->after('product_variant_id')->constrained('units')->onDelete('set null');
         });
 
-        // 3. Modify storage_locations table
-        Schema::table('storage_locations', function (Blueprint $table) {
-            $table->foreignId('parent_id')->nullable()->after('warehouse_id')->constrained('storage_locations')->onDelete('set null');
-        });
 
-        // 4. Create goods_receipt_item_slabs table
+
+        // 3. Create goods_receipt_item_slabs table
         Schema::create('goods_receipt_item_slabs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('organization_id')->index()->constrained('organizations')->onDelete('cascade');
@@ -40,21 +38,25 @@ return new class extends Migration {
         });
     }
 
-    public function down(): void {
+    public function down(): void
+    {
         Schema::dropIfExists('goods_receipt_item_slabs');
 
-        Schema::table('storage_locations', function (Blueprint $table) {
-            $table->dropColumn('parent_id');
-        });
 
-        Schema::table('goods_receipt_items', function (Blueprint $table) {
-            $table->dropColumn('unit_id');
-            $table->foreignId('purchase_order_item_id')->nullable(false)->change();
-        });
+        // First check if the table exists or not
+        if (Schema::hasTable('goods_receipt_items')) {
+            Schema::table('goods_receipt_items', function (Blueprint $table) {
+                $table->dropColumn('unit_id');
+                $table->foreignId('purchase_order_item_id')->nullable(false)->change();
+            });
+        }
 
-        Schema::table('goods_receipt_notes', function (Blueprint $table) {
-            $table->dropColumn(['supplier_id', 'storage_location_id']);
-            $table->foreignId('purchase_order_id')->nullable(false)->change();
-        });
+        // First check if the table exists or not
+        if (Schema::hasTable('goods_receipt_notes')) {
+            Schema::table('goods_receipt_notes', function (Blueprint $table) {
+                $table->dropColumn(['supplier_id', 'storage_location_id']);
+                $table->foreignId('purchase_order_id')->nullable(false)->change();
+            });
+        }
     }
 };

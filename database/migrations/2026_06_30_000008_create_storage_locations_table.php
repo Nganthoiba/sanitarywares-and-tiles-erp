@@ -11,6 +11,10 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('organization_id')->index()->constrained('organizations')->onDelete('cascade');
             $table->foreignId('warehouse_id')->index()->constrained('warehouses')->onDelete('cascade');
+            $table->foreignId('parent_id')->nullable()
+                ->constrained('storage_locations')
+                ->onUpdate('cascade')
+                ->onDelete('set null');
             $table->string('name');
             $table->string('location_type');
             $table->string('code', 50); // Fully qualified e.g. R1-C2-S3-B4
