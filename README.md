@@ -26,7 +26,7 @@ The primary objective of this system is to computerise and streamline the comple
 ```
 
 > **Core Operating Principle:**
-> *One connected transaction chain in which each operational stage feeds the next — connecting Procurement, Inventory, Sales, and Financial Reporting into a unified, traceable digital ecosystem.*
+> _One connected transaction chain in which each operational stage feeds the next — connecting Procurement, Inventory, Sales, and Financial Reporting into a unified, traceable digital ecosystem._
 
 ---
 
@@ -36,26 +36,26 @@ The primary objective of this system is to computerise and streamline the comple
 - [2. Target Businesses](#2-target-businesses)
 - [3. Core Business Lifecycle](#3-core-business-lifecycle)
 - [4. Procurement Management](#4-procurement-management)
-  - [4.1 Purchase Order Lifecycle & Statuses](#41-purchase-order-lifecycle--statuses)
-  - [42 Goods Receipt Note (GRN)](#42-goods-receipt-note-grn)
-  - [4.3 Direct GRN (Receiving Without PO)](#43-direct-grn-receiving-without-po)
+    - [4.1 Purchase Order Lifecycle & Statuses](#41-purchase-order-lifecycle--statuses)
+    - [42 Goods Receipt Note (GRN)](#42-goods-receipt-note-grn)
+    - [4.3 Direct GRN (Receiving Without PO)](#43-direct-grn-receiving-without-po)
 - [5. Advanced Inventory & Measurement Models](#5-advanced-inventory--measurement-models)
-  - [5.1 Units of Measurement (UOM) Dimensions](#51-units-of-measurement-uom-dimensions)
-  - [5.2 Product-Specific Unit Conversions](#52-product-specific-unit-conversions)
-  - [5.3 Tiles & Box Coverage Dynamics](#53-tiles--box-coverage-dynamics)
-  - [5.4 Granite & Marble Slab Management](#54-granite--marble-slab-management)
+    - [5.1 Units of Measurement (UOM) Dimensions](#51-units-of-measurement-uom-dimensions)
+    - [5.2 Product-Specific Unit Conversions](#52-product-specific-unit-conversions)
+    - [5.3 Tiles & Box Coverage Dynamics](#53-tiles--box-coverage-dynamics)
+    - [5.4 Granite & Marble Slab Management](#54-granite--marble-slab-management)
 - [6. Product Catalog & Attribute System](#6-product-catalog--attribute-system)
-  - [6.1 Product Types (Standard vs. Measured Material)](#61-product-types-standard-vs-measured-material)
-  - [6.2 Product Specifications & Reusable Attributes](#62-product-specifications--reusable-attributes)
-  - [6.3 Global Manufacturer Master vs. Tenant Suppliers](#63-global-manufacturer-master-vs-tenant-suppliers)
+    - [6.1 Product Types (Standard vs. Measured Material)](#61-product-types-standard-vs-measured-material)
+    - [6.2 Product Specifications & Reusable Attributes](#62-product-specifications--reusable-attributes)
+    - [6.3 Global Manufacturer Master vs. Tenant Suppliers](#63-global-manufacturer-master-vs-tenant-suppliers)
 - [7. Multi-Tenant Architecture & RBAC](#7-multi-tenant-architecture--rbac)
-  - [7.1 Organization Isolation](#71-organization-isolation)
-  - [7.2 Role-Based Access Control (RBAC)](#72-role-based-access-control-rbac)
-  - [7.3 Multi-Branch & Multi-Warehouse Operations](#73-multi-branch--multi-warehouse-operations)
+    - [7.1 Organization Isolation](#71-organization-isolation)
+    - [7.2 Role-Based Access Control (RBAC)](#72-role-based-access-control-rbac)
+    - [7.3 Multi-Branch & Multi-Warehouse Operations](#73-multi-branch--multi-warehouse-operations)
 - [8. Sales, Pricing & Auditability](#8-sales-pricing--auditability)
-  - [8.1 Sales Flow & Inventory Reduction](#81-sales-flow--inventory-reduction)
-  - [8.2 Pricing Models & Tax Profiles](#82-pricing-models--tax-profiles)
-  - [8.3 End-to-End Audit Trail](#83-end-to-end-audit-trail)
+    - [8.1 Sales Flow & Inventory Reduction](#81-sales-flow--inventory-reduction)
+    - [8.2 Pricing Models & Tax Profiles](#82-pricing-models--tax-profiles)
+    - [8.3 End-to-End Audit Trail](#83-end-to-end-audit-trail)
 - [9. Technical Stack & Getting Started](#9-technical-stack--getting-started)
 - [10. Project Status & Roadmap](#10-project-status--roadmap)
 
@@ -78,16 +78,16 @@ This ERP brings all these operational domains together into **one integrated, st
 The application is tailored specifically for:
 
 - **Product Domains:**
-  - Ceramic, Vitrified, & Porcelain Tiles
-  - Sanitaryware & Bathroom Fixtures
-  - Granite, Marble, & Natural Stone Slabs
-  - CP Fittings & Plumbing Hardware
-  - Building Material Accessories
+    - Ceramic, Vitrified, & Porcelain Tiles
+    - Sanitaryware & Bathroom Fixtures
+    - Granite, Marble, & Natural Stone Slabs
+    - CP Fittings & Plumbing Hardware
+    - Building Material Accessories
 - **Enterprise Formats:**
-  - Single-Location Retail Showrooms
-  - Wholesale Distributors
-  - Hybrid Retail-Wholesale Dealers
-  - Multi-Branch & Multi-Warehouse Enterprises
+    - Single-Location Retail Showrooms
+    - Wholesale Distributors
+    - Hybrid Retail-Wholesale Dealers
+    - Multi-Branch & Multi-Warehouse Enterprises
 
 ---
 
@@ -116,6 +116,7 @@ The Procurement module governs all purchasing activities from external suppliers
 ```
 
 A **Purchase Order (PO)** records the enterprise's binding commercial request to buy goods. Key fields captured include:
+
 - **Header Details:** Supplier, Branch, PO Number, PO Date, Expected Delivery Date, Reference Number, Payment & Delivery Terms.
 - **Line Items:** Products, Quantities, Units, Rates, Item Discounts, Taxes (CGST/SGST/IGST), Total Amounts, Remarks.
 
@@ -123,20 +124,20 @@ A **Purchase Order (PO)** records the enterprise's binding commercial request to
 
 Purchase Orders transition through well-defined lifecycle states:
 
-| Status | Description |
-| :--- | :--- |
-| `DRAFT` | Initial order creation & item entry; editable by procurement staff. |
-| `SUBMITTED` | Submitted for internal review/approval. |
-| `APPROVED` | Approved by authorized organization manager. |
-| `SENT` | Formally dispatched to the external supplier. |
-| `PARTIALLY_RECEIVED` | Goods partially delivered; matching GRN recorded. |
-| `FULLY_RECEIVED` | All ordered line items fully received in warehouse. |
-| `CLOSED` | Order completed or manually concluded. |
-| `CANCELLED` | Order voided prior to fulfillment. |
+| Status               | Description                                                         |
+| :------------------- | :------------------------------------------------------------------ |
+| `DRAFT`              | Initial order creation & item entry; editable by procurement staff. |
+| `SUBMITTED`          | Submitted for internal review/approval.                             |
+| `APPROVED`           | Approved by authorized organization manager.                        |
+| `SENT`               | Formally dispatched to the external supplier.                       |
+| `PARTIALLY_RECEIVED` | Goods partially delivered; matching GRN recorded.                   |
+| `FULLY_RECEIVED`     | All ordered line items fully received in warehouse.                 |
+| `CLOSED`             | Order completed or manually concluded.                              |
+| `CANCELLED`          | Order voided prior to fulfillment.                                  |
 
 ### 4.2 Goods Receipt Note (GRN)
 
-A **Goods Receipt Note (GRN)** records physical delivery at the warehouse. While a PO represents *what was ordered*, the GRN represents *what was physically delivered*.
+A **Goods Receipt Note (GRN)** records physical delivery at the warehouse. While a PO represents _what was ordered_, the GRN represents _what was physically delivered_.
 
 ```text
   PO Ordered Quantity:     100 BOX Tiles
@@ -146,6 +147,7 @@ A **Goods Receipt Note (GRN)** records physical delivery at the warehouse. While
 ```
 
 The system automatically calculates and maintains:
+
 - **Ordered Quantity**
 - **Received Quantity to Date**
 - **Outstanding Quantity Balance**
@@ -171,20 +173,21 @@ One of the greatest complexities in building materials is that products are purc
 
 The system categorizes measurement units into distinct physical dimensions:
 
-| Dimension | Supported Units |
-| :--- | :--- |
-| **Length** | `MM`, `CM`, `M`, `IN`, `FT` |
-| **Area** | `SQ.MM`, `SQ.M`, `SQ.IN`, `SQ.FT` |
-| **Volume** | `CU.MM`, `CU.CM`, `CU.M`, `CU.FT` |
-| **Mass** | `G`, `KG`, `TON` |
-| **Count** | `PCS`, `BOX`, `BAG`, `SET`, `SLAB` |
+| Dimension  | Supported Units                    |
+| :--------- | :--------------------------------- |
+| **Length** | `MM`, `CM`, `M`, `IN`, `FT`        |
+| **Area**   | `SQ.MM`, `SQ.M`, `SQ.IN`, `SQ.FT`  |
+| **Volume** | `CU.MM`, `CU.CM`, `CU.M`, `CU.FT`  |
+| **Mass**   | `G`, `KG`, `TON`                   |
+| **Count**  | `PCS`, `BOX`, `BAG`, `SET`, `SLAB` |
 
 > [!IMPORTANT]
-> **Dimension Conversion Rule:** Conversions between units of the *same* dimension (e.g., `FT` ↔ `MM`, `SQ.FT` ↔ `SQ.M`) are universal standard math. Conversions *across* dimensions (e.g., `MM` ↔ `SQ.FT`) are strictly disallowed unless governed by explicit product specifications.
+> **Dimension Conversion Rule:** Conversions between units of the _same_ dimension (e.g., `FT` ↔ `MM`, `SQ.FT` ↔ `SQ.M`) are universal standard math. Conversions _across_ dimensions (e.g., `MM` ↔ `SQ.FT`) are strictly disallowed unless governed by explicit product specifications.
 
 ### 5.2 Product-Specific Unit Conversions
 
 Commercial packaging varies per product:
+
 - Product A: `1 BOX = 4 PCS = 15.5 SQ.FT`
 - Product B: `1 BOX = 2 PCS = 12.0 SQ.FT`
 
@@ -230,7 +233,7 @@ Products follow two core operational configurations:
 
 ### 6.2 Product Specifications & Reusable Attributes
 
-Attributes (e.g., *Length*, *Width*, *Thickness*, *Color*, *Finish*, *Material*) are defined as global reusable concepts and attached to products as needed:
+Attributes (e.g., _Length_, _Width_, _Thickness_, _Color_, _Finish_, _Material_) are defined as global reusable concepts and attached to products as needed:
 
 ```text
   Attribute Definition: Thickness [Numeric, Unit: MM]
@@ -258,9 +261,9 @@ The application distinguishes between Manufacturers and Suppliers based on real-
   └──────────────────┘                  └──────────────────┘
 ```
 
-- **Manufacturer (Global Master):** Real-world manufacturing business entities (e.g., *Kajaria*, *Somany*, *Jaquar*) exist as global master records shared across tenants.
-  - **Super Admin (`super-admin`):** Full CRUD management & verification status control (`VERIFIED`, `UNVERIFIED`, `REJECTED`).
-  - **Organization Admin:** Can search the master registry and contribute new manufacturers once; cannot update or delete shared global records.
+- **Manufacturer (Global Master):** Real-world manufacturing business entities (e.g., _Kajaria_, _Somany_, _Jaquar_) exist as global master records shared across tenants.
+    - **Super Admin (`super-admin`):** Full CRUD management & verification status control (`VERIFIED`, `UNVERIFIED`, `REJECTED`).
+    - **Organization Admin:** Can search the master registry and contribute new manufacturers once; cannot update or delete shared global records.
 - **Supplier (Tenant-Scoped):** Commercial vendor entities registered per organization for purchasing transactions.
 
 ---
@@ -270,6 +273,7 @@ The application distinguishes between Manufacturers and Suppliers based on real-
 ### 7.1 Organization Isolation
 
 The ERP enforces strict data isolation across tenant organizations:
+
 - Organization-owned models (`Product`, `Inventory`, `PurchaseOrder`, `GRN`, `Supplier`, `Branch`, `Warehouse`) enforce automatic tenant scoping (`organization_id`).
 - All requests are validated against active `TenantContext` to prevent cross-tenant data leakage.
 
@@ -341,40 +345,46 @@ Every stock movement maintains an unalterable transactional audit record:
 ### Quick Start Guide
 
 1. **Clone & Install Dependencies:**
-   ```bash
-   git clone https://github.com/Nganthoiba/sanitarywares-and-tiles-erp.git
-   cd sanitarywares-and-tiles-erp
-   composer install
-   npm install
-   ```
+
+    ```bash
+    git clone https://github.com/Nganthoiba/sanitarywares-and-tiles-erp.git
+    cd sanitarywares-and-tiles-erp
+    composer install
+    npm install
+    ```
 
 2. **Configure Environment:**
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   ```
-   *Configure your MySQL database credentials in `.env`.*
+
+    ```bash
+    cp .env.example .env
+    php artisan key:generate
+    ```
+
+    _Configure your MySQL database credentials in `.env`._
 
 3. **Run Migrations & Seeders:**
-   ```bash
-   php artisan migrate --seed
-   ```
-   *This seeds standard units, default organization, sample products, global manufacturers, and the Super Admin account (`smartnotification1@gmail.com` / `password123`).*
+
+    ```bash
+    php artisan migrate --seed
+    ```
+
+    _This seeds standard units, default organization, sample products, global manufacturers, and the Super Admin account._
 
 4. **Start Development Servers:**
-   ```bash
-   # Terminal 1: Backend API
-   php artisan serve
 
-   # Terminal 2: Frontend Vite
-   npm run dev
-   ```
+    ```bash
+    # Terminal 1: Backend API
+    php artisan serve
+
+    # Terminal 2: Frontend Vite
+    npm run dev
+    ```
 
 5. **Run Automated Test Suite:**
-   ```bash
-   ./vendor/bin/phpunit --filter=GlobalManufacturerTest
-   ./vendor/bin/phpunit --filter=ProductMasterTest
-   ```
+    ```bash
+    ./vendor/bin/phpunit --filter=GlobalManufacturerTest
+    ./vendor/bin/phpunit --filter=ProductMasterTest
+    ```
 
 ---
 
@@ -383,6 +393,7 @@ Every stock movement maintains an unalterable transactional audit record:
 This project is under active continuous development.
 
 ### Core Modules Active
+
 - [x] Multi-Tenant Architecture & Organization Context
 - [x] Super Admin & Role Switcher UI
 - [x] Global Manufacturer Master Registry with Duplicate GSTIN Detection
@@ -394,6 +405,7 @@ This project is under active continuous development.
 - [x] Automated PHPUnit Test Suites
 
 ### Upcoming Enhancements
+
 - [ ] Sales Invoicing & Customer Management
 - [ ] Stock Transfer & Branch Reconciliation Workflow
 - [ ] Low-Stock Automated Reorder Notifications
@@ -402,4 +414,4 @@ This project is under active continuous development.
 
 ---
 
-*Licensed under the [MIT License](LICENSE).*
+_Licensed under the [MIT License](LICENSE)._
