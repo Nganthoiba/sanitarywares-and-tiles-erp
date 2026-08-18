@@ -93,9 +93,6 @@ class InventoryService
                             'reference_type' => 'GoodsReceiptNote',
                             'reference_id' => $grn->id,
                         ]);
-                        if (config('database.default') === 'sqlite') {
-                            $movement->id = (int) InventoryMovement::max('id') + 1;
-                        }
                         $movement->save();
                     }
                 } else {
@@ -148,9 +145,6 @@ class InventoryService
                         'reference_type' => 'GoodsReceiptNote',
                         'reference_id' => $grn->id,
                     ]);
-                    if (config('database.default') === 'sqlite') {
-                        $movement->id = (int) InventoryMovement::max('id') + 1;
-                    }
                     $movement->save();
                 }
             }
@@ -226,8 +220,7 @@ class InventoryService
         }
 
         // Find standard SQFT unit (symbol = 'SQFT' or type = 'AREA')
-        $sqftUnit = Unit::where('organization_id', $organizationId)
-            ->where(fn($q) => $q->where('symbol', 'SQFT')->orWhere('type', 'AREA'))
+        $sqftUnit = Unit::where(fn($q) => $q->where('symbol', 'SQFT')->orWhere('type', 'AREA'))
             ->first();
 
         if (!$sqftUnit) {

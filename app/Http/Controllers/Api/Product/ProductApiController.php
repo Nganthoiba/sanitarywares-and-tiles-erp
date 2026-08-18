@@ -170,11 +170,9 @@ class ProductApiController extends Controller
             }
 
             if (!empty($validated['pieces_per_box'])) {
-                $boxUnit = Unit::where('organization_id', $orgId)
-                    ->where('symbol', 'BOX')
+                $boxUnit = Unit::whereIn('symbol', ['BOX', 'box', 'Box'])
                     ->first();
-                $pcsUnit = Unit::where('organization_id', $orgId)
-                    ->where('symbol', 'PCS')
+                $pcsUnit = Unit::whereIn('symbol', ['PCS', 'pcs', 'PC'])
                     ->first();
 
                 if ($boxUnit && $pcsUnit) {
@@ -340,9 +338,8 @@ class ProductApiController extends Controller
                 ]);
                 
                 if (!$request->has('purchase_unit_id') || !$request->has('sales_unit_id') || !$request->has('base_unit_id')) {
-                    $sqftUnit = Unit::where('organization_id', $orgId)
-                        ->whereIn('symbol', ['SQFT', 'SQ.FT.', 'SQ_FT'])
-                        ->first() ?? Unit::where('organization_id', $orgId)->first();
+                    $sqftUnit = Unit::whereIn('symbol', ['SQFT', 'SQ.FT.', 'SQ_FT', 'sqft', 'sq.ft.'])
+                        ->first() ?? Unit::first();
                     if ($sqftUnit) {
                         $request->merge([
                             'purchase_unit_id' => $request->input('purchase_unit_id', $sqftUnit->id),
@@ -357,9 +354,8 @@ class ProductApiController extends Controller
                 ]);
                 
                 if (!$request->has('purchase_unit_id') || !$request->has('sales_unit_id') || !$request->has('base_unit_id')) {
-                    $pcsUnit = Unit::where('organization_id', $orgId)
-                        ->whereIn('symbol', ['PCS', 'pcs', 'PC'])
-                        ->first() ?? Unit::where('organization_id', $orgId)->first();
+                    $pcsUnit = Unit::whereIn('symbol', ['PCS', 'pcs', 'PC'])
+                        ->first() ?? Unit::first();
                     if ($pcsUnit) {
                         $request->merge([
                             'purchase_unit_id' => $request->input('purchase_unit_id', $pcsUnit->id),

@@ -86,7 +86,7 @@ class GlobalManufacturerTest extends TestCase
     {
         $this->assertNotNull($this->superAdmin);
         $this->assertEquals('smartnotification1@gmail.com', $this->superAdmin->email);
-        $this->assertTrue($this->superAdmin->roles->contains('slug', 'super-admin'));
+        $this->assertTrue($this->superAdmin->roles()->withoutGlobalScopes()->get()->contains('slug', 'super-admin'));
     }
 
     public function test_manufacturer_exists_globally_without_organization_id()

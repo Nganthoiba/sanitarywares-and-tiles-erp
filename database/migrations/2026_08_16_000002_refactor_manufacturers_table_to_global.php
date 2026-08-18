@@ -88,16 +88,7 @@ return new class extends Migration
         // 3. Drop organization_id column if present
         if (Schema::hasColumn('manufacturers', 'organization_id')) {
             Schema::table('manufacturers', function (Blueprint $table) {
-                try {
-                    $table->dropForeign(['organization_id']);
-                } catch (\Throwable $e) {
-                    // Foreign key constraint might not exist or have a different name
-                }
-                try {
-                    $table->dropIndex(['organization_id']);
-                } catch (\Throwable $e) {
-                    // Index might not exist
-                }
+                $table->dropForeign(['organization_id']);
                 $table->dropColumn('organization_id');
             });
         }

@@ -63,24 +63,24 @@ class OrganizationRegistrationTest extends TestCase
         $this->assertEquals($org->id, $user->organization_id);
 
         // Assert Administrator Role was created and assigned
-        $role = Role::where('organization_id', $org->id)->where('slug', 'administrator')->first();
+        $role = Role::withoutGlobalScopes()->where('organization_id', $org->id)->where('slug', 'administrator')->first();
         $this->assertNotNull($role);
         $this->assertTrue($role->is_system);
-        $this->assertTrue($user->roles->contains($role));
+        $this->assertTrue($user->roles()->withoutGlobalScopes()->get()->contains('id', $role->id));
 
         // Assert Default Branch was created
-        $branch = Branch::where('organization_id', $org->id)->first();
+        $branch = Branch::withoutGlobalScopes()->where('organization_id', $org->id)->first();
         $this->assertNotNull($branch);
         $this->assertEquals('Apex Sanitarywares Ltd Main Branch', $branch->name);
 
         // Assert Default Warehouse was created
-        $warehouse = Warehouse::where('organization_id', $org->id)->first();
+        $warehouse = Warehouse::withoutGlobalScopes()->where('organization_id', $org->id)->first();
         $this->assertNotNull($warehouse);
         $this->assertEquals('Central Warehouse', $warehouse->name);
         $this->assertEquals($branch->id, $warehouse->branch_id);
 
         // Assert Default UserScope is created
-        $scope = UserScope::where('organization_id', $org->id)->where('user_id', $user->id)->first();
+        $scope = UserScope::withoutGlobalScopes()->where('organization_id', $org->id)->where('user_id', $user->id)->first();
         $this->assertNotNull($scope);
         $this->assertEquals($branch->id, $scope->branch_id);
         $this->assertEquals($warehouse->id, $scope->warehouse_id);

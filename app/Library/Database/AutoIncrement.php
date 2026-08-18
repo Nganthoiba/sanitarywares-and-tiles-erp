@@ -48,7 +48,11 @@ class AutoIncrement
 
         if ($driver === 'pgsql') {
             // Reset PostgreSQL sequence linked to the column
-            DB::statement("SELECT setval(pg_get_serial_sequence('{$table_name}', '{$field_name}'), $maxId, true)");
+            if ($maxId > 0) {
+                DB::statement("SELECT setval(pg_get_serial_sequence('{$table_name}', '{$field_name}'), $maxId, true)");
+            } else {
+                DB::statement("SELECT setval(pg_get_serial_sequence('{$table_name}', '{$field_name}'), 1, false)");
+            }
         } elseif ($driver === 'mysql') {
             // Reset AUTO_INCREMENT value in MySQL/MariaDB
             DB::statement("ALTER TABLE {$table_name} AUTO_INCREMENT = " . ($maxId + 1));

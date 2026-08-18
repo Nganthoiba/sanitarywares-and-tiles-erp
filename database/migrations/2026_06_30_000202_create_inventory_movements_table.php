@@ -7,8 +7,14 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('inventory_movements', function (Blueprint $table) {
-            $table->bigInteger('id');
+        $driver = \Illuminate\Support\Facades\DB::getDriverName();
+
+        Schema::create('inventory_movements', function (Blueprint $table) use ($driver) {
+            if ($driver === 'mysql') {
+                $table->bigInteger('id');
+            } else {
+                $table->id();
+            }
             $table->unsignedBigInteger('organization_id')->index();
             $table->unsignedBigInteger('inventory_object_id')->index();
             $table->string('movement_type'); // PURCHASE, SALE, RETURN, TRANSFER, ADJUSTMENT, DAMAGE, ALLOCATION, REALLOCATION
@@ -32,11 +38,13 @@ return new class extends Migration {
 
             $table->index(['organization_id', 'inventory_object_id']);
             $table->index(['reference_type', 'reference_id']);
-            $table->primary(['id', 'created_at']);
+            if ($driver === 'mysql') {
+                $table->primary(['id', 'created_at']);
+            }
         });
 
-        // Set auto_increment for primary key column and apply partition by range columns on created_at
-        if (config('database.default') !== 'sqlite') {
+        // Set auto_increment for primary key column and apply partition by range columns on created_at for MySQL
+        if ($driver === 'mysql') {
             \Illuminate\Support\Facades\DB::statement('ALTER TABLE inventory_movements MODIFY id BIGINT NOT NULL AUTO_INCREMENT');
             \Illuminate\Support\Facades\DB::statement("ALTER TABLE inventory_movements PARTITION BY RANGE (UNIX_TIMESTAMP(created_at)) (
                 PARTITION p_2026_06 VALUES LESS THAN (UNIX_TIMESTAMP('2026-07-01 00:00:00')),
