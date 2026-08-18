@@ -442,3 +442,375 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
     background-color: rgba(255, 255, 255, 0.05);
     color: var(--accent-color) !important;
 }
+
+/* ==========================================================================
+   LANDING PAGE MODERN UI STYLES
+   ========================================================================== */
+
+.landing-wrapper {
+    font-family: var(--default-font);
+    color: var(--default-color);
+    background-color: #f8fafc;
+    overflow-x: hidden;
+}
+
+[data-theme="dark"] .landing-wrapper {
+    background-color: #0b1120;
+    color: #e2e8f0;
+}
+
+/* Sticky Glass Navbar */
+.landing-nav {
+    position: sticky;
+    top: 0;
+    z-index: 1040;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .landing-nav {
+    background: rgba(15, 23, 42, 0.85);
+    border-bottom: 1px solid rgba(30, 41, 59, 0.8);
+}
+
+.landing-nav .nav-link {
+    color: #475569 !important;
+    font-weight: 600;
+    font-size: 0.925rem !important;
+    padding: 0.5rem 1rem !important;
+    transition: color 0.2s ease;
+}
+
+.landing-nav .nav-link:hover,
+.landing-nav .nav-link.active {
+    color: var(--accent-color) !important;
+}
+
+[data-theme="dark"] .landing-nav .nav-link {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .landing-nav .nav-link:hover {
+    color: #60a5fa !important;
+}
+
+/* Hero Section Mesh Backdrop */
+.hero-mesh-bg {
+    position: absolute;
+    inset: 0;
+    background-image: 
+        radial-gradient(circle at 15% 20%, rgba(49, 92, 246, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 85% 30%, rgba(15, 155, 122, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 50% 80%, rgba(236, 72, 153, 0.08) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+[data-theme="dark"] .hero-mesh-bg {
+    background-image: 
+        radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.2) 0%, transparent 50%),
+        radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.18) 0%, transparent 50%),
+        radial-gradient(circle at 50% 80%, rgba(168, 85, 247, 0.12) 0%, transparent 50%);
+}
+
+.hero-grid-pattern {
+    position: absolute;
+    inset: 0;
+    background-size: 32px 32px;
+    background-image: 
+        linear-gradient(to right, rgba(203, 213, 225, 0.3) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(203, 213, 225, 0.3) 1px, transparent 1px);
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 40%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 40%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+[data-theme="dark"] .hero-grid-pattern {
+    background-image: 
+        linear-gradient(to right, rgba(51, 65, 85, 0.3) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(51, 65, 85, 0.3) 1px, transparent 1px);
+}
+
+/* Hero Badge */
+.hero-pill-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1rem;
+    border-radius: 9999px;
+    background: rgba(49, 92, 246, 0.08);
+    border: 1px solid rgba(49, 92, 246, 0.2);
+    color: #2563eb;
+    font-weight: 600;
+    font-size: 0.85rem !important;
+    backdrop-filter: blur(8px);
+}
+
+[data-theme="dark"] .hero-pill-badge {
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    color: #93c5fd;
+}
+
+/* Gradient Titles */
+.gradient-text-primary {
+    background: linear-gradient(135deg, #0f172a 0%, #315cf6 50%, #0f9b7a 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+[data-theme="dark"] .gradient-text-primary {
+    background: linear-gradient(135deg, #ffffff 0%, #60a5fa 50%, #34d399 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.gradient-text-accent {
+    background: linear-gradient(135deg, #315cf6 0%, #6366f1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Glassmorphism Cards */
+.landing-glass-card {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 1.25rem !important;
+    box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(12px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.landing-glass-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -15px rgba(49, 92, 246, 0.15);
+    border-color: rgba(49, 92, 246, 0.3);
+}
+
+[data-theme="dark"] .landing-glass-card {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(51, 65, 85, 0.7);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .landing-glass-card:hover {
+    border-color: rgba(96, 165, 250, 0.4);
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+}
+
+/* Hero Sandbox Widget */
+.sandbox-wrapper {
+    background: linear-gradient(145deg, #ffffff, #f1f5f9);
+    border: 1px solid #e2e8f0;
+    border-radius: 1.5rem !important;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.15);
+    padding: 1.75rem;
+}
+
+[data-theme="dark"] .sandbox-wrapper {
+    background: linear-gradient(145deg, #1e293b, #0f172a);
+    border-color: #334155;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+}
+
+.sandbox-nav-pills .nav-link {
+    border-radius: 0.75rem;
+    font-weight: 600;
+    padding: 0.5rem 1.25rem;
+    color: #64748b;
+    transition: all 0.2s ease;
+}
+
+.sandbox-nav-pills .nav-link.active {
+    background-color: var(--accent-color);
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(49, 92, 246, 0.3);
+}
+
+.sandbox-result-box {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 1rem;
+    padding: 1.25rem;
+}
+
+[data-theme="dark"] .sandbox-result-box {
+    background: #0b1120;
+    border-color: #334155;
+}
+
+/* Feature Icon Badges */
+.icon-badge-lg {
+    width: 64px;
+    height: 64px;
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.icon-badge-blue {
+    background: rgba(49, 92, 246, 0.1);
+    color: #315cf6;
+}
+.icon-badge-emerald {
+    background: rgba(15, 155, 122, 0.1);
+    color: #0f9b7a;
+}
+.icon-badge-amber {
+    background: rgba(217, 119, 6, 0.1);
+    color: #d97706;
+}
+.icon-badge-purple {
+    background: rgba(147, 51, 234, 0.1);
+    color: #9333ea;
+}
+.icon-badge-rose {
+    background: rgba(225, 29, 72, 0.1);
+    color: #e11d48;
+}
+.icon-badge-cyan {
+    background: rgba(6, 182, 212, 0.1);
+    color: #06b6d4;
+}
+
+[data-theme="dark"] .icon-badge-blue { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
+[data-theme="dark"] .icon-badge-emerald { background: rgba(52, 211, 153, 0.2); color: #34d399; }
+[data-theme="dark"] .icon-badge-amber { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+[data-theme="dark"] .icon-badge-purple { background: rgba(192, 132, 252, 0.2); color: #c084fc; }
+[data-theme="dark"] .icon-badge-rose { background: rgba(251, 113, 133, 0.2); color: #fb7185; }
+[data-theme="dark"] .icon-badge-cyan { background: rgba(34, 211, 238, 0.2); color: #22d3ee; }
+
+/* Interactive Stepper Pipeline */
+.pipeline-step-card {
+    cursor: pointer;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 1rem;
+    padding: 1.25rem;
+    transition: all 0.25s ease;
+    position: relative;
+}
+
+.pipeline-step-card.active {
+    border-color: var(--accent-color);
+    background: rgba(49, 92, 246, 0.03);
+    box-shadow: 0 8px 25px -5px rgba(49, 92, 246, 0.2);
+}
+
+[data-theme="dark"] .pipeline-step-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .pipeline-step-card.active {
+    border-color: #60a5fa;
+    background: rgba(96, 165, 250, 0.08);
+}
+
+.step-num-pill {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    color: #64748b;
+    font-weight: 700;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pipeline-step-card.active .step-num-pill {
+    background: var(--accent-color);
+    color: #ffffff;
+}
+
+/* Role Persona Switcher */
+.role-persona-btn {
+    border-radius: 0.85rem;
+    padding: 0.85rem 1.25rem;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #475569;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.role-persona-btn.active {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: #ffffff !important;
+    box-shadow: 0 8px 20px rgba(49, 92, 246, 0.25);
+}
+
+[data-theme="dark"] .role-persona-btn {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .role-persona-btn.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #ffffff !important;
+}
+
+/* Stat Counters */
+.stat-counter-card {
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid #e2e8f0;
+    border-radius: 1.25rem;
+    padding: 1.75rem 1.25rem;
+    text-align: center;
+    backdrop-filter: blur(8px);
+}
+
+[data-theme="dark"] .stat-counter-card {
+    background: rgba(30, 41, 59, 0.6);
+    border-color: #334155;
+}
+
+.stat-number {
+    font-family: var(--heading-font);
+    font-size: 2.75rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+/* CTA Banner Gradient */
+.cta-banner-bg {
+    background: linear-gradient(135deg, #1e1b4b 0%, #315cf6 50%, #0f9b7a 100%);
+    border-radius: 2rem !important;
+    box-shadow: 0 25px 60px -15px rgba(49, 92, 246, 0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Industry Badge Pills */
+.industry-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 9999px;
+    font-size: 0.825rem;
+    font-weight: 600;
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #e2e8f0;
+}
+
+[data-theme="dark"] .industry-chip {
+    background: #1e293b;
+    color: #cbd5e1;
+    border-color: #334155;
+}
