@@ -67,15 +67,17 @@ class OrganizationRegistrationService
                 ->toArray();
 
             // 4. Create Default Administrator Role for the organization & Assign Permissions
-            $adminRole = Role::create([
-                'organization_id' => $org->id,
-                'name' => 'Administrator',
-                'slug' => 'administrator',
-                'is_system' => true
-            ]);
+            $adminRole = Role::updateOrCreate(
+                // ['organization_id' => $org->id, 'slug' => 'administrator'],
+                ['slug' => 'administrator'],
+                [
+                    'name' => 'Organization Administrator',
+                    'is_system' => true,
+                ]
+            );
 
             if (!empty($permissionIds)) {
-                $adminRole->permissions()->attach($permissionIds, ['organization_id' => $org->id]);
+                $adminRole->permissions()->sync($permissionIds);
             }
 
             // 5. Assign Administrator Role to the Owner User
