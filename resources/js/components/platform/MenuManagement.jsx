@@ -67,8 +67,10 @@ export default function MenuManagement() {
                     'Accept': 'application/json',
                 }
             });
-            if (!res.ok) throw new Error('Failed to load platform menus.');
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(data.message || `Failed to load platform menus (HTTP ${res.status}).`);
+            }
             setTree(data.tree || []);
             setFlatList(data.flat || []);
         } catch (err) {
