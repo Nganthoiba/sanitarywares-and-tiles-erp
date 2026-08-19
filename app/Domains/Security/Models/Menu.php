@@ -12,9 +12,9 @@ class Menu extends Model
 
     protected $fillable = [
         'menu_name',
+        'menu_type',
         'route_uri',
         'icon',
-        'group_name',
         'parent_id',
         'permission_id',
         'order',
@@ -49,5 +49,15 @@ class Menu extends Model
     public function scopeOrdered($query)
     {
         return $query->orderBy('order', 'asc');
+    }
+
+    public function scopeGroups($query)
+    {
+        return $query->where('menu_type', 'GROUP');
+    }
+
+    public function scopePages($query)
+    {
+        return $query->where('menu_type', 'PAGE');
     }
 }

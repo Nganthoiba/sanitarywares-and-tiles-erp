@@ -7,6 +7,7 @@ use App\Domains\Security\Models\Menu;
 use App\Shared\Context\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Collection;
 
 class NavigationController extends Controller
 {
@@ -18,56 +19,76 @@ class NavigationController extends Controller
         $user = $request->user();
 
         $context = App::make(TenantContext::class);
-        $contextUser = $context->getUser() ?? $user;
 
         $isSuperAdmin = $user->organization_id === null || $user->roles()->where('slug', 'super-admin')->exists();
 
         $permissions = $context->getPermissions() ?? collect();
-        if ($permissions->isEmpty() && $user->relationLoaded('roles')) {
-            $permissions = $user->roles->flatMap(fn($r) => $r->permissions)->pluck('slug')->filter()->unique();
+        if ($permissions->isEmpty()) {
+            if ($user->relationLoaded('roles')) {
+                $permissions = $user->roles->flatMap(fn($r) => $r->permissions)->pluck('slug')->filter()->unique();
+            } else {
+                $permissions = $user->roles()->with('permissions')->get()->flatMap(fn($r) => $r->permissions)->pluck('slug')->filter()->unique();
+            }
         }
 
         $topMenus = Menu::with(['children' => function ($query) {
             $query->where('enabled', true)->orderBy('order', 'asc');
-        }, 'permission'])
+        }, 'children.permission', 'permission'])
             ->whereNull('parent_id')
             ->where('enabled', true)
             ->orderBy('order', 'asc')
             ->get();
 
-        $authorizedMenus = [];
+        $authorizedTree = $this->buildAuthorizedTree($topMenus, $isSuperAdmin, $permissions);
 
-        foreach ($topMenus as $menu) {
-            $isParentAuthorized = $isSuperAdmin || !$menu->permission_id || $permissions->contains($menu->permission?->slug);
+        return response()->json($authorizedTree);
+    }
 
-            $authorizedChildren = [];
-            foreach ($menu->children as $child) {
-                $isChildAuthorized = $isSuperAdmin || !$child->permission_id || $permissions->contains($child->permission?->slug);
-                if ($isChildAuthorized) {
-                    $authorizedChildren[] = [
-                        'id' => $child->id,
-                        'menu_name' => $child->menu_name,
-                        'route_uri' => $child->route_uri,
-                        'icon' => $child->icon,
-                        'order' => $child->order,
+    /**
+     * Recursively build authorized navigation tree.
+     */
+    private function buildAuthorizedTree(Collection $menus, bool $isSuperAdmin, Collection $userPermissions): array
+    {
+        $result = [];
+
+        foreach ($menus as $menu) {
+            if (!$menu->enabled) {
+                continue;
+            }
+
+            if ($menu->menu_type === 'GROUP') {
+                $childrenCollection = $menu->children ? $menu->children->filter(fn($c) => $c->enabled) : collect();
+                $authorizedChildren = $this->buildAuthorizedTree($childrenCollection, $isSuperAdmin, $userPermissions);
+
+                // Parent GROUP menu is only displayed if it has at least one authorized child
+                if (count($authorizedChildren) > 0) {
+                    $result[] = [
+                        'id'        => $menu->id,
+                        'menu_name' => $menu->menu_name,
+                        'menu_type' => 'GROUP',
+                        'route_uri' => null,
+                        'icon'      => $menu->icon,
+                        'order'     => $menu->order,
+                        'children'  => $authorizedChildren,
+                    ];
+                }
+            } else {
+                // PAGE menu
+                $isAuthorized = $isSuperAdmin || !$menu->permission_id || $userPermissions->contains($menu->permission?->slug);
+                if ($isAuthorized) {
+                    $result[] = [
+                        'id'        => $menu->id,
+                        'menu_name' => $menu->menu_name,
+                        'menu_type' => 'PAGE',
+                        'route_uri' => $menu->route_uri,
+                        'icon'      => $menu->icon,
+                        'order'     => $menu->order,
+                        'children'  => [],
                     ];
                 }
             }
-
-            // Include parent menu if it has authorized children or if the parent itself is directly authorized (and has no children)
-            if ($isParentAuthorized || count($authorizedChildren) > 0) {
-                $authorizedMenus[] = [
-                    'id' => $menu->id,
-                    'menu_name' => $menu->menu_name,
-                    'route_uri' => $menu->route_uri,
-                    'icon' => $menu->icon,
-                    'group_name' => $menu->group_name,
-                    'order' => $menu->order,
-                    'children' => $authorizedChildren,
-                ];
-            }
         }
 
-        return response()->json($authorizedMenus);
+        return $result;
     }
 }

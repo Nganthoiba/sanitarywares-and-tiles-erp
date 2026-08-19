@@ -21,6 +21,7 @@ import SupplierManager from './components/grn/SupplierManager';
 import StorageLocationManager from './components/inventory/StorageLocationManager';
 import LandingPage from './components/auth/LandingPage';
 import PurchaseOrderList from './components/purchase/PurchaseOrderList';
+import MenuManagement from './components/platform/MenuManagement';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
@@ -571,6 +572,14 @@ function App() {
                         <Route path="/bookkeeping" element={<LedgerReports />} />
                         <Route path="/reporting" element={<ReportingHub />} />
                         
+                        <Route path="/platform/menus" element={
+                            hasPermission('platform.menus.manage') ? (
+                                <MenuManagement />
+                            ) : (
+                                <Navigate to="/inventory" replace />
+                            )
+                        } />
+
                         <Route path="/users" element={
                             hasPermission('master.users.manage') ? (
                                 <UserManagement />

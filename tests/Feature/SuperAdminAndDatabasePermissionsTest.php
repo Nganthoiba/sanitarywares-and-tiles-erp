@@ -176,11 +176,24 @@ class SuperAdminAndDatabasePermissionsTest extends TestCase
 
     public function test_dynamic_navigation_api_returns_authorized_menus()
     {
+        $extractUris = function (array $items) use (&$extractUris) {
+            $uris = collect();
+            foreach ($items as $item) {
+                if (!empty($item['route_uri'])) {
+                    $uris->push($item['route_uri']);
+                }
+                if (!empty($item['children']) && is_array($item['children'])) {
+                    $uris = $uris->merge($extractUris($item['children']));
+                }
+            }
+            return $uris;
+        };
+
         // For Super Admin: returns platform + operational menus
         Sanctum::actingAs($this->superAdmin);
         $superNav = $this->getJson('/api/navigation');
         $superNav->assertStatus(200);
-        $superUris = collect($superNav->json())->pluck('route_uri');
+        $superUris = $extractUris($superNav->json());
         $this->assertTrue($superUris->contains('/platform/organizations'));
         $this->assertTrue($superUris->contains('/inventory'));
 
@@ -188,7 +201,7 @@ class SuperAdminAndDatabasePermissionsTest extends TestCase
         Sanctum::actingAs($this->tenantAdmin);
         $tenantNav = $this->getJson('/api/navigation');
         $tenantNav->assertStatus(200);
-        $tenantUris = collect($tenantNav->json())->pluck('route_uri');
+        $tenantUris = $extractUris($tenantNav->json());
         $this->assertFalse($tenantUris->contains('/platform/organizations'));
         $this->assertTrue($tenantUris->contains('/inventory'));
     }

@@ -63,10 +63,13 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::post('/permissions', [PlatformPermissionController::class, 'storePermission']);
         Route::put('/permissions/{id}', [PlatformPermissionController::class, 'updatePermission']);
         Route::post('/permissions/{id}/toggle', [PlatformPermissionController::class, 'togglePermission']);
+    });
 
-        // Platform Menus
+    // Dedicated Platform Menu Management Routes (Restricted to platform.menus.manage)
+    Route::middleware(['permission:platform.menus.manage'])->prefix('platform')->group(function () {
         Route::get('/menus', [PlatformMenuController::class, 'index']);
         Route::post('/menus', [PlatformMenuController::class, 'store']);
+        Route::post('/menus/reorder', [PlatformMenuController::class, 'reorder']);
         Route::put('/menus/{id}', [PlatformMenuController::class, 'update']);
         Route::delete('/menus/{id}', [PlatformMenuController::class, 'destroy']);
     });

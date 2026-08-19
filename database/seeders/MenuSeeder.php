@@ -12,248 +12,341 @@ class MenuSeeder extends Seeder
     {
         $perm = fn(string $slug) => Permission::where('slug', $slug)->first()?->id;
 
-        // Platform Administration Group
+        // 1. Platform Administration (GROUP)
+        $platformGroup = Menu::updateOrCreate(
+            ['menu_name' => 'Platform Administration', 'parent_id' => null],
+            [
+                'menu_type'     => 'GROUP',
+                'route_uri'     => null,
+                'icon'          => 'fa-solid fa-shield-halved',
+                'permission_id' => null,
+                'order'         => 10,
+                'enabled'       => true,
+            ]
+        );
+
         Menu::updateOrCreate(
             ['route_uri' => '/platform/organizations'],
             [
-                'menu_name' => 'Organizations',
-                'icon' => 'fa-solid fa-sitemap',
-                'group_name' => 'Platform Administration',
+                'menu_name'     => 'Organizations',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-sitemap',
+                'parent_id'     => $platformGroup->id,
                 'permission_id' => $perm('platform.organizations.manage'),
-                'order' => 10,
-                'enabled' => true,
+                'order'         => 1,
+                'enabled'       => true,
             ]
         );
 
         Menu::updateOrCreate(
             ['route_uri' => '/platform/permissions'],
             [
-                'menu_name' => 'Permissions',
-                'icon' => 'fa-solid fa-key',
-                'group_name' => 'Platform Administration',
+                'menu_name'     => 'Permissions',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-key',
+                'parent_id'     => $platformGroup->id,
                 'permission_id' => $perm('platform.permissions.manage'),
-                'order' => 20,
-                'enabled' => true,
+                'order'         => 2,
+                'enabled'       => true,
             ]
         );
 
         Menu::updateOrCreate(
             ['route_uri' => '/platform/menus'],
             [
-                'menu_name' => 'Menu Manager',
-                'icon' => 'fa-solid fa-list-check',
-                'group_name' => 'Platform Administration',
+                'menu_name'     => 'Menu Manager',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-list-check',
+                'parent_id'     => $platformGroup->id,
                 'permission_id' => $perm('platform.menus.manage'),
-                'order' => 30,
-                'enabled' => true,
+                'order'         => 3,
+                'enabled'       => true,
             ]
         );
 
-        // Core Operations Group
-        Menu::updateOrCreate(
-            ['route_uri' => '/inventory'],
+        // 2. Purchases (GROUP)
+        $purchasesGroup = Menu::updateOrCreate(
+            ['menu_name' => 'Purchases', 'parent_id' => null],
             [
-                'menu_name' => 'Inventory Engine',
-                'icon' => 'fa-solid fa-boxes-stacked',
-                'group_name' => 'Operations',
-                'permission_id' => $perm('inventory.stock.view'),
-                'order' => 100,
-                'enabled' => true,
-            ]
-        );
-
-        $grnParent = Menu::updateOrCreate(
-            ['route_uri' => '/grn'],
-            [
-                'menu_name' => 'Goods Receipt (GRN)',
-                'icon' => 'fa-solid fa-file-invoice',
-                'group_name' => 'Operations',
-                'permission_id' => $perm('purchase.requisitions.manage'),
-                'order' => 110,
-                'enabled' => true,
+                'menu_type'     => 'GROUP',
+                'route_uri'     => null,
+                'icon'          => 'fa-solid fa-cart-shopping',
+                'permission_id' => null,
+                'order'         => 20,
+                'enabled'       => true,
             ]
         );
 
         Menu::updateOrCreate(
-            ['route_uri' => '/grn/new'],
-            [
-                'menu_name' => 'New GRN Note',
-                'icon' => 'fa-solid fa-plus',
-                'group_name' => 'Operations',
-                'parent_id' => $grnParent->id,
-                'permission_id' => $perm('purchase.requisitions.manage'),
-                'order' => 2,
-                'enabled' => true,
-            ]
-        );
-
-        $poParent = Menu::updateOrCreate(
             ['route_uri' => '/purchase-orders'],
             [
-                'menu_name' => 'Purchase Orders',
-                'icon' => 'fa-solid fa-cart-shopping',
-                'group_name' => 'Operations',
+                'menu_name'     => 'Purchase Orders',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-file-invoice-dollar',
+                'parent_id'     => $purchasesGroup->id,
                 'permission_id' => $perm('purchase.orders.view'),
-                'order' => 120,
-                'enabled' => true,
+                'order'         => 1,
+                'enabled'       => true,
             ]
         );
 
         Menu::updateOrCreate(
             ['route_uri' => '/purchase-orders/new'],
             [
-                'menu_name' => 'New Purchase Order',
-                'icon' => 'fa-solid fa-plus',
-                'group_name' => 'Operations',
-                'parent_id' => $poParent->id,
+                'menu_name'     => 'New Purchase Order',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-plus',
+                'parent_id'     => $purchasesGroup->id,
                 'permission_id' => $perm('purchase.orders.create'),
-                'order' => 2,
-                'enabled' => true,
+                'order'         => 2,
+                'enabled'       => true,
             ]
         );
 
         Menu::updateOrCreate(
-            ['route_uri' => '/branches'],
+            ['route_uri' => '/grn'],
             [
-                'menu_name' => 'Branch Locations',
-                'icon' => 'fa-solid fa-code-branch',
-                'group_name' => 'Master Data',
-                'permission_id' => $perm('master.branches.manage'),
-                'order' => 130,
-                'enabled' => true,
-            ]
-        );
-
-        Menu::updateOrCreate(
-            ['route_uri' => '/warehouses'],
-            [
-                'menu_name' => 'Warehouses',
-                'icon' => 'fa-solid fa-warehouse',
-                'group_name' => 'Master Data',
-                'permission_id' => $perm('master.warehouses.manage'),
-                'order' => 140,
-                'enabled' => true,
-            ]
-        );
-
-        Menu::updateOrCreate(
-            ['route_uri' => '/storage-locations'],
-            [
-                'menu_name' => 'Storage Locations',
-                'icon' => 'fa-solid fa-map-pin',
-                'group_name' => 'Master Data',
-                'permission_id' => $perm('master.warehouses.manage'),
-                'order' => 150,
-                'enabled' => true,
+                'menu_name'     => 'Goods Receipt (GRN)',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-truck-ramp-box',
+                'parent_id'     => $purchasesGroup->id,
+                'permission_id' => $perm('purchase.requisitions.manage'),
+                'order'         => 3,
+                'enabled'       => true,
             ]
         );
 
         Menu::updateOrCreate(
             ['route_uri' => '/suppliers'],
             [
-                'menu_name' => 'Suppliers',
-                'icon' => 'fa-solid fa-truck-field',
-                'group_name' => 'Master Data',
+                'menu_name'     => 'Suppliers',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-truck-field',
+                'parent_id'     => $purchasesGroup->id,
                 'permission_id' => $perm('purchase.orders.view'),
-                'order' => 160,
-                'enabled' => true,
+                'order'         => 4,
+                'enabled'       => true,
             ]
         );
 
-        $prodParent = Menu::updateOrCreate(
+        // 3. Inventory (GROUP)
+        $inventoryGroup = Menu::updateOrCreate(
+            ['menu_name' => 'Inventory', 'parent_id' => null],
+            [
+                'menu_type'     => 'GROUP',
+                'route_uri'     => null,
+                'icon'          => 'fa-solid fa-boxes-stacked',
+                'permission_id' => null,
+                'order'         => 30,
+                'enabled'       => true,
+            ]
+        );
+
+        Menu::updateOrCreate(
+            ['route_uri' => '/inventory'],
+            [
+                'menu_name'     => 'Stock Manager',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-cubes',
+                'parent_id'     => $inventoryGroup->id,
+                'permission_id' => $perm('inventory.stock.view'),
+                'order'         => 1,
+                'enabled'       => true,
+            ]
+        );
+
+        Menu::updateOrCreate(
+            ['route_uri' => '/branches'],
+            [
+                'menu_name'     => 'Branch Locations',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-code-branch',
+                'parent_id'     => $inventoryGroup->id,
+                'permission_id' => $perm('master.branches.manage'),
+                'order'         => 2,
+                'enabled'       => true,
+            ]
+        );
+
+        Menu::updateOrCreate(
+            ['route_uri' => '/warehouses'],
+            [
+                'menu_name'     => 'Warehouses',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-warehouse',
+                'parent_id'     => $inventoryGroup->id,
+                'permission_id' => $perm('master.warehouses.manage'),
+                'order'         => 3,
+                'enabled'       => true,
+            ]
+        );
+
+        Menu::updateOrCreate(
+            ['route_uri' => '/storage-locations'],
+            [
+                'menu_name'     => 'Storage Locations',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-map-pin',
+                'parent_id'     => $inventoryGroup->id,
+                'permission_id' => $perm('master.warehouses.manage'),
+                'order'         => 4,
+                'enabled'       => true,
+            ]
+        );
+
+        // 4. Products (GROUP)
+        $productsGroup = Menu::updateOrCreate(
+            ['menu_name' => 'Products', 'parent_id' => null],
+            [
+                'menu_type'     => 'GROUP',
+                'route_uri'     => null,
+                'icon'          => 'fa-solid fa-box-archive',
+                'permission_id' => null,
+                'order'         => 40,
+                'enabled'       => true,
+            ]
+        );
+
+        Menu::updateOrCreate(
             ['route_uri' => '/products'],
             [
-                'menu_name' => 'Products',
-                'icon' => 'fa-solid fa-cube',
-                'group_name' => 'Master Data',
+                'menu_name'     => 'Product Catalog',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-cube',
+                'parent_id'     => $productsGroup->id,
                 'permission_id' => $perm('products.view'),
-                'order' => 170,
-                'enabled' => true,
+                'order'         => 1,
+                'enabled'       => true,
             ]
         );
 
         Menu::updateOrCreate(
             ['route_uri' => '/products/categories'],
             [
-                'menu_name' => 'Categories',
-                'icon' => 'fa-solid fa-sitemap',
-                'group_name' => 'Master Data',
-                'parent_id' => $prodParent->id,
+                'menu_name'     => 'Categories',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-sitemap',
+                'parent_id'     => $productsGroup->id,
                 'permission_id' => $perm('products.view'),
-                'order' => 2,
-                'enabled' => true,
+                'order'         => 2,
+                'enabled'       => true,
             ]
         );
 
         Menu::updateOrCreate(
             ['route_uri' => '/products/brands'],
             [
-                'menu_name' => 'Brands',
-                'icon' => 'fa-solid fa-tags',
-                'group_name' => 'Master Data',
+                'menu_name'     => 'Brands',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-tags',
+                'parent_id'     => $productsGroup->id,
                 'permission_id' => $perm('products.brands.manage'),
-                'order' => 180,
-                'enabled' => true,
+                'order'         => 3,
+                'enabled'       => true,
             ]
         );
 
         Menu::updateOrCreate(
             ['route_uri' => '/products/manufacturers'],
             [
-                'menu_name' => 'Manufacturers',
-                'icon' => 'fa-solid fa-industry',
-                'group_name' => 'Master Data',
+                'menu_name'     => 'Manufacturers',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-industry',
+                'parent_id'     => $productsGroup->id,
                 'permission_id' => $perm('products.manufacturers.manage'),
-                'order' => 190,
-                'enabled' => true,
+                'order'         => 4,
+                'enabled'       => true,
             ]
         );
 
-        Menu::updateOrCreate(
-            ['route_uri' => '/workflows'],
+        // 5. Finance (GROUP)
+        $financeGroup = Menu::updateOrCreate(
+            ['menu_name' => 'Finance', 'parent_id' => null],
             [
-                'menu_name' => 'BPM Workflows',
-                'icon' => 'fa-solid fa-diagram-project',
-                'group_name' => 'System',
-                'permission_id' => $perm('workflow.definition.manage'),
-                'order' => 200,
-                'enabled' => true,
+                'menu_type'     => 'GROUP',
+                'route_uri'     => null,
+                'icon'          => 'fa-solid fa-calculator',
+                'permission_id' => null,
+                'order'         => 50,
+                'enabled'       => true,
             ]
         );
 
         Menu::updateOrCreate(
             ['route_uri' => '/bookkeeping'],
             [
-                'menu_name' => 'General Bookkeeping',
-                'icon' => 'fa-solid fa-calculator',
-                'group_name' => 'Finance',
+                'menu_name'     => 'General Bookkeeping',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-book',
+                'parent_id'     => $financeGroup->id,
                 'permission_id' => $perm('accounting.accounts.manage'),
-                'order' => 210,
-                'enabled' => true,
+                'order'         => 1,
+                'enabled'       => true,
+            ]
+        );
+
+        // 6. Reports (GROUP)
+        $reportsGroup = Menu::updateOrCreate(
+            ['menu_name' => 'Reports', 'parent_id' => null],
+            [
+                'menu_type'     => 'GROUP',
+                'route_uri'     => null,
+                'icon'          => 'fa-solid fa-chart-pie',
+                'permission_id' => null,
+                'order'         => 60,
+                'enabled'       => true,
             ]
         );
 
         Menu::updateOrCreate(
             ['route_uri' => '/reporting'],
             [
-                'menu_name' => 'Reporting & BI Hub',
-                'icon' => 'fa-solid fa-chart-line',
-                'group_name' => 'Reports',
+                'menu_name'     => 'Reporting & BI Hub',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-chart-line',
+                'parent_id'     => $reportsGroup->id,
                 'permission_id' => $perm('inventory.stock.view'),
-                'order' => 220,
-                'enabled' => true,
+                'order'         => 1,
+                'enabled'       => true,
+            ]
+        );
+
+        // 7. System Administration (GROUP)
+        $systemGroup = Menu::updateOrCreate(
+            ['menu_name' => 'System Administration', 'parent_id' => null],
+            [
+                'menu_type'     => 'GROUP',
+                'route_uri'     => null,
+                'icon'          => 'fa-solid fa-gears',
+                'permission_id' => null,
+                'order'         => 70,
+                'enabled'       => true,
             ]
         );
 
         Menu::updateOrCreate(
             ['route_uri' => '/users'],
             [
-                'menu_name' => 'User & Role Manager',
-                'icon' => 'fa-solid fa-users-gear',
-                'group_name' => 'Administration',
+                'menu_name'     => 'User & Role Manager',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-users-gear',
+                'parent_id'     => $systemGroup->id,
                 'permission_id' => $perm('master.users.manage'),
-                'order' => 230,
-                'enabled' => true,
+                'order'         => 1,
+                'enabled'       => true,
+            ]
+        );
+
+        Menu::updateOrCreate(
+            ['route_uri' => '/workflows'],
+            [
+                'menu_name'     => 'BPM Workflows',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-diagram-project',
+                'parent_id'     => $systemGroup->id,
+                'permission_id' => $perm('workflow.definition.manage'),
+                'order'         => 2,
+                'enabled'       => true,
             ]
         );
     }
