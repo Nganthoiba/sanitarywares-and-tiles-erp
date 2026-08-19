@@ -28,7 +28,7 @@ class SuperAdminSeeder extends Seeder
 
         // Ensure Super Admin user exists with organization_id = null
         $user = User::withoutGlobalScopes()->updateOrCreate(
-            ['email' => 'smartnotification1@gmail.com'],
+            ['email' => 'super.admin1992@gmail.com'],
             [
                 'organization_id' => null,
                 'default_role_id' => $superAdminRole->id,

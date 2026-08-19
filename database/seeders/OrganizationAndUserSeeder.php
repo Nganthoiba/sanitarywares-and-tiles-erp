@@ -16,6 +16,7 @@ class OrganizationAndUserSeeder extends Seeder
 {
     public function run(): void
     {
+
         $org = Organization::updateOrCreate(
             ['code' => 'ACME001'],
             [
@@ -55,9 +56,11 @@ class OrganizationAndUserSeeder extends Seeder
             ]
         );
 
+
         // Create Administrator role for the tenant organization
         $adminRole = Role::updateOrCreate(
-            ['organization_id' => $org->id, 'slug' => 'administrator'],
+            // ['organization_id' => $org->id, 'slug' => 'administrator'],
+            ['slug' => 'administrator'],
             [
                 'name' => 'Organization Administrator',
                 'is_system' => true,
@@ -69,14 +72,14 @@ class OrganizationAndUserSeeder extends Seeder
             ->where('slug', 'not like', 'platform.%')
             ->pluck('id');
 
-        $adminRole->permissions()->syncWithPivotValues($operationalPermissions, ['organization_id' => $org->id]);
+        $adminRole->permissions()->sync($operationalPermissions,  ['organization_id' => $org->id]);
 
         $adminUser = User::updateOrCreate(
-            ['email' => 'admin@acme.com'],
+            ['email' => 'khangembamc@gmail.com'],
             [
                 'organization_id' => $org->id,
                 'default_role_id' => $adminRole->id,
-                'name' => 'Admin User',
+                'name' => 'Khangembam Nganthoiba',
                 'password' => Hash::make('password'),
             ]
         );

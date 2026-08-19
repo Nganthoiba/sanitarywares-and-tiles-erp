@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            RoleSeeder::class,
             UnitSeeder::class,                  // Global organization-independent units
             PermissionSeeder::class,            // Global permissions and permission groups
             MenuSeeder::class,                  // Global dynamic database menus
