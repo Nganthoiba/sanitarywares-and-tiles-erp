@@ -2,6 +2,7 @@
 
 namespace App\Domains\Master\Scopes;
 
+use App\Domains\Security\Models\Role;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Scope;
@@ -18,11 +19,13 @@ class OrganizationScope implements Scope
     public function apply(Builder $builder, Model $model): void
     {
         // 1. Skip tenant filtering for global platform entities
-        if ($model instanceof \App\Domains\Security\Models\Permission ||
+        if (
+            $model instanceof \App\Domains\Security\Models\Permission ||
             $model instanceof \App\Domains\Security\Models\PermissionGroup ||
             $model instanceof \App\Domains\Master\Models\Manufacturer ||
             $model instanceof \App\Domains\Master\Models\Unit ||
-            $model instanceof \App\Domains\Security\Models\Menu) {
+            $model instanceof \App\Domains\Security\Models\Menu
+        ) {
             return;
         }
 
@@ -57,7 +60,18 @@ class OrganizationScope implements Scope
         // 4. Fall back to header if provided
         $orgId = request()->header('X-Organization-Id');
         if ($orgId) {
+            /*
             $builder->where($model->getTable() . '.organization_id', $orgId);
+            return;
+            */
+            if ($model instanceof Role) {
+                $builder->where(function ($q) use ($model, $orgId) {
+                    $q->where($model->getTable() . '.organization_id', $orgId)
+                        ->orWhereNull($model->getTable() . '.organization_id');
+                });
+            } else {
+                $builder->where($model->getTable() . '.organization_id', $orgId);
+            }
             return;
         }
 
