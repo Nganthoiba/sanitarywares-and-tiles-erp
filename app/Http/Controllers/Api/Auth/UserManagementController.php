@@ -67,7 +67,9 @@ class UserManagementController extends Controller
             'password' => 'required|string|min:8',
             'role_id' => [
                 'required',
-                Rule::exists('roles', 'id')->where('organization_id', $orgId)
+                Rule::exists('roles', 'id')->where(function ($q) use ($orgId) {
+                    $q->where('organization_id', $orgId)->orWhereNull('organization_id');
+                })
             ],
             'branch_id' => [
                 'required',
@@ -119,7 +121,9 @@ class UserManagementController extends Controller
             'role_id' => [
                 'sometimes',
                 'required',
-                Rule::exists('roles', 'id')->where('organization_id', $orgId)
+                Rule::exists('roles', 'id')->where(function ($q) use ($orgId) {
+                    $q->where('organization_id', $orgId)->orWhereNull('organization_id');
+                })
             ],
             'branch_id' => [
                 'sometimes',
@@ -215,7 +219,7 @@ class UserManagementController extends Controller
             'permissions' => 'nullable|array',
             'permissions.*' => [
                 'integer',
-                Rule::exists('permissions', 'id')->where('organization_id', $orgId)
+                Rule::exists('permissions', 'id')
             ],
         ]);
 
@@ -270,7 +274,7 @@ class UserManagementController extends Controller
             'permissions' => 'sometimes|nullable|array',
             'permissions.*' => [
                 'integer',
-                Rule::exists('permissions', 'id')->where('organization_id', $orgId)
+                Rule::exists('permissions', 'id')
             ],
         ]);
 
@@ -329,11 +333,11 @@ class UserManagementController extends Controller
     }
 
     /**
-     * List all permissions in the organization.
+     * List all permissions in the system.
      */
     public function permissions(Request $request)
     {
-        $permissions = Permission::with('group')->get();
+        $permissions = Permission::with('group')->where('enabled', true)->get();
         return response()->json($permissions);
     }
 }

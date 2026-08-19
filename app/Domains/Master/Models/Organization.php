@@ -3,6 +3,8 @@
 namespace App\Domains\Master\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\User;
 
 class Organization extends Model
 {
@@ -34,4 +36,19 @@ class Organization extends Model
         'preferences' => 'array',
         'is_active' => 'boolean',
     ];
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class, 'organization_id');
+    }
+
+    public function branches(): HasMany
+    {
+        return $this->hasMany(Branch::class, 'organization_id');
+    }
+
+    public function warehouses(): HasMany
+    {
+        return $this->hasMany(Warehouse::class, 'organization_id');
+    }
 }

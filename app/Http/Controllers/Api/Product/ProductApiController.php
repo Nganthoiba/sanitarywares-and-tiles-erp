@@ -133,7 +133,7 @@ class ProductApiController extends Controller
             ],
             'manufacturer_id' => [
                 'nullable',
-                Rule::exists('manufacturers', 'id')->where('organization_id', $orgId)
+                Rule::exists('manufacturers', 'id')
             ],
             'cost_price' => 'required|numeric|min:0',
             'sale_price' => 'required|numeric|min:0',
@@ -397,17 +397,19 @@ class ProductApiController extends Controller
             'gtin' => 'nullable|string|max:50',
             'barcode' => 'nullable|string|max:50',
             'inventory_behavior' => 'required|string|in:STANDARD,CONVERTIBLE,SLAB,SERIAL,BATCH,BUNDLE,ROLL',
-            'purchase_unit_id' => [
+            'primary_unit_id' => [
+                'sometimes',
                 'required',
-                Rule::exists('units', 'id')->where('organization_id', $orgId)
+                Rule::exists('units', 'id')
             ],
-            'sales_unit_id' => [
-                'required',
-                Rule::exists('units', 'id')->where('organization_id', $orgId)
+            'secondary_unit_id' => [
+                'nullable',
+                Rule::exists('units', 'id')
             ],
-            'base_unit_id' => [
+            'pricing_unit_id' => [
+                'sometimes',
                 'required',
-                Rule::exists('units', 'id')->where('organization_id', $orgId)
+                Rule::exists('units', 'id')
             ],
             'tax_profile_id' => [
                 'required',
@@ -415,7 +417,7 @@ class ProductApiController extends Controller
             ],
             'manufacturer_id' => [
                 'nullable',
-                Rule::exists('manufacturers', 'id')->where('organization_id', $orgId)
+                Rule::exists('manufacturers', 'id')
             ],
             'cost_price' => 'required|numeric|min:0',
             'sale_price' => 'required|numeric|min:0',

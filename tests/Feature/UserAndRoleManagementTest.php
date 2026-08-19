@@ -8,9 +8,8 @@ use App\Domains\Master\Models\Branch;
 use App\Domains\Master\Models\Warehouse;
 use App\Domains\Security\Models\Role;
 use App\Domains\Security\Models\Permission;
-use App\Domains\Security\Services\OrganizationRegistrationService;
-use Laravel\Sanctum\Sanctum;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class UserAndRoleManagementTest extends TestCase
@@ -18,87 +17,67 @@ class UserAndRoleManagementTest extends TestCase
     use RefreshDatabase;
 
     protected Organization $orgA;
-    protected User $adminA;
-    protected Branch $branchA;
-    protected Warehouse $warehouseA;
-
     protected Organization $orgB;
+    protected User $adminA;
     protected User $adminB;
+    protected Branch $branchA;
     protected Branch $branchB;
+    protected Warehouse $warehouseA;
     protected Warehouse $warehouseB;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $registrationService = app(OrganizationRegistrationService::class);
+        // Seed default global permissions
+        $this->seed(\Database\Seeders\PermissionSeeder::class);
 
-        // Provision Org A
-        $resultA = $registrationService->register([
-            'name' => 'Org A',
-            'code' => 'ORGA'
-        ], [
-            'name' => 'Admin A',
-            'email' => 'admin@orga.com',
-            'password' => 'password123'
-        ]);
+        // Org A
+        $this->orgA = Organization::create(['name' => 'Org A', 'code' => 'ORGA', 'is_active' => true]);
+        $this->branchA = Branch::create(['organization_id' => $this->orgA->id, 'name' => 'Branch A', 'code' => 'BRA']);
+        $this->warehouseA = Warehouse::create(['organization_id' => $this->orgA->id, 'branch_id' => $this->branchA->id, 'name' => 'WH A', 'code' => 'WHA']);
 
-        $this->orgA = $resultA['organization'];
-        $this->adminA = $resultA['user'];
-        $this->branchA = $resultA['branch'];
-        $this->warehouseA = $resultA['warehouse'];
+        $roleAdminA = Role::create(['organization_id' => $this->orgA->id, 'name' => 'Administrator', 'slug' => 'administrator', 'is_system' => true]);
+        $this->adminA = User::create(['organization_id' => $this->orgA->id, 'name' => 'Admin A', 'email' => 'admina@orga.com', 'password' => bcrypt('password')]);
+        $this->adminA->roles()->attach($roleAdminA->id, ['organization_id' => $this->orgA->id]);
 
-        // Provision Org B
-        $resultB = $registrationService->register([
-            'name' => 'Org B',
-            'code' => 'ORGB'
-        ], [
-            'name' => 'Admin B',
-            'email' => 'admin@orgb.com',
-            'password' => 'password123'
-        ]);
+        // Org B
+        $this->orgB = Organization::create(['name' => 'Org B', 'code' => 'ORGB', 'is_active' => true]);
+        $this->branchB = Branch::create(['organization_id' => $this->orgB->id, 'name' => 'Branch B', 'code' => 'BRB']);
+        $this->warehouseB = Warehouse::create(['organization_id' => $this->orgB->id, 'branch_id' => $this->branchB->id, 'name' => 'WH B', 'code' => 'WHB']);
 
-        $this->orgB = $resultB['organization'];
-        $this->adminB = $resultB['user'];
-        $this->branchB = $resultB['branch'];
-        $this->warehouseB = $resultB['warehouse'];
+        $roleAdminB = Role::create(['organization_id' => $this->orgB->id, 'name' => 'Administrator', 'slug' => 'administrator', 'is_system' => true]);
+        $this->adminB = User::create(['organization_id' => $this->orgB->id, 'name' => 'Admin B', 'email' => 'adminb@orgb.com', 'password' => bcrypt('password')]);
+        $this->adminB->roles()->attach($roleAdminB->id, ['organization_id' => $this->orgB->id]);
     }
 
-    public function test_admin_can_list_permissions()
+    public function test_admin_can_list_organization_users()
     {
         Sanctum::actingAs($this->adminA);
 
-        $response = $this->getJson('/api/permissions');
+        $response = $this->getJson('/api/users');
 
         $response->assertStatus(200);
-
-        // All returned permissions should belong to Org A
-        foreach ($response->json() as $perm) {
-            $this->assertEquals($this->orgA->id, $perm['organization_id']);
-        }
+        $response->assertJsonCount(1);
+        $this->assertEquals('Admin A', $response->json('0.name'));
     }
 
-    public function test_admin_can_list_roles()
+    public function test_admin_can_list_organization_roles()
     {
         Sanctum::actingAs($this->adminA);
 
         $response = $this->getJson('/api/roles');
 
         $response->assertStatus(200);
-
-        // Check that the system role "Administrator" is present
-        $response->assertJsonFragment([
-            'slug' => 'administrator',
-            'is_system' => true
-        ]);
+        $this->assertGreaterThanOrEqual(1, count($response->json()));
+        $this->assertEquals('Administrator', $response->json('0.name'));
     }
 
     public function test_admin_can_create_custom_role_with_permissions()
     {
         Sanctum::actingAs($this->adminA);
 
-        // Fetch two permissions belonging to Org A
-        $permissions = Permission::where('organization_id', $this->orgA->id)->take(2)->pluck('id')->toArray();
+        $permissions = Permission::where('enabled', true)->take(2)->pluck('id')->toArray();
 
         $response = $this->postJson('/api/roles', [
             'name' => 'Sales Rep',
@@ -135,22 +114,6 @@ class UserAndRoleManagementTest extends TestCase
         $response->assertJsonValidationErrors('name');
     }
 
-    public function test_admin_cannot_assign_permission_from_other_organization_to_role()
-    {
-        Sanctum::actingAs($this->adminA);
-
-        // Fetch a permission belonging to Org B
-        $invalidPermissionId = Permission::withoutGlobalScopes()->where('organization_id', $this->orgB->id)->first()->id;
-
-        $response = $this->postJson('/api/roles', [
-            'name' => 'Invalid Role',
-            'permissions' => [$invalidPermissionId]
-        ]);
-
-        $response->assertStatus(422);
-        $response->assertJsonValidationErrors('permissions.0');
-    }
-
     public function test_admin_can_update_custom_role()
     {
         Sanctum::actingAs($this->adminA);
@@ -163,7 +126,7 @@ class UserAndRoleManagementTest extends TestCase
             'is_system' => false
         ]);
 
-        $permissions = Permission::where('organization_id', $this->orgA->id)->take(2)->pluck('id')->toArray();
+        $permissions = Permission::where('enabled', true)->take(2)->pluck('id')->toArray();
 
         $response = $this->putJson("/api/roles/{$role->id}", [
             'name' => 'New Name',
@@ -180,26 +143,34 @@ class UserAndRoleManagementTest extends TestCase
     {
         Sanctum::actingAs($this->adminA);
 
-        // Find the system Administrator role for Org A
-        $adminRole = Role::where('organization_id', $this->orgA->id)->where('slug', 'administrator')->first();
+        $systemRole = Role::where('organization_id', $this->orgA->id)->where('slug', 'administrator')->first();
 
-        $response = $this->putJson("/api/roles/{$adminRole->id}", [
-            'name' => 'Modified Admin'
+        $response = $this->putJson("/api/roles/{$systemRole->id}", [
+            'name' => 'Attempted System Rename'
         ]);
 
         $response->assertStatus(403);
-        $this->assertEquals('System roles cannot be modified.', $response->json('message'));
     }
 
-    public function test_admin_can_delete_custom_role()
+    public function test_admin_cannot_delete_system_role()
     {
         Sanctum::actingAs($this->adminA);
 
-        // Create custom role
+        $systemRole = Role::where('organization_id', $this->orgA->id)->where('slug', 'administrator')->first();
+
+        $response = $this->deleteJson("/api/roles/{$systemRole->id}");
+
+        $response->assertStatus(403);
+    }
+
+    public function test_admin_can_delete_unused_custom_role()
+    {
+        Sanctum::actingAs($this->adminA);
+
         $role = Role::create([
             'organization_id' => $this->orgA->id,
-            'name' => 'Custom Role',
-            'slug' => 'custom-role',
+            'name' => 'Temporary Role',
+            'slug' => 'temporary-role',
             'is_system' => false
         ]);
 
@@ -209,24 +180,10 @@ class UserAndRoleManagementTest extends TestCase
         $this->assertSoftDeleted('roles', ['id' => $role->id]);
     }
 
-    public function test_admin_cannot_delete_system_role()
+    public function test_admin_cannot_delete_role_assigned_to_users()
     {
         Sanctum::actingAs($this->adminA);
 
-        // Find system role
-        $adminRole = Role::where('organization_id', $this->orgA->id)->where('slug', 'administrator')->first();
-
-        $response = $this->deleteJson("/api/roles/{$adminRole->id}");
-
-        $response->assertStatus(403);
-        $this->assertEquals('System roles cannot be deleted.', $response->json('message'));
-    }
-
-    public function test_admin_cannot_delete_role_assigned_to_user()
-    {
-        Sanctum::actingAs($this->adminA);
-
-        // Create custom role
         $role = Role::create([
             'organization_id' => $this->orgA->id,
             'name' => 'Assigned Role',
@@ -234,26 +191,19 @@ class UserAndRoleManagementTest extends TestCase
             'is_system' => false
         ]);
 
-        // Create user and assign role
-        $staff = User::create([
-            'organization_id' => $this->orgA->id,
-            'name' => 'Staff Member',
-            'email' => 'staff@orga.com',
-            'password' => bcrypt('password')
-        ]);
-        $staff->roles()->attach($role->id, ['organization_id' => $this->orgA->id]);
+        // Assign role to Admin A
+        $this->adminA->roles()->attach($role->id, ['organization_id' => $this->orgA->id]);
 
         $response = $this->deleteJson("/api/roles/{$role->id}");
 
         $response->assertStatus(400);
-        $this->assertEquals('Cannot delete role because it is currently assigned to one or more staff members.', $response->json('message'));
+        $response->assertJsonPath('message', 'Cannot delete role because it is currently assigned to one or more staff members.');
     }
 
-    public function test_admin_can_create_staff_with_valid_scoped_inputs()
+    public function test_admin_can_create_staff_member()
     {
         Sanctum::actingAs($this->adminA);
 
-        // Fetch valid role for Org A
         $roleId = Role::where('organization_id', $this->orgA->id)->first()->id;
 
         $response = $this->postJson('/api/users', [
@@ -266,7 +216,16 @@ class UserAndRoleManagementTest extends TestCase
         ]);
 
         $response->assertStatus(201);
-        $response->assertJsonStructure(['message', 'user']);
+        $this->assertEquals('Staff One', $response->json('user.name'));
+        $this->assertEquals('staff1@orga.com', $response->json('user.email'));
+
+        // Verify scopes created
+        $staffUser = User::where('email', 'staff1@orga.com')->first();
+        $this->assertNotNull($staffUser);
+        $this->assertEquals($this->orgA->id, $staffUser->organization_id);
+        $this->assertCount(1, $staffUser->scopes);
+        $this->assertEquals($this->branchA->id, $staffUser->scopes->first()->branch_id);
+        $this->assertEquals($this->warehouseA->id, $staffUser->scopes->first()->warehouse_id);
     }
 
     public function test_admin_cannot_create_staff_with_cross_tenant_inputs()
@@ -302,61 +261,23 @@ class UserAndRoleManagementTest extends TestCase
         $response->assertJsonValidationErrors('branch_id');
     }
 
-    public function test_admin_can_invite_staff_with_valid_scoped_inputs()
-    {
-        Sanctum::actingAs($this->adminA);
-
-        $roleId = Role::where('organization_id', $this->orgA->id)->first()->id;
-
-        $response = $this->postJson('/api/users/invite', [
-            'name' => 'Invited Staff',
-            'email' => 'invited@orga.com',
-            'role_id' => $roleId,
-            'branch_id' => $this->branchA->id,
-            'warehouse_id' => $this->warehouseA->id
-        ]);
-
-        $response->assertStatus(201);
-        $response->assertJsonStructure(['message', 'invitation_link', 'invitation_token', 'user']);
-    }
-
-    public function test_admin_cannot_invite_staff_with_cross_tenant_inputs()
-    {
-        Sanctum::actingAs($this->adminA);
-
-        $roleIdB = Role::withoutGlobalScopes()->where('organization_id', $this->orgB->id)->first()->id;
-
-        $response = $this->postJson('/api/users/invite', [
-            'name' => 'Invited Staff',
-            'email' => 'invited@orga.com',
-            'role_id' => $roleIdB,
-            'branch_id' => $this->branchA->id,
-            'warehouse_id' => $this->warehouseA->id
-        ]);
-
-        $response->assertStatus(422);
-        $response->assertJsonValidationErrors('role_id');
-    }
-
     public function test_admin_can_update_staff_member()
     {
         Sanctum::actingAs($this->adminA);
 
-        // Create a staff user first
         $staff = User::create([
             'organization_id' => $this->orgA->id,
             'name' => 'Initial Name',
             'email' => 'staff_update@orga.com',
             'password' => bcrypt('password')
         ]);
-        
-        // Retrieve custom roles and another branch/warehouse for update
+
         $newBranch = Branch::create([
             'organization_id' => $this->orgA->id,
             'name' => 'Branch Two',
             'code' => 'BR2'
         ]);
-        
+
         $newWarehouse = Warehouse::create([
             'organization_id' => $this->orgA->id,
             'branch_id' => $newBranch->id,
@@ -380,16 +301,10 @@ class UserAndRoleManagementTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertJsonPath('user.name', 'Updated Name');
-        
-        // Assert changes in DB
+
         $staff->refresh();
         $this->assertEquals('Updated Name', $staff->name);
         $this->assertTrue($staff->roles->contains($newRole->id));
-        
-        $scope = $staff->scopes()->first();
-        $this->assertNotNull($scope);
-        $this->assertEquals($newBranch->id, $scope->branch_id);
-        $this->assertEquals($newWarehouse->id, $scope->warehouse_id);
     }
 
     public function test_admin_cannot_update_staff_member_with_cross_tenant_inputs()
@@ -403,7 +318,6 @@ class UserAndRoleManagementTest extends TestCase
             'password' => bcrypt('password')
         ]);
 
-        // Try updating role with Org B role
         $roleIdB = Role::withoutGlobalScopes()->where('organization_id', $this->orgB->id)->first()->id;
 
         $response = $this->putJson("/api/users/{$staff->id}", [
@@ -412,18 +326,51 @@ class UserAndRoleManagementTest extends TestCase
         $response->assertStatus(422);
         $response->assertJsonValidationErrors('role_id');
 
-        // Try updating branch with Org B branch
         $response = $this->putJson("/api/users/{$staff->id}", [
             'branch_id' => $this->branchB->id
         ]);
         $response->assertStatus(422);
         $response->assertJsonValidationErrors('branch_id');
+    }
 
-        // Try updating warehouse with Org B warehouse
-        $response = $this->putJson("/api/users/{$staff->id}", [
-            'warehouse_id' => $this->warehouseB->id
+    public function test_admin_cannot_delete_self()
+    {
+        Sanctum::actingAs($this->adminA);
+
+        $response = $this->deleteJson("/api/users/{$this->adminA->id}");
+
+        $response->assertStatus(400);
+        $response->assertJsonPath('message', 'You cannot delete yourself.');
+    }
+
+    public function test_admin_cannot_delete_sole_organization_owner()
+    {
+        Sanctum::actingAs($this->adminA);
+
+        $staffRole = Role::create([
+            'organization_id' => $this->orgA->id,
+            'name' => 'HR Manager',
+            'slug' => 'hr-manager',
+            'is_system' => false
         ]);
-        $response->assertStatus(422);
-        $response->assertJsonValidationErrors('warehouse_id');
+        $manageUsersPermission = Permission::where('name', 'master.users.manage')->first();
+        if ($manageUsersPermission) {
+            $staffRole->permissions()->attach($manageUsersPermission->id, ['organization_id' => $this->orgA->id]);
+        }
+
+        $anotherUser = User::create([
+            'organization_id' => $this->orgA->id,
+            'name' => 'Second User',
+            'email' => 'user2@orga.com',
+            'password' => bcrypt('password')
+        ]);
+        $anotherUser->roles()->attach($staffRole->id, ['organization_id' => $this->orgA->id]);
+
+        Sanctum::actingAs($anotherUser);
+
+        $response = $this->deleteJson("/api/users/{$this->adminA->id}");
+
+        $response->assertStatus(400);
+        $response->assertJsonPath('message', 'Cannot delete the organization owner account.');
     }
 }

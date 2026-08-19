@@ -41,27 +41,40 @@ function GuestRoute({ user }) {
 
 function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontSize, theme, toggleTheme, setShowSettingsModal, setShowLogoutModal, handleSwitchRole }) {
     const location = useLocation();
-
-    // Determine default menu open states based on the current path (for browser refresh / direct entry)
-    const [grnMenuOpen, setGrnMenuOpen] = useState(() => location.pathname.startsWith('/grn'));
-    const [poMenuOpen, setPoMenuOpen] = useState(() => location.pathname.startsWith('/purchase-orders'));
-    const [productsMenuOpen, setProductsMenuOpen] = useState(() => location.pathname.startsWith('/products'));
+    const [navItems, setNavItems] = useState([]);
+    const [openSubmenus, setOpenSubmenus] = useState({});
 
     useEffect(() => {
-        if (location.pathname.startsWith('/grn')) {
-            setGrnMenuOpen(true);
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+            fetch('/api/navigation', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                }
+            })
+            .then(res => res.ok ? res.json() : [])
+            .then(data => {
+                if (Array.isArray(data) && data.length > 0) {
+                    setNavItems(data);
+                }
+            })
+            .catch(() => {});
         }
-        if (location.pathname.startsWith('/purchase-orders')) {
-            setPoMenuOpen(true);
-        }
-        if (location.pathname.startsWith('/products')) {
-            setProductsMenuOpen(true);
-        }
-    }, [location.pathname]);
+    }, [user]);
+
+    const toggleSubmenu = (id) => {
+        setOpenSubmenus(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    const isSubmenuActive = (item) => {
+        if (!item.children || item.children.length === 0) return false;
+        return item.children.some(child => location.pathname.startsWith(child.route_uri));
+    };
 
     return (
         <div className="d-flex" style={{ minHeight: '100vh' }}>
-            {/* Elegant Sidebar Navigation */}
+            {/* Dynamic Database-Driven Sidebar Navigation */}
             <div className="sidebar-wrapper">
                 <div className="sidebar-brand">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="me-2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
@@ -69,178 +82,52 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
                 </div>
                 
                 <ul className="sidebar-menu">
-                    <li className="sidebar-menu-item">
-                        <NavLink to="/inventory" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                            <i className="fa-solid fa-boxes-stacked me-3"></i>
-                            <span className="sidebar-text">Inventory Engine</span>
-                        </NavLink>
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <button 
-                            className={`sidebar-link d-flex justify-content-between align-items-center ${location.pathname.startsWith('/grn') ? 'active' : ''}`} 
-                            onClick={() => setGrnMenuOpen(!grnMenuOpen)}
-                        >
-                            <span className="d-flex align-items-center">
-                                <i className="fa-solid fa-file-invoice me-3"></i>
-                                <span className="sidebar-text">Goods Receipt (GRN)</span>
-                            </span>
-                            <i className={`fa-solid fa-chevron-${grnMenuOpen ? 'down' : 'right'} ms-auto`} style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
-                        </button>
-                        {grnMenuOpen && (
-                            <ul className="sidebar-submenu animate__animated animate__fadeIn">
-                                <li>
-                                    <NavLink 
-                                        to="/grn" 
-                                        end
-                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
+                    {navItems.map((item) => {
+                        const hasChildren = item.children && item.children.length > 0;
+                        const isOpen = openSubmenus[item.id] || isSubmenuActive(item);
+
+                        if (hasChildren) {
+                            return (
+                                <li className="sidebar-menu-item" key={item.id}>
+                                    <button 
+                                        className={`sidebar-link d-flex justify-content-between align-items-center ${isSubmenuActive(item) ? 'active' : ''}`}
+                                        onClick={() => toggleSubmenu(item.id)}
                                     >
-                                        <i className="fa-solid fa-list me-2" style={{ fontSize: '0.8rem' }}></i>
-                                        Registry List
-                                    </NavLink>
+                                        <span className="d-flex align-items-center">
+                                            <i className={`${item.icon || 'fa-solid fa-folder'} me-3`}></i>
+                                            <span className="sidebar-text">{item.menu_name}</span>
+                                        </span>
+                                        <i className={`fa-solid fa-chevron-${isOpen ? 'down' : 'right'} ms-auto`} style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
+                                    </button>
+                                    {isOpen && (
+                                        <ul className="sidebar-submenu animate__animated animate__fadeIn">
+                                            {item.children.map(child => (
+                                                <li key={child.id}>
+                                                    <NavLink 
+                                                        to={child.route_uri}
+                                                        end={child.route_uri === item.route_uri}
+                                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
+                                                    >
+                                                        <i className={`${child.icon || 'fa-solid fa-angle-right'} me-2`} style={{ fontSize: '0.8rem' }}></i>
+                                                        {child.menu_name}
+                                                    </NavLink>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
                                 </li>
-                                <li>
-                                    <NavLink 
-                                        to="/grn/new" 
-                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
-                                    >
-                                        <i className="fa-solid fa-plus me-2" style={{ fontSize: '0.8rem' }}></i>
-                                        New GRN Note
-                                    </NavLink>
-                                </li>
-                            </ul>
-                        )}
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <button 
-                            className={`sidebar-link d-flex justify-content-between align-items-center ${location.pathname.startsWith('/purchase-orders') ? 'active' : ''}`} 
-                            onClick={() => setPoMenuOpen(!poMenuOpen)}
-                        >
-                            <span className="d-flex align-items-center">
-                                <i className="fa-solid fa-cart-shopping me-3"></i>
-                                <span className="sidebar-text">Purchase Orders</span>
-                            </span>
-                            <i className={`fa-solid fa-chevron-${poMenuOpen ? 'down' : 'right'} ms-auto`} style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
-                        </button>
-                        {poMenuOpen && (
-                            <ul className="sidebar-submenu animate__animated animate__fadeIn">
-                                <li>
-                                    <NavLink 
-                                        to="/purchase-orders" 
-                                        end
-                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
-                                    >
-                                        <i className="fa-solid fa-list me-2" style={{ fontSize: '0.8rem' }}></i>
-                                        PO Registry List
-                                    </NavLink>
-                                </li>
-                                <li>
-                                    <NavLink 
-                                        to="/purchase-orders/new" 
-                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
-                                    >
-                                        <i className="fa-solid fa-plus me-2" style={{ fontSize: '0.8rem' }}></i>
-                                        New Purchase Order
-                                    </NavLink>
-                                </li>
-                            </ul>
-                        )}
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <NavLink to="/branches" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                            <i className="fa-solid fa-code-branch me-3"></i>
-                            <span className="sidebar-text">Branch Locations</span>
-                        </NavLink>
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <NavLink to="/warehouses" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                            <i className="fa-solid fa-warehouse me-3"></i>
-                            <span className="sidebar-text">Warehouses</span>
-                        </NavLink>
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <NavLink to="/storage-locations" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                            <i className="fa-solid fa-map-pin me-3"></i>
-                            <span className="sidebar-text">Storage Locations</span>
-                        </NavLink>
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <NavLink to="/suppliers" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                            <i className="fa-solid fa-truck-field me-3"></i>
-                            <span className="sidebar-text">Suppliers</span>
-                        </NavLink>
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <button 
-                            className={`sidebar-link d-flex justify-content-between align-items-center ${location.pathname.startsWith('/products') ? 'active' : ''}`} 
-                            onClick={() => setProductsMenuOpen(!productsMenuOpen)}
-                        >
-                            <span className="d-flex align-items-center">
-                                <i className="fa-solid fa-cube me-3"></i>
-                                <span className="sidebar-text">Products</span>
-                            </span>
-                            <i className={`fa-solid fa-chevron-${productsMenuOpen ? 'down' : 'right'} ms-auto`} style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
-                        </button>
-                        {productsMenuOpen && (
-                            <ul className="sidebar-submenu animate__animated animate__fadeIn">
-                                <li>
-                                    <NavLink 
-                                        to="/products" 
-                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
-                                    >
-                                        <i className="fa-solid fa-list me-2" style={{ fontSize: '0.8rem' }}></i>
-                                        All Products
-                                    </NavLink>
-                                </li>
-                                <li>
-                                    <NavLink 
-                                        to="/products/categories" 
-                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
-                                    >
-                                        <i className="fa-solid fa-sitemap me-2" style={{ fontSize: '0.8rem' }}></i>
-                                        Categories
-                                    </NavLink>
-                                </li>
-                            </ul>
-                        )}
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <NavLink to="/products/brands" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                            <i className="fa-solid fa-tags me-3"></i>
-                            <span className="sidebar-text">Brands</span>
-                        </NavLink>
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <NavLink to="/products/manufacturers" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                            <i className="fa-solid fa-industry me-3"></i>
-                            <span className="sidebar-text">Manufacturers</span>
-                        </NavLink>
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <NavLink to="/workflows" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                            <i className="fa-solid fa-diagram-project me-3"></i>
-                            <span className="sidebar-text">BPM Workflows</span>
-                        </NavLink>
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <NavLink to="/bookkeeping" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                            <i className="fa-solid fa-calculator me-3"></i>
-                            <span className="sidebar-text">General Bookkeeping</span>
-                        </NavLink>
-                    </li>
-                    <li className="sidebar-menu-item">
-                        <NavLink to="/reporting" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                            <i className="fa-solid fa-chart-line me-3"></i>
-                            <span className="sidebar-text">Reporting & BI Hub</span>
-                        </NavLink>
-                    </li>
-                    {hasPermission('master.users.manage') && (
-                        <li className="sidebar-menu-item">
-                            <NavLink to="/users" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                                <i className="fa-solid fa-users-gear me-3"></i>
-                                <span className="sidebar-text">User & Role Manager</span>
-                            </NavLink>
-                        </li>
-                    )}
+                            );
+                        }
+
+                        return (
+                            <li className="sidebar-menu-item" key={item.id}>
+                                <NavLink to={item.route_uri} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                                    <i className={`${item.icon || 'fa-solid fa-circle-dot'} me-3`}></i>
+                                    <span className="sidebar-text">{item.menu_name}</span>
+                                </NavLink>
+                            </li>
+                        );
+                    })}
                 </ul>
 
                 <hr />
@@ -564,7 +451,7 @@ function App() {
     };
 
     const handleLoginSuccess = (data) => {
-        const orgName = data.organization?.name || data.user?.organization?.name || '';
+        const orgName = data.organization?.name || data.user?.organization?.name || 'Platform Administration';
         const permissions = data.user_permissions || data.user?.permissions || [];
         const roles = data.user?.roles || data.user_roles || (permissions.includes('master.users.manage') ? [{ id: 1, name: 'Administrator', slug: 'administrator' }] : []);
         const activeRole = data.user?.active_role || (roles.length > 0 ? (typeof roles[0] === 'object' ? roles[0] : { id: 1, name: roles[0] }) : null);

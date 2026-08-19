@@ -17,35 +17,51 @@ class OrganizationScope implements Scope
      */
     public function apply(Builder $builder, Model $model): void
     {
-        // 1. Resolve organization ID from TenantContext if bound
+        // 1. Skip tenant filtering for global platform entities
+        if ($model instanceof \App\Domains\Security\Models\Permission ||
+            $model instanceof \App\Domains\Security\Models\PermissionGroup ||
+            $model instanceof \App\Domains\Master\Models\Manufacturer ||
+            $model instanceof \App\Domains\Master\Models\Unit ||
+            $model instanceof \App\Domains\Security\Models\Menu) {
+            return;
+        }
+
+        // 2. Resolve organization ID from TenantContext if bound
         if (App::bound(TenantContext::class)) {
-            $orgId = App::make(TenantContext::class)->getOrganizationId();
+            $context = App::make(TenantContext::class);
+            $user = $context->getUser() ?? Auth::user();
+
+            // If user is Super Admin (organization_id === null), do not apply tenant lock
+            if ($user && $user->organization_id === null) {
+                return;
+            }
+
+            $orgId = $context->getOrganizationId();
             if ($orgId) {
                 $builder->where($model->getTable() . '.organization_id', $orgId);
                 return;
             }
         }
 
-        // 2. Fall back to active authenticated user organization
+        // 3. Fall back to active authenticated user organization
         if (Auth::check()) {
-            $builder->where($model->getTable() . '.organization_id', Auth::user()->organization_id);
+            $user = Auth::user();
+            if ($user->organization_id === null) {
+                // Super Admin operating at platform level
+                return;
+            }
+            $builder->where($model->getTable() . '.organization_id', $user->organization_id);
             return;
         }
 
-        // 3. Fall back to headers if provided
+        // 4. Fall back to header if provided
         $orgId = request()->header('X-Organization-Id');
         if ($orgId) {
             $builder->where($model->getTable() . '.organization_id', $orgId);
             return;
         }
 
-        // Do not restrict User model queries when no tenant context or auth is active
-        // so Sanctum token resolution can locate users across all organizations.
-        if ($model instanceof User) {
-            return;
-        }
-
-        // 4. Default fallback for other domain models in CLI/setup context
-        $builder->where($model->getTable() . '.organization_id', 1);
+        // 5. Default fallback: do not filter if no tenant context, auth, or header is active
+        return;
     }
 }

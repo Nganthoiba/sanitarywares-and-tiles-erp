@@ -6,6 +6,8 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use App\Shared\Context\TenantContext;
+use App\Domains\Master\Models\Branch;
+use Illuminate\Support\Facades\Auth;
 
 class ResolveTenantContext
 {
@@ -14,8 +16,8 @@ class ResolveTenantContext
      */
     public function handle(Request $request, Closure $next)
     {
-        if (auth()->check()) {
-            $user = auth()->user();
+        if (Auth::check()) {
+            $user = Auth::user();
             $org = $user->organization;
 
             $context = App::make(TenantContext::class);
@@ -31,23 +33,26 @@ class ResolveTenantContext
             $branchId = $request->header('X-Branch-Id') ?? $request->input('branch_id');
 
             if ($branchId && $allowedBranchIds->contains($branchId)) {
-                $branch = \App\Domains\Master\Models\Branch::find($branchId);
+                $branch = Branch::find($branchId);
             } else {
                 $firstBranchId = $allowedBranchIds->first();
-                $branch = $firstBranchId ? \App\Domains\Master\Models\Branch::find($firstBranchId) : null;
+                $branch = $firstBranchId ? Branch::find($firstBranchId) : null;
             }
 
             $context->setBranch($branch);
 
-            // Resolve permissions from roles
+            // Resolve permissions from roles using 'name' column
             $permissions = $user->roles()
                 ->with('permissions')
                 ->get()
                 ->flatMap(fn($role) => $role->permissions)
-                ->pluck('slug')
-                ->unique();
+                ->pluck('name')
+                ->filter()
+                ->unique()
+                ->toArray();
 
-            $context->setPermissions($permissions);
+            $context->setPermissions(collect($permissions));
+            $request->attributes->set('user_permissions', $permissions);
         }
 
         return $next($request);

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\OrganizationRegistrationController;
 use App\Http\Controllers\Api\Auth\UserInvitationController;
 use App\Http\Controllers\Api\Auth\UserManagementController;
+use App\Http\Controllers\Api\Auth\NavigationController;
 use App\Http\Controllers\Api\Product\ProductApiController;
 use App\Http\Controllers\Api\Purchase\GRNApiController;
 use App\Http\Controllers\Api\Purchase\PurchaseOrderApiController;
@@ -20,6 +21,9 @@ use App\Http\Controllers\Api\Master\StorageLocationApiController;
 use App\Http\Controllers\Api\Master\CategoryApiController;
 use App\Http\Controllers\Api\Master\BrandApiController;
 use App\Http\Controllers\Api\Master\ManufacturerApiController;
+use App\Http\Controllers\Api\Platform\PlatformOrganizationController;
+use App\Http\Controllers\Api\Platform\PlatformPermissionController;
+use App\Http\Controllers\Api\Platform\PlatformMenuController;
 
 
 // A simple api route to test whether the api route is working or not
@@ -34,12 +38,38 @@ Route::post('/register-organization', [OrganizationRegistrationController::class
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/accept-invitation', [UserInvitationController::class, 'accept']);
 
-// Authenticated & Tenant Scoped Routes
+// Authenticated Routes
 Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
     Route::post('/switch-role', [AuthController::class, 'switchRole']);
+    Route::get('/navigation', [NavigationController::class, 'index']);
+
+    // Super Admin Platform Management Routes
+    Route::middleware(['permission:platform.organizations.manage'])->prefix('platform')->group(function () {
+        // Platform Organizations
+        Route::get('/organizations', [PlatformOrganizationController::class, 'index']);
+        Route::post('/organizations', [PlatformOrganizationController::class, 'store']);
+        Route::get('/organizations/{id}', [PlatformOrganizationController::class, 'show']);
+        Route::put('/organizations/{id}', [PlatformOrganizationController::class, 'update']);
+        Route::post('/organizations/{id}/suspend', [PlatformOrganizationController::class, 'suspend']);
+        Route::post('/organizations/{id}/activate', [PlatformOrganizationController::class, 'activate']);
+
+        // Platform Permissions & Groups
+        Route::get('/permissions', [PlatformPermissionController::class, 'index']);
+        Route::post('/permission-groups', [PlatformPermissionController::class, 'storeGroup']);
+        Route::put('/permission-groups/{id}', [PlatformPermissionController::class, 'updateGroup']);
+        Route::post('/permissions', [PlatformPermissionController::class, 'storePermission']);
+        Route::put('/permissions/{id}', [PlatformPermissionController::class, 'updatePermission']);
+        Route::post('/permissions/{id}/toggle', [PlatformPermissionController::class, 'togglePermission']);
+
+        // Platform Menus
+        Route::get('/menus', [PlatformMenuController::class, 'index']);
+        Route::post('/menus', [PlatformMenuController::class, 'store']);
+        Route::put('/menus/{id}', [PlatformMenuController::class, 'update']);
+        Route::delete('/menus/{id}', [PlatformMenuController::class, 'destroy']);
+    });
 
     // User Management (restricted to users with 'master.users.manage' permission)
     Route::middleware(['permission:master.users.manage'])->group(function () {

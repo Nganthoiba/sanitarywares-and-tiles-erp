@@ -4,39 +4,50 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\App;
-use App\Shared\Context\TenantContext;
+use Symfony\Component\HttpFoundation\Response;
 
 class CheckPermission
 {
     /**
      * Handle an incoming request.
+     *
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, string $permission)
+    public function handle(Request $request, Closure $next, string $permission): Response
     {
-        if (!auth()->check()) {
+        $user = $request->user();
+
+        if (!$user) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        $context = App::make(TenantContext::class);
-        $user = $context->getUser();
-
-        if (!$user) {
-            return response()->json(['message' => 'Unauthorized.'], 403);
-        }
-
-        // Check if user is an Administrator (highest role within organization)
-        $isAdmin = $user->roles()->where('slug', 'administrator')->exists();
-        if ($isAdmin) {
+        // Super Admin (organization_id === null or super-admin role) bypasses all permission checks
+        if ($user->organization_id === null || $user->hasRole('super-admin')) {
             return $next($request);
         }
 
-        // Check resolved permissions
-        $permissions = $context->getPermissions();
-        if ($permissions && $permissions->contains($permission)) {
+        // Platform-level permissions (platform.*) are strictly reserved for Super Admin
+        if (str_starts_with($permission, 'platform.')) {
+            return response()->json([
+                'message' => 'Platform administration access required.'
+            ], 403);
+        }
+
+        // Tenant Administrator role bypasses operational tenant permissions within their organization
+        if ($user->hasRole('administrator')) {
             return $next($request);
         }
 
-        return response()->json(['message' => 'Forbidden. Missing permission: ' . $permission], 403);
+        // Check assigned permissions for standard staff users
+        $userPermissions = $request->attributes->get('user_permissions', []);
+
+        if (in_array('*', $userPermissions) || in_array($permission, $userPermissions)) {
+            return $next($request);
+        }
+
+        return response()->json([
+            'message' => 'You do not have permission to perform this action.',
+            'required_permission' => $permission
+        ], 403);
     }
 }

@@ -2,20 +2,18 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use App\Models\User;
 use App\Domains\Master\Models\Organization;
-use App\Domains\Master\Models\Branch;
-use App\Domains\Master\Models\Warehouse;
 use App\Domains\Master\Models\Manufacturer;
 use App\Domains\Master\Models\Category;
 use App\Domains\Master\Models\Brand;
-use App\Domains\Master\Models\TaxProfile;
 use App\Domains\Master\Models\Unit;
-use App\Domains\Product\Models\Product;
+use App\Domains\Master\Models\TaxProfile;
 use App\Domains\Security\Models\Role;
-use Database\Seeders\SuperAdminSeeder;
+use App\Domains\Security\Models\Permission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
 
 class GlobalManufacturerTest extends TestCase
 {
@@ -26,111 +24,131 @@ class GlobalManufacturerTest extends TestCase
     protected User $userA;
     protected User $userB;
     protected User $superAdmin;
+    protected Role $superAdminRole;
+    protected Category $category;
+    protected Brand $brand;
+    protected Unit $unit;
+    protected TaxProfile $taxProfileA;
+    protected TaxProfile $taxProfileB;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Create Org A
+        $this->seed(\Database\Seeders\PermissionSeeder::class);
+
+        // 1. Create Organization A & Owner User
         $this->orgA = Organization::create([
-            'name' => 'Org A',
-            'code' => 'ORGA01',
+            'name' => 'Org Alpha Tiles',
+            'code' => 'ALPHA01',
             'is_active' => true
         ]);
-
+        $this->userA = User::create([
+            'organization_id' => $this->orgA->id,
+            'name' => 'Owner Alpha',
+            'email' => 'alpha@tiles.com',
+            'password' => bcrypt('password')
+        ]);
         $roleA = Role::create([
             'organization_id' => $this->orgA->id,
             'name' => 'Administrator',
             'slug' => 'administrator',
             'is_system' => true
         ]);
-
-        $this->userA = User::create([
-            'organization_id' => $this->orgA->id,
-            'default_role_id' => $roleA->id,
-            'name' => 'User Org A',
-            'email' => 'admin@orga.com',
-            'password' => bcrypt('password123')
-        ]);
+        $allPermissions = Permission::pluck('id');
+        $roleA->permissions()->syncWithPivotValues($allPermissions, ['organization_id' => $this->orgA->id]);
         $this->userA->roles()->attach($roleA->id, ['organization_id' => $this->orgA->id]);
+        $this->userA->default_role_id = $roleA->id;
+        $this->userA->save();
+        $this->taxProfileA = TaxProfile::create(['organization_id' => $this->orgA->id, 'name' => 'GST 18%', 'cgst_rate' => 9, 'sgst_rate' => 9, 'igst_rate' => 18, 'is_active' => true]);
 
-        // Create Org B
+        // Organization-scoped master data
+        $this->category = Category::create(['organization_id' => $this->orgA->id, 'name' => 'Tiles', 'slug' => 'tiles', 'is_active' => true]);
+        $this->brand = Brand::create(['organization_id' => $this->orgA->id, 'name' => 'Premium Brand', 'slug' => 'premium-brand', 'is_active' => true]);
+        $this->unit = Unit::create(['name' => 'Pieces', 'code' => 'PCS', 'symbol' => 'pcs', 'is_active' => true]);
+
+        // 2. Create Organization B & Owner User
         $this->orgB = Organization::create([
-            'name' => 'Org B',
-            'code' => 'ORGB01',
+            'name' => 'Org Beta Sanitary',
+            'code' => 'BETA01',
             'is_active' => true
         ]);
-
+        $this->userB = User::create([
+            'organization_id' => $this->orgB->id,
+            'name' => 'Owner Beta',
+            'email' => 'beta@sanitary.com',
+            'password' => bcrypt('password')
+        ]);
         $roleB = Role::create([
             'organization_id' => $this->orgB->id,
             'name' => 'Administrator',
             'slug' => 'administrator',
             'is_system' => true
         ]);
-
-        $this->userB = User::create([
-            'organization_id' => $this->orgB->id,
-            'default_role_id' => $roleB->id,
-            'name' => 'User Org B',
-            'email' => 'admin@orgb.com',
-            'password' => bcrypt('password123')
-        ]);
+        $roleB->permissions()->syncWithPivotValues($allPermissions, ['organization_id' => $this->orgB->id]);
         $this->userB->roles()->attach($roleB->id, ['organization_id' => $this->orgB->id]);
+        $this->userB->default_role_id = $roleB->id;
+        $this->userB->save();
+        $this->taxProfileB = TaxProfile::create(['organization_id' => $this->orgB->id, 'name' => 'GST 18%', 'cgst_rate' => 9, 'sgst_rate' => 9, 'igst_rate' => 18, 'is_active' => true]);
 
-        // Seed Super Admin
-        $this->seed(SuperAdminSeeder::class);
-        $this->superAdmin = User::where('email', 'smartnotification1@gmail.com')->first();
-    }
-
-    public function test_super_admin_seeder_creates_user_with_correct_credentials_and_role()
-    {
-        $this->assertNotNull($this->superAdmin);
-        $this->assertEquals('smartnotification1@gmail.com', $this->superAdmin->email);
-        $this->assertTrue($this->superAdmin->roles()->withoutGlobalScopes()->get()->contains('slug', 'super-admin'));
-    }
-
-    public function test_manufacturer_exists_globally_without_organization_id()
-    {
-        $mfg = Manufacturer::create([
-            'legal_name' => 'Kajaria Ceramics Limited',
-            'trade_name' => 'Kajaria',
-            'gstin' => '27AAACK1234F1Z5',
-            'is_active' => true
+        // 3. Create Super Admin User (platform-scoped, organization_id = NULL)
+        $this->superAdminRole = Role::create([
+            'organization_id' => null,
+            'name' => 'Super Administrator',
+            'slug' => 'super-admin',
+            'is_system' => true
         ]);
-
-        $this->assertDatabaseHas('manufacturers', [
-            'id' => $mfg->id,
-            'legal_name' => 'Kajaria Ceramics Limited',
-            'gstin' => '27AAACK1234F1Z5',
+        $this->superAdmin = User::create([
+            'organization_id' => null,
+            'name' => 'Super Admin',
+            'email' => 'super@admin.com',
+            'password' => bcrypt('password')
         ]);
-
-        // Verify manufacturer model has no organization relationship
-        $this->assertFalse(method_exists($mfg, 'organization'));
+        $this->superAdmin->organization_id = null;
+        $this->superAdmin->save();
+        $this->superAdmin->roles()->attach($this->superAdminRole->id, ['organization_id' => null]);
     }
 
-    public function test_super_admin_has_full_crud_on_global_manufacturers()
+    public function test_super_admin_can_create_update_and_delete_global_manufacturer()
     {
         $token = $this->superAdmin->createToken('test')->plainTextToken;
 
         // 1. Create
         $response = $this->withHeader('Authorization', "Bearer {$token}")
             ->postJson('/api/manufacturers-crud', [
-                'legal_name' => 'Somany Ceramics Ltd',
-                'trade_name' => 'Somany',
-                'gstin' => '19AAACS5678G1Z2'
+                'legal_name' => 'Kajaria Ceramics Limited',
+                'trade_name' => 'Kajaria',
+                'gstin' => '27AAACK1234F1Z5',
+                'registration_number' => 'REG-KAJ-9988',
+                'business_constitution' => 'Public Limited',
+                'address' => 'Andheri East, Mumbai',
+                'phone' => '022-12345678',
+                'email' => 'info@kajaria.com',
+                'website' => 'https://www.kajariaceramics.com'
             ]);
 
-        $response->assertStatus(201);
+        $response->assertStatus(201)
+            ->assertJsonPath('manufacturer.legal_name', 'Kajaria Ceramics Limited')
+            ->assertJsonPath('manufacturer.gstin', '27AAACK1234F1Z5');
+
         $id = $response->json('manufacturer.id');
+
+        // Verify Database
+        $this->assertDatabaseHas('manufacturers', [
+            'id' => $id,
+            'legal_name' => 'Kajaria Ceramics Limited',
+            'gstin' => '27AAACK1234F1Z5'
+        ]);
 
         // 2. Update
         $updateResponse = $this->withHeader('Authorization', "Bearer {$token}")
             ->putJson("/api/manufacturers-crud/{$id}", [
-                'legal_name' => 'Somany Ceramics Limited Updated',
+                'trade_name' => 'Kajaria Tiles & Ceramics',
                 'verification_status' => 'VERIFIED'
             ]);
 
         $updateResponse->assertStatus(200)
+            ->assertJsonPath('manufacturer.trade_name', 'Kajaria Tiles & Ceramics')
             ->assertJsonPath('manufacturer.verification_status', 'VERIFIED');
 
         // 3. Delete
@@ -141,33 +159,42 @@ class GlobalManufacturerTest extends TestCase
         $this->assertSoftDeleted('manufacturers', ['id' => $id]);
     }
 
-    public function test_org_admin_can_create_manufacturer_but_cannot_update_or_delete()
+    public function test_org_admin_can_search_manufacturers_but_cannot_create_update_or_delete()
     {
+        $mfg = Manufacturer::create([
+            'legal_name' => 'Jaquar & Company Pvt Ltd',
+            'trade_name' => 'Jaquar',
+            'gstin' => '06AAACJ9012H1Z9'
+        ]);
+
         $tokenA = $this->userA->createToken('test')->plainTextToken;
 
-        // 1. Create -> Allowed
-        $response = $this->withHeader('Authorization', "Bearer {$tokenA}")
+        // 1. Search / View -> Allowed
+        $searchResponse = $this->withHeader('Authorization', "Bearer {$tokenA}")
+            ->getJson('/api/manufacturers-crud?query=Jaquar');
+        $searchResponse->assertStatus(200)
+            ->assertJsonCount(1);
+
+        // 2. Create -> Forbidden for Org Admin (403)
+        $createResponse = $this->withHeader('Authorization', "Bearer {$tokenA}")
             ->postJson('/api/manufacturers-crud', [
-                'legal_name' => 'Jaquar & Company Pvt Ltd',
-                'trade_name' => 'Jaquar',
-                'gstin' => '06AAACJ9012H1Z9'
+                'legal_name' => 'Unauthorized New Manufacturer',
+                'gstin' => '27AAACJ9012H1Z9'
             ]);
+        $createResponse->assertStatus(403);
 
-        $response->assertStatus(201);
-        $id = $response->json('manufacturer.id');
-
-        // 2. Update -> Forbidden (403)
+        // 3. Update -> Forbidden for Org Admin (403)
         $updateResponse = $this->withHeader('Authorization', "Bearer {$tokenA}")
-            ->putJson("/api/manufacturers-crud/{$id}", [
+            ->putJson("/api/manufacturers-crud/{$mfg->id}", [
                 'legal_name' => 'Unauthorized Update Name'
             ]);
 
         $updateResponse->assertStatus(403)
             ->assertJsonPath('message', 'Only Super Admin can update shared global manufacturer records.');
 
-        // 3. Delete -> Forbidden (403)
+        // 4. Delete -> Forbidden for Org Admin (403)
         $deleteResponse = $this->withHeader('Authorization', "Bearer {$tokenA}")
-            ->deleteJson("/api/manufacturers-crud/{$id}");
+            ->deleteJson("/api/manufacturers-crud/{$mfg->id}");
 
         $deleteResponse->assertStatus(403)
             ->assertJsonPath('message', 'Only Super Admin can delete shared global manufacturer records.');
@@ -180,13 +207,13 @@ class GlobalManufacturerTest extends TestCase
             'gstin' => '27AAACK1234F1Z5'
         ]);
 
-        $tokenA = $this->userA->createToken('test')->plainTextToken;
+        $token = $this->superAdmin->createToken('test')->plainTextToken;
 
         // Try to create another manufacturer with the same GSTIN
-        $response = $this->withHeader('Authorization', "Bearer {$tokenA}")
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
             ->postJson('/api/manufacturers-crud', [
                 'legal_name' => 'Kajaria Duplicate Entry',
-                'gstin' => '27aaack1234f1z5' // Normalized case
+                'gstin' => '27aaack1234f1z5'
             ]);
 
         $response->assertStatus(409)
@@ -198,63 +225,93 @@ class GlobalManufacturerTest extends TestCase
         $mfg = Manufacturer::create([
             'legal_name' => 'Shared Global Manufacturer Ltd',
             'trade_name' => 'SharedMfg',
-            'gstin' => '33AAACS1111A1Z0'
+            'is_active' => true
         ]);
 
-        // Setup Org A dependencies
-        $catA = Category::create(['organization_id' => $this->orgA->id, 'name' => 'Tiles Org A', 'slug' => 'tiles-a']);
-        $brandA = Brand::create(['organization_id' => $this->orgA->id, 'name' => 'Brand A', 'slug' => 'brand-a']);
-        $taxA = TaxProfile::create(['organization_id' => $this->orgA->id, 'name' => 'GST 18% A', 'cgst_rate' => 9, 'sgst_rate' => 9]);
-        $unit = Unit::create(['name' => 'Box', 'symbol' => 'box', 'unit_type' => 'QUANTITY', 'is_active' => true]);
-
-        // Product Org A
-        $productA = Product::create([
-            'organization_id' => $this->orgA->id,
-            'category_id' => $catA->id,
-            'brand_id' => $brandA->id,
+        // Org A creates product referencing global $mfg
+        Sanctum::actingAs($this->userA);
+        $prodA = $this->postJson('/api/product/variants', [
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
+            'name' => 'Polished Vitrified Tile 600x600',
+            'sku' => 'PVT-6060-01',
             'manufacturer_id' => $mfg->id,
-            'purchase_unit_id' => $unit->id,
-            'sales_unit_id' => $unit->id,
-            'base_unit_id' => $unit->id,
-            'sku' => 'SKU-ORGA-001',
-            'name' => 'Product Org A',
-            'inventory_behavior' => 'STANDARD',
-            'tax_profile_id' => $taxA->id
+            'purchase_unit_id' => $this->unit->id,
+            'sales_unit_id' => $this->unit->id,
+            'base_unit_id' => $this->unit->id,
+            'tax_profile_id' => $this->taxProfileA->id,
+            'cost_price' => 500,
+            'sale_price' => 750,
+            'min_stock' => 10,
         ]);
+        $prodA->assertStatus(201);
 
-        // Setup Org B dependencies
-        $catB = Category::create(['organization_id' => $this->orgB->id, 'name' => 'Tiles Org B', 'slug' => 'tiles-b']);
-        $brandB = Brand::create(['organization_id' => $this->orgB->id, 'name' => 'Brand B', 'slug' => 'brand-b']);
-        $taxB = TaxProfile::create(['organization_id' => $this->orgB->id, 'name' => 'GST 18% B', 'cgst_rate' => 9, 'sgst_rate' => 9]);
+        // Org B creates product referencing same global $mfg
+        Sanctum::actingAs($this->userB);
+        $categoryB = Category::create(['organization_id' => $this->orgB->id, 'name' => 'Sanitary', 'slug' => 'sanitary', 'is_active' => true]);
+        $brandB = Brand::create(['organization_id' => $this->orgB->id, 'name' => 'Beta Brand', 'slug' => 'beta-brand', 'is_active' => true]);
 
-        // Product Org B
-        $productB = Product::create([
-            'organization_id' => $this->orgB->id,
-            'category_id' => $catB->id,
+        $prodB = $this->postJson('/api/product/variants', [
+            'category_id' => $categoryB->id,
             'brand_id' => $brandB->id,
+            'name' => 'Glazed Ceramic Tile 300x600',
+            'sku' => 'GCT-3060-01',
             'manufacturer_id' => $mfg->id,
-            'purchase_unit_id' => $unit->id,
-            'sales_unit_id' => $unit->id,
-            'base_unit_id' => $unit->id,
-            'sku' => 'SKU-ORGB-001',
-            'name' => 'Product Org B',
-            'inventory_behavior' => 'STANDARD',
-            'tax_profile_id' => $taxB->id
+            'purchase_unit_id' => $this->unit->id,
+            'sales_unit_id' => $this->unit->id,
+            'base_unit_id' => $this->unit->id,
+            'tax_profile_id' => $this->taxProfileB->id,
+            'cost_price' => 300,
+            'sale_price' => 450,
+            'min_stock' => 5,
+        ]);
+        $prodB->assertStatus(201);
+
+        // Verify products belong to different orgs but share manufacturer
+        $prodAId = $prodA->json('data.id');
+        $prodBId = $prodB->json('data.id');
+
+        $this->assertDatabaseHas('product_variants', [
+            'id' => $prodAId,
+            'organization_id' => $this->orgA->id,
+            'manufacturer_id' => $mfg->id
         ]);
 
-        // Assert products share the same manufacturer_id
-        $this->assertEquals($productA->manufacturer_id, $productB->manufacturer_id);
-        $this->assertEquals($mfg->id, $productA->manufacturer_id);
+        $this->assertDatabaseHas('product_variants', [
+            'id' => $prodBId,
+            'organization_id' => $this->orgB->id,
+            'manufacturer_id' => $mfg->id
+        ]);
+    }
 
-        // Assert organization IDs remain isolated
-        $this->assertNotEquals($productA->organization_id, $productB->organization_id);
+    public function test_cannot_delete_manufacturer_referenced_by_products()
+    {
+        $mfg = Manufacturer::create([
+            'legal_name' => 'Referenced Manufacturer Ltd',
+            'is_active' => true
+        ]);
 
-        // Assert Org A cannot access Org B product via tenant scoping when TenantContext is bound to Org A
-        $context = app(\App\Shared\Context\TenantContext::class);
-        $context->setUser($this->userA);
-        $context->setOrganization($this->orgA);
+        // Create product referencing $mfg
+        Sanctum::actingAs($this->userA);
+        $this->postJson('/api/product/variants', [
+            'category_id' => $this->category->id,
+            'brand_id' => $this->brand->id,
+            'name' => 'Sanitary Basin White',
+            'sku' => 'SBW-01',
+            'manufacturer_id' => $mfg->id,
+            'purchase_unit_id' => $this->unit->id,
+            'sales_unit_id' => $this->unit->id,
+            'base_unit_id' => $this->unit->id,
+            'tax_profile_id' => $this->taxProfileA->id,
+            'cost_price' => 1200,
+            'sale_price' => 1800
+        ])->assertStatus(201);
 
-        $this->assertNull(Product::find($productB->id));
-        $this->assertNotNull(Product::find($productA->id));
+        // Super Admin attempts to delete referenced manufacturer
+        Sanctum::actingAs($this->superAdmin);
+        $response = $this->deleteJson("/api/manufacturers-crud/{$mfg->id}");
+
+        $response->assertStatus(422)
+            ->assertJsonPath('message', 'Cannot delete manufacturer because it is referenced by active products. Deactivate instead.');
     }
 }

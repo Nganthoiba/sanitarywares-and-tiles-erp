@@ -61,6 +61,11 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function hasRole(string $slug): bool
+    {
+        return $this->roles()->where('slug', $slug)->exists();
+    }
+
     public function scopes(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(\App\Domains\Security\Models\UserScope::class);

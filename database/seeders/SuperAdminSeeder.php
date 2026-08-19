@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use App\Domains\Master\Models\Organization;
 use App\Domains\Security\Models\Role;
+use App\Domains\Security\Models\Permission;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -12,33 +12,34 @@ class SuperAdminSeeder extends Seeder
 {
     public function run(): void
     {
-        $org = Organization::first();
-        $orgId = $org?->id;
-
-        // Ensure super-admin role exists
-        $superAdminRole = Role::firstOrCreate(
+        // Ensure super-admin role exists with organization_id = null
+        $superAdminRole = Role::updateOrCreate(
             ['slug' => 'super-admin'],
             [
-                'organization_id' => $orgId,
+                'organization_id' => null,
                 'name' => 'Super Administrator',
                 'is_system' => true,
             ]
         );
 
-        // Ensure Super Admin user exists
+        // Assign all enabled permissions to Super Admin role
+        $allPermissions = Permission::where('enabled', true)->pluck('id');
+        $superAdminRole->permissions()->syncWithPivotValues($allPermissions, ['organization_id' => null]);
+
+        // Ensure Super Admin user exists with organization_id = null
         $user = User::withoutGlobalScopes()->updateOrCreate(
             ['email' => 'smartnotification1@gmail.com'],
             [
-                'organization_id' => $orgId,
+                'organization_id' => null,
                 'default_role_id' => $superAdminRole->id,
                 'name' => 'Super Admin',
                 'password' => Hash::make('password123'),
             ]
         );
 
-        // Assign role in user_roles pivot
+        // Assign role in user_roles pivot with organization_id = null
         $user->roles()->syncWithoutDetaching([
-            $superAdminRole->id => ['organization_id' => $orgId]
+            $superAdminRole->id => ['organization_id' => null]
         ]);
     }
 }

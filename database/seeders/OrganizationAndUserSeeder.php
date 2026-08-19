@@ -8,7 +8,6 @@ use App\Domains\Master\Models\Branch;
 use App\Domains\Master\Models\Warehouse;
 use App\Domains\Master\Models\StorageLocation;
 use App\Domains\Security\Models\Role;
-use App\Domains\Security\Models\PermissionGroup;
 use App\Domains\Security\Models\Permission;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -56,15 +55,27 @@ class OrganizationAndUserSeeder extends Seeder
             ]
         );
 
-        $adminRole = Role::firstOrCreate(
-            ['organization_id' => $org->id, 'slug' => 'super-admin'],
-            ['name' => 'Super Administrator']
+        // Create Administrator role for the tenant organization
+        $adminRole = Role::updateOrCreate(
+            ['organization_id' => $org->id, 'slug' => 'administrator'],
+            [
+                'name' => 'Organization Administrator',
+                'is_system' => true,
+            ]
         );
+
+        // Attach operational permissions (excluding platform admin permissions)
+        $operationalPermissions = Permission::where('enabled', true)
+            ->where('slug', 'not like', 'platform.%')
+            ->pluck('id');
+
+        $adminRole->permissions()->syncWithPivotValues($operationalPermissions, ['organization_id' => $org->id]);
 
         $adminUser = User::updateOrCreate(
             ['email' => 'admin@acme.com'],
             [
                 'organization_id' => $org->id,
+                'default_role_id' => $adminRole->id,
                 'name' => 'Admin User',
                 'password' => Hash::make('password'),
             ]

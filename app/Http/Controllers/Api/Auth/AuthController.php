@@ -43,8 +43,8 @@ class AuthController extends Controller
 
         RateLimiter::clear($throttleKey);
 
-        // Check if organization is active
-        if (!$user->organization || !$user->organization->is_active) {
+        // Check if organization is active (only for tenant users)
+        if ($user->organization_id !== null && (!$user->organization || !$user->organization->is_active)) {
             return response()->json([
                 'message' => 'Your organization is currently inactive.'
             ], 403);
@@ -103,7 +103,7 @@ class AuthController extends Controller
         $assignedRole = $user->roles->firstWhere('id', $roleId);
         if (!$assignedRole) {
             return response()->json([
-                'message' => 'You are not assigned to this role in your organization.'
+                'message' => 'You are not assigned to this role.'
             ], 403);
         }
 
@@ -140,9 +140,9 @@ class AuthController extends Controller
         $allRoles = $user->roles;
         $activeRole = $user->defaultRole ?? $allRoles->first();
 
-        $allowedBranches = $user->scopes->whereNotNull('branch_id')->map(fn($s) => $s->branch)->unique()->values();
-        $allPermissions = $allRoles->flatMap(fn($r) => $r->permissions)->pluck('slug')->unique()->values();
-        $activePermissions = $activeRole ? $activeRole->permissions->pluck('slug')->unique()->values() : collect();
+        $allowedBranches = $user->scopes->whereNotNull('branch_id')->map(fn($s) => $s->branch)->filter()->unique()->values();
+        $allPermissions = $allRoles->flatMap(fn($r) => $r->permissions)->pluck('slug')->filter()->unique()->values();
+        $activePermissions = $activeRole ? $activeRole->permissions->pluck('slug')->filter()->unique()->values() : collect();
 
         $formattedRoles = $allRoles->map(fn($r) => [
             'id' => $r->id,
@@ -151,15 +151,18 @@ class AuthController extends Controller
             'is_default' => $r->id === ($activeRole->id ?? null),
         ])->values();
 
+        $isSuperAdmin = $user->organization_id === null || $allRoles->contains('slug', 'super-admin');
+
         return [
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'is_super_admin' => $isSuperAdmin,
             'default_role_id' => $user->default_role_id,
-            'organization' => [
-                'id' => $user->organization->id ?? null,
-                'name' => $user->organization->name ?? null,
-            ],
+            'organization' => $user->organization ? [
+                'id' => $user->organization->id,
+                'name' => $user->organization->name,
+            ] : null,
             'branches' => $allowedBranches,
             'roles' => $formattedRoles,
             'roles_list' => $allRoles->pluck('name')->unique()->values(),

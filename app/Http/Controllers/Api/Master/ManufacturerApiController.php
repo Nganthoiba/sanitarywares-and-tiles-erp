@@ -6,8 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Domains\Master\Models\Manufacturer;
 use App\Domains\Product\Models\Product;
-use Illuminate\Support\Facades\App;
-use App\Shared\Context\TenantContext;
 
 class ManufacturerApiController extends Controller
 {
@@ -17,6 +15,10 @@ class ManufacturerApiController extends Controller
     protected function isSuperAdmin($user): bool
     {
         if (!$user) return false;
+
+        if ($user->organization_id === null) {
+            return true;
+        }
 
         if ($user->relationLoaded('roles')) {
             if ($user->roles->contains('slug', 'super-admin')) {
@@ -106,10 +108,18 @@ class ManufacturerApiController extends Controller
 
     /**
      * Store a newly created global manufacturer.
-     * Accessible by Super Admin and Organization Admin.
+     * RESTRICTED TO SUPER ADMIN ONLY.
      */
     public function store(Request $request)
     {
+        $user = $request->user();
+
+        if (!$this->isSuperAdmin($user)) {
+            return response()->json([
+                'message' => 'Only Super Admin can manage canonical global manufacturer records.'
+            ], 403);
+        }
+
         $validated = $request->validate([
             'legal_name' => 'required|string|max:255',
             'trade_name' => 'nullable|string|max:255',
@@ -155,8 +165,6 @@ class ManufacturerApiController extends Controller
             }
         }
 
-        $user = $request->user();
-
         $manufacturer = Manufacturer::create([
             'legal_name' => $legalName,
             'trade_name' => $request->input('trade_name'),
@@ -189,7 +197,7 @@ class ManufacturerApiController extends Controller
 
     /**
      * Update the specified manufacturer.
-     * RESTRICTED TO SUPER ADMIN ONLY (slug: super-admin).
+     * RESTRICTED TO SUPER ADMIN ONLY.
      */
     public function update(Request $request, $id)
     {
@@ -233,7 +241,7 @@ class ManufacturerApiController extends Controller
 
     /**
      * Remove the specified manufacturer.
-     * RESTRICTED TO SUPER ADMIN ONLY (slug: super-admin).
+     * RESTRICTED TO SUPER ADMIN ONLY.
      */
     public function destroy(Request $request, $id)
     {
@@ -247,8 +255,8 @@ class ManufacturerApiController extends Controller
 
         $manufacturer = Manufacturer::findOrFail($id);
 
-        // Prevent deletion if referenced by products
-        $hasProducts = Product::where('manufacturer_id', $manufacturer->id)->exists();
+        // Prevent deletion if referenced by products across any tenant organization
+        $hasProducts = Product::withoutGlobalScopes()->where('manufacturer_id', $manufacturer->id)->exists();
         if ($hasProducts) {
             return response()->json([
                 'message' => 'Cannot delete manufacturer because it is referenced by active products. Deactivate instead.'

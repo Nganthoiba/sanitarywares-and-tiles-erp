@@ -6,7 +6,6 @@ use App\Domains\Master\Models\Organization;
 use App\Domains\Master\Models\Branch;
 use App\Domains\Master\Models\Warehouse;
 use App\Models\User;
-use App\Domains\Security\Models\PermissionGroup;
 use App\Domains\Security\Models\Permission;
 use App\Domains\Security\Models\Role;
 use App\Domains\Security\Models\UserScope;
@@ -61,28 +60,13 @@ class OrganizationRegistrationService
                 'password' => Hash::make($userData['password']),
             ]);
 
-            // 3. Create Default Permission Groups and Permissions
-            $defaultPermissions = config('permissions.default_permissions') ?? [];
+            // 3. Resolve Operational Permissions from Database
+            $permissionIds = Permission::where('enabled', true)
+                ->where('slug', 'not like', 'platform.%')
+                ->pluck('id')
+                ->toArray();
 
-            $permissionIds = [];
-            foreach ($defaultPermissions as $groupName => $perms) {
-                $group = PermissionGroup::create([
-                    'organization_id' => $org->id,
-                    'name' => $groupName
-                ]);
-
-                foreach ($perms as $slug => $name) {
-                    $p = Permission::create([
-                        'organization_id' => $org->id,
-                        'permission_group_id' => $group->id,
-                        'name' => $name,
-                        'slug' => $slug
-                    ]);
-                    $permissionIds[] = $p->id;
-                }
-            }
-
-            // 4. Create Or Update Default Administrator Role for the organization & Assign Permissions
+            // 4. Create Default Administrator Role for the organization & Assign Permissions
             $adminRole = Role::create([
                 'organization_id' => $org->id,
                 'name' => 'Administrator',
@@ -90,7 +74,9 @@ class OrganizationRegistrationService
                 'is_system' => true
             ]);
 
-            $adminRole->permissions()->attach($permissionIds, ['organization_id' => $org->id]);
+            if (!empty($permissionIds)) {
+                $adminRole->permissions()->attach($permissionIds, ['organization_id' => $org->id]);
+            }
 
             // 5. Assign Administrator Role to the Owner User
             $user->roles()->attach($adminRole->id, ['organization_id' => $org->id]);
@@ -126,36 +112,7 @@ class OrganizationRegistrationService
                 'warehouse_id' => $warehouse->id
             ]);
 
-            /*
-            I want to get user_permission in an array like this
-            $user_permissions = [
-                'master.organizations.view',
-                'master.organizations.update',
-                'master.branches.manage',
-                'master.warehouses.manage',
-                'master.users.manage',
-                'inventory.stock.view',
-                'inventory.transfer.execute',
-                'inventory.adjustment.approve',
-                'inventory.count.manage',
-                'purchase.requisitions.manage',
-                'purchase.orders.create',
-                'purchase.orders.approve',
-                'sales.orders.manage',
-                'sales.invoice.cancel',
-                'accounting.accounts.manage',
-                'accounting.journal.post',
-                'workflow.definition.manage'
-            ]
-
-                from the $defaultPermissions variable
-            
-            */
-
-            $user_permissions = [];
-            foreach ($defaultPermissions as $key => $value) {
-                $user_permissions = array_merge($user_permissions, array_keys($value));
-            }
+            $user_permissions = Permission::whereIn('id', $permissionIds)->pluck('slug')->toArray();
 
             return [
                 'organization' => $org,
