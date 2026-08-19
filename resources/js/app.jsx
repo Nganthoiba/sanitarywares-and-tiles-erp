@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import SlabInventoryView from './components/inventory/SlabInventoryView';
@@ -24,6 +24,7 @@ import PurchaseOrderList from './components/purchase/PurchaseOrderList';
 import MenuManagement from './components/platform/MenuManagement';
 import OrganizationManagement from './components/platform/OrganizationManagement';
 import PermissionManagement from './components/platform/PermissionManagement';
+import ImageCropperModal from './components/common/ImageCropperModal';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
@@ -58,6 +59,7 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
             })
             .then(res => res.ok ? res.json() : [])
             .then(data => {
+                console.log(data);
                 if (Array.isArray(data) && data.length > 0) {
                     setNavItems(data);
                 }
@@ -159,9 +161,18 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
                 <div className="sidebar-footer border-top p-3">
                     <div className="d-flex align-items-center justify-content-between">
                         <div className="d-flex align-items-center">
-                            <div className="rounded-circle d-flex justify-content-center align-items-center me-2 font-monospace fw-bold" style={{ width: '32px', height: '32px', fontSize: '0.85rem', backgroundColor: 'var(--border-color)', color: 'var(--accent-color)' }}>
-                                {user?.name?.substring(0, 2).toUpperCase() || 'US'}
-                            </div>
+                            {user?.profile_photo_url ? (
+                                <img 
+                                    src={user.profile_photo_url} 
+                                    alt={user.name} 
+                                    className="rounded-circle me-2 object-fit-cover shadow-sm border" 
+                                    style={{ width: '32px', height: '32px' }} 
+                                />
+                            ) : (
+                                <div className="rounded-circle d-flex justify-content-center align-items-center me-2 font-monospace fw-bold" style={{ width: '32px', height: '32px', fontSize: '0.85rem', backgroundColor: 'var(--border-color)', color: 'var(--accent-color)' }}>
+                                    {user?.name?.substring(0, 2).toUpperCase() || 'US'}
+                                </div>
+                            )}
                             <div style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 <div className="fw-bold" style={{ fontSize: '0.85rem' }}>{user?.name || 'Operator'}</div>
                                 <span className="text-muted font-monospace" style={{ fontSize: '0.75rem' }}>{user?.organizationName || 'Acme'}</span>
@@ -211,14 +222,23 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
                         {/* User & Role Switcher Button */}
                         <li className="nav-item dropdown">
                             <button 
-                                className="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-2 py-1 px-3 shadow-sm"
+                                className="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-2 py-1 px-2.5 shadow-sm"
                                 type="button"
                                 id="userRoleDropdown"
                                 data-bs-toggle="dropdown"
                                 aria-expanded="false"
                                 style={{ fontSize: '0.8rem', borderRadius: '20px' }}
                             >
-                                <i className="fa-solid fa-user-gear text-primary"></i>
+                                {user?.profile_photo_url ? (
+                                    <img 
+                                        src={user.profile_photo_url} 
+                                        alt={user.name} 
+                                        className="rounded-circle object-fit-cover shadow-sm border" 
+                                        style={{ width: '22px', height: '22px' }} 
+                                    />
+                                ) : (
+                                    <i className="fa-solid fa-user-gear text-primary"></i>
+                                )}
                                 <span className="fw-semibold">{user?.name || 'User'}</span>
                                 <span className="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill ms-1" style={{ fontSize: '0.7rem' }}>
                                     {user?.activeRole?.name || (typeof user?.roles?.[0] === 'object' ? user?.roles?.[0]?.name : (user?.roles?.[0] || 'Role'))}
@@ -226,10 +246,24 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
                             </button>
                             
                             <ul className="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 p-2" aria-labelledby="userRoleDropdown" style={{ minWidth: '260px', borderRadius: '12px', zIndex: 1060 }}>
-                                <li className="px-3 py-2 bg-light rounded-3 mb-2">
-                                    <div className="fw-bold text-dark" style={{ fontSize: '0.85rem' }}>{user?.name}</div>
-                                    <div className="text-muted small" style={{ fontSize: '0.75rem' }}>{user?.email}</div>
-                                    <div className="text-muted small font-monospace mt-1" style={{ fontSize: '0.7rem' }}>Org: {user?.organizationName || 'N/A'}</div>
+                                <li className="px-3 py-2 bg-light rounded-3 mb-2 d-flex align-items-center gap-2">
+                                    {user?.profile_photo_url ? (
+                                        <img 
+                                            src={user.profile_photo_url} 
+                                            alt={user.name} 
+                                            className="rounded-circle object-fit-cover shadow-sm border" 
+                                            style={{ width: '36px', height: '36px' }} 
+                                        />
+                                    ) : (
+                                        <div className="rounded-circle d-flex justify-content-center align-items-center font-monospace fw-bold me-1" style={{ width: '36px', height: '36px', fontSize: '0.9rem', backgroundColor: 'var(--border-color)', color: 'var(--accent-color)' }}>
+                                            {user?.name?.substring(0, 2).toUpperCase() || 'US'}
+                                        </div>
+                                    )}
+                                    <div className="overflow-hidden">
+                                        <div className="fw-bold text-dark text-truncate" style={{ fontSize: '0.85rem' }}>{user?.name}</div>
+                                        <div className="text-muted small text-truncate" style={{ fontSize: '0.75rem' }}>{user?.email}</div>
+                                        <div className="text-muted small font-monospace mt-0.5" style={{ fontSize: '0.7rem' }}>Org: {user?.organizationName || 'N/A'}</div>
+                                    </div>
                                 </li>
 
                                 <li><hr className="dropdown-divider my-1" /></li>
@@ -300,6 +334,7 @@ function App() {
                 return {
                     name: localStorage.getItem('user_name'),
                     email: localStorage.getItem('user_email'),
+                    profile_photo_url: localStorage.getItem('user_profile_photo_url') || null,
                     organizationName: localStorage.getItem('organization_name'),
                     default_role_id: localStorage.getItem('default_role_id') ? parseInt(localStorage.getItem('default_role_id')) : null,
                     activeRole: JSON.parse(localStorage.getItem('user_active_role') || 'null'),
@@ -354,6 +389,47 @@ function App() {
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+    // Profile photo upload & cropper states
+    const [croppedPhoto, setCroppedPhoto] = useState(null);
+    const [rawImageSrc, setRawImageSrc] = useState(null);
+    const [showCropper, setShowCropper] = useState(false);
+    const [removePhoto, setRemovePhoto] = useState(false);
+    const fileInputRef = useRef(null);
+
+    const handleFileSelect = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 10 * 1024 * 1024) {
+                setSettingsError('Selected image file size exceeds 10MB limit.');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = () => {
+                setRawImageSrc(reader.result);
+                setShowCropper(true);
+            };
+            reader.readAsDataURL(file);
+        }
+        e.target.value = '';
+    };
+
+    const handleCropComplete = (croppedDataUrl) => {
+        setCroppedPhoto(croppedDataUrl);
+        setRemovePhoto(false);
+        setShowCropper(false);
+        setRawImageSrc(null);
+    };
+
+    const handleRemovePhoto = () => {
+        setCroppedPhoto(null);
+        setRemovePhoto(true);
+    };
+
+    let previewPhotoUrl = null;
+    if (!removePhoto) {
+        previewPhotoUrl = croppedPhoto || user?.profile_photo_url || null;
+    }
+
     useEffect(() => {
         if (showSettingsModal && user) {
             setProfileName(user.name || '');
@@ -366,6 +442,10 @@ function App() {
             setShowConfirmPassword(false);
             setSettingsSuccess('');
             setSettingsError('');
+            setCroppedPhoto(null);
+            setRemovePhoto(false);
+            setRawImageSrc(null);
+            setShowCropper(false);
         }
     }, [showSettingsModal]);
 
@@ -392,6 +472,20 @@ function App() {
         setIsUpdatingProfile(true);
 
         try {
+            const bodyPayload = {
+                name: profileName,
+                email: profileEmail,
+                current_password: currentPassword || undefined,
+                new_password: newPassword || undefined,
+                new_password_confirmation: confirmPassword || undefined
+            };
+
+            if (croppedPhoto) {
+                bodyPayload.profile_photo = croppedPhoto;
+            } else if (removePhoto) {
+                bodyPayload.remove_photo = true;
+            }
+
             const response = await fetch('/api/profile', {
                 method: 'PUT',
                 headers: {
@@ -399,13 +493,7 @@ function App() {
                     'Accept': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 },
-                body: JSON.stringify({
-                    name: profileName,
-                    email: profileEmail,
-                    current_password: currentPassword || undefined,
-                    new_password: newPassword || undefined,
-                    new_password_confirmation: confirmPassword || undefined
-                })
+                body: JSON.stringify(bodyPayload)
             });
 
             const data = await response.json();
@@ -418,13 +506,20 @@ function App() {
             // Update React state
             setUser(prev => ({
                 ...prev,
-                name: data.user.name,
-                email: data.user.email
+                ...data.user
             }));
 
             // Update localStorage
             localStorage.setItem('user_name', data.user.name);
             localStorage.setItem('user_email', data.user.email);
+            if (data.user.profile_photo_url) {
+                localStorage.setItem('user_profile_photo_url', data.user.profile_photo_url);
+            } else {
+                localStorage.removeItem('user_profile_photo_url');
+            }
+
+            setCroppedPhoto(null);
+            setRemovePhoto(false);
 
             setSettingsSuccess(data.message || 'Profile updated successfully!');
             setCurrentPassword('');
@@ -586,7 +681,7 @@ function App() {
                         <Route path="/storage-locations" element={<StorageLocationManager />} />
                         <Route path="/suppliers" element={<SupplierManager />} />
 
-                        <Route path="/products" element={<ProductEntry key="products" initialSubTab="list" />} />
+                        <Route path="/products/catalog" element={<ProductEntry key="products" initialSubTab="list" />} />
                         <Route path="/products/categories" element={<CategoryManager />} />
                         <Route path="/products/brands" element={<BrandManager />} />
                         <Route path="/products/manufacturers" element={<ManufacturerManager />} />
@@ -670,12 +765,21 @@ function App() {
                             {/* Modal Header */}
                             <div className="modal-header border-bottom bg-gradient p-4" style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' }}>
                                 <div className="d-flex align-items-center gap-3">
-                                    <div className="rounded-circle d-flex justify-content-center align-items-center font-monospace fw-bold shadow-sm" style={{ width: '48px', height: '48px', fontSize: '1.2rem', backgroundColor: 'var(--accent-color, #3b82f6)', color: '#ffffff', border: '2px solid rgba(255,255,255,0.2)' }}>
-                                        {user?.name?.substring(0, 2).toUpperCase() || 'US'}
-                                    </div>
+                                    {previewPhotoUrl ? (
+                                        <img 
+                                            src={previewPhotoUrl} 
+                                            alt={user?.name} 
+                                            className="rounded-circle object-fit-cover shadow-sm" 
+                                            style={{ width: '48px', height: '48px', border: '2px solid rgba(255,255,255,0.2)' }} 
+                                        />
+                                    ) : (
+                                        <div className="rounded-circle d-flex justify-content-center align-items-center font-monospace fw-bold shadow-sm" style={{ width: '48px', height: '48px', fontSize: '1.2rem', backgroundColor: 'var(--accent-color, #3b82f6)', color: '#ffffff', border: '2px solid rgba(255,255,255,0.2)' }}>
+                                            {user?.name?.substring(0, 2).toUpperCase() || 'US'}
+                                        </div>
+                                    )}
                                     <div>
-                                        <h5 className="modal-title fw-bold mb-0" style={{ fontSize: '1.15rem' }}>Account Settings</h5>
-                                        <div className="text-muted small" style={{ fontSize: '0.8rem' }}>Manage your profile information, and credentials</div>
+                                        <h5 className="modal-title fw-bold mb-0 text-gray" style={{ fontSize: '1.15rem' }}>Account Settings</h5>
+                                        <div className="text-gray-50 small" style={{ fontSize: '0.8rem' }}>Manage your profile information, picture, and credentials</div>
                                     </div>
                                 </div>
                                 <button type="button" className="btn-close" onClick={() => setShowSettingsModal(false)} aria-label="Close"></button>
@@ -697,13 +801,67 @@ function App() {
                                     )}
 
                                     <div className="row g-4">
-                                        {/* Left Column: User Card & Organization Context */}
+                                        {/* Left Column: User Card & Profile Photo Upload */}
                                         <div className="col-md-4">
                                             <div className="card border-0 shadow-sm rounded-3 h-100 bg-white">
                                                 <div className="card-body p-3.5 text-center">
-                                                    <div className="mx-auto rounded-circle d-flex justify-content-center align-items-center mb-3 font-monospace fw-bold shadow-sm" style={{ width: '64px', height: '64px', fontSize: '1.5rem', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', color: '#fff' }}>
-                                                        {user?.name?.substring(0, 2).toUpperCase() || 'US'}
+                                                    <input 
+                                                        type="file" 
+                                                        ref={fileInputRef} 
+                                                        accept="image/png, image/jpeg, image/webp" 
+                                                        className="d-none" 
+                                                        onChange={handleFileSelect} 
+                                                    />
+
+                                                    <div 
+                                                        className="mx-auto rounded-circle d-flex justify-content-center align-items-center mb-3 font-monospace fw-bold shadow-sm position-relative avatar-hover-container" 
+                                                        style={{ 
+                                                            width: '84px', 
+                                                            height: '84px', 
+                                                            fontSize: '1.8rem', 
+                                                            background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', 
+                                                            color: '#fff',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        title="Click to change profile picture"
+                                                    >
+                                                        {previewPhotoUrl ? (
+                                                            <img 
+                                                                src={previewPhotoUrl} 
+                                                                alt={user?.name} 
+                                                                className="w-100 h-100 rounded-circle object-fit-cover" 
+                                                            />
+                                                        ) : (
+                                                            user?.name?.substring(0, 2).toUpperCase() || 'US'
+                                                        )}
+                                                        <div className="avatar-hover-overlay rounded-circle d-flex align-items-center justify-content-center position-absolute top-0 start-0 w-100 h-100">
+                                                            <i className="fa-solid fa-camera text-white fs-5"></i>
+                                                        </div>
                                                     </div>
+
+                                                    <div className="d-flex justify-content-center gap-1 mb-3">
+                                                        <button 
+                                                            type="button" 
+                                                            className="btn btn-xs btn-outline-primary py-1 px-2.5 rounded-pill fw-medium" 
+                                                            style={{ fontSize: '0.75rem' }}
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                        >
+                                                            <i className="fa-solid fa-cloud-arrow-up me-1"></i> Upload Photo
+                                                        </button>
+                                                        {previewPhotoUrl && (
+                                                            <button 
+                                                                type="button" 
+                                                                className="btn btn-xs btn-outline-danger py-1 px-2 rounded-pill" 
+                                                                style={{ fontSize: '0.75rem' }}
+                                                                onClick={handleRemovePhoto}
+                                                                title="Remove Photo"
+                                                            >
+                                                                <i className="fa-solid fa-trash me-1"></i> Remove
+                                                            </button>
+                                                        )}
+                                                    </div>
+
                                                     <h6 className="fw-bold text-dark mb-1" style={{ fontSize: '0.95rem' }}>{user?.name}</h6>
                                                     <div className="text-muted small text-break mb-3" style={{ fontSize: '0.78rem' }}>{user?.email}</div>
                                                     
@@ -845,7 +1003,7 @@ function App() {
                                 </div>
 
                                 <div className="modal-footer border-top bg-light px-4 py-3">
-                                    <button type="button" className="btn btn-light px-4 fw-medium text-secondary" onClick={() => setShowSettingsModal(false)}>
+                                    <button type="button" className="btn btn-secondary px-4 fw-medium text-white" onClick={() => setShowSettingsModal(false)}>
                                         Close
                                     </button>
                                     <button type="submit" className="btn btn-primary px-4 fw-medium d-flex align-items-center shadow-sm" disabled={isUpdatingProfile}>
@@ -867,6 +1025,17 @@ function App() {
                     </div>
                 </div>
             )}
+
+            {/* Profile Image Cropper Modal */}
+            <ImageCropperModal
+                isOpen={showCropper}
+                imageSrc={rawImageSrc}
+                onClose={() => {
+                    setShowCropper(false);
+                    setRawImageSrc(null);
+                }}
+                onCropComplete={handleCropComplete}
+            />
         </>
     );
 }
