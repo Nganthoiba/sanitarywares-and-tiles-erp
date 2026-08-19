@@ -44,7 +44,7 @@ function GuestRoute({ user }) {
 function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontSize, theme, toggleTheme, setShowSettingsModal, setShowLogoutModal, handleSwitchRole }) {
     const location = useLocation();
     const [navItems, setNavItems] = useState([]);
-    const [openSubmenus, setOpenSubmenus] = useState({});
+    const [openMenuId, setOpenMenuId] = useState(null);
 
     useEffect(() => {
         const token = localStorage.getItem('auth_token');
@@ -65,13 +65,36 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
         }
     }, [user]);
 
+    // Helper to find which parent group owns the active route
+    const getActiveParentId = (items, pathname) => {
+        for (const item of items) {
+            if (item.children && item.children.length > 0) {
+                if (item.children.some(child => child.route_uri && (pathname === child.route_uri || pathname.startsWith(child.route_uri + '/')))) {
+                    return item.id;
+                }
+            }
+        }
+        return null;
+    };
+
+    // Automatically expand the parent group of the current active route on route change
+    useEffect(() => {
+        if (navItems.length > 0) {
+            const activeParentId = getActiveParentId(navItems, location.pathname);
+            if (activeParentId) {
+                setOpenMenuId(activeParentId);
+            }
+        }
+    }, [location.pathname, navItems]);
+
+    // Accordion toggle: opening a new parent group collapses all other parent groups
     const toggleSubmenu = (id) => {
-        setOpenSubmenus(prev => ({ ...prev, [id]: !prev[id] }));
+        setOpenMenuId(prevId => prevId === id ? null : id);
     };
 
     const isSubmenuActive = (item) => {
         if (!item.children || item.children.length === 0) return false;
-        return item.children.some(child => location.pathname.startsWith(child.route_uri));
+        return item.children.some(child => child.route_uri && (location.pathname === child.route_uri || location.pathname.startsWith(child.route_uri + '/')));
     };
 
     return (
@@ -86,13 +109,13 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
                 <ul className="sidebar-menu">
                     {navItems.map((item) => {
                         const hasChildren = item.children && item.children.length > 0;
-                        const isOpen = openSubmenus[item.id] || isSubmenuActive(item);
+                        const isOpen = openMenuId === item.id;
 
                         if (hasChildren) {
                             return (
                                 <li className="sidebar-menu-item" key={item.id}>
                                     <button 
-                                        className={`sidebar-link d-flex justify-content-between align-items-center ${isSubmenuActive(item) ? 'active' : ''}`}
+                                        className={`sidebar-link d-flex justify-content-between align-items-center ${(isOpen && isSubmenuActive(item)) ? 'active' : ''}`}
                                         onClick={() => toggleSubmenu(item.id)}
                                     >
                                         <span className="d-flex align-items-center">
