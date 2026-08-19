@@ -9,6 +9,11 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Domains\Master\Traits\BelongsToOrganization;
+use App\Domains\Security\Models\Role;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Domains\Security\Models\UserScope;
 
 class User extends Authenticatable
 {
@@ -26,6 +31,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'profile_photo_path',
         'invitation_token',
     ];
 
@@ -50,14 +56,15 @@ class User extends Authenticatable
         ];
     }
 
-    public function defaultRole(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function defaultRole(): BelongsTo
     {
-        return $this->belongsTo(\App\Domains\Security\Models\Role::class, 'default_role_id');
+        return $this->belongsTo(Role::class, 'default_role_id');
     }
 
-    public function roles(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(\App\Domains\Security\Models\Role::class, 'user_roles')
+        return $this->belongsToMany(Role::class, 'user_roles')
+            ->withoutGlobalScopes()
             ->withTimestamps();
     }
 
@@ -66,9 +73,8 @@ class User extends Authenticatable
         return $this->roles()->where('slug', $slug)->exists();
     }
 
-    public function scopes(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function scopes(): HasMany
     {
-        return $this->hasMany(\App\Domains\Security\Models\UserScope::class);
+        return $this->hasMany(UserScope::class);
     }
 }
-
