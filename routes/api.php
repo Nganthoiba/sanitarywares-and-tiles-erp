@@ -60,9 +60,11 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::get('/permissions', [PlatformPermissionController::class, 'index']);
         Route::post('/permission-groups', [PlatformPermissionController::class, 'storeGroup']);
         Route::put('/permission-groups/{id}', [PlatformPermissionController::class, 'updateGroup']);
+        Route::delete('/permission-groups/{id}', [PlatformPermissionController::class, 'destroyGroup']);
         Route::post('/permissions', [PlatformPermissionController::class, 'storePermission']);
         Route::put('/permissions/{id}', [PlatformPermissionController::class, 'updatePermission']);
         Route::post('/permissions/{id}/toggle', [PlatformPermissionController::class, 'togglePermission']);
+        Route::delete('/permissions/{id}', [PlatformPermissionController::class, 'destroyPermission']);
     });
 
     // Dedicated Platform Menu Management Routes (Restricted to platform.menus.manage)

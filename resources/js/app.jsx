@@ -23,6 +23,7 @@ import LandingPage from './components/auth/LandingPage';
 import PurchaseOrderList from './components/purchase/PurchaseOrderList';
 import MenuManagement from './components/platform/MenuManagement';
 import OrganizationManagement from './components/platform/OrganizationManagement';
+import PermissionManagement from './components/platform/PermissionManagement';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
@@ -607,6 +608,14 @@ function App() {
                         <Route path="/platform/organizations" element={
                             hasPermission('platform.organizations.manage') ? (
                                 <OrganizationManagement />
+                            ) : (
+                                <Navigate to="/inventory" replace />
+                            )
+                        } />
+
+                        <Route path="/platform/permissions" element={
+                            hasPermission('platform.permissions.manage') ? (
+                                <PermissionManagement />
                             ) : (
                                 <Navigate to="/inventory" replace />
                             )

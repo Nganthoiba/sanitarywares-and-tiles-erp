@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -7,13 +8,13 @@ return new class extends Migration {
     public function up(): void {
         Schema::create('permission_groups', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organization_id')->index()->constrained('organizations')->onDelete('cascade');
-            $table->string('name');
+            $table->string('name')->unique();
+            $table->boolean('enabled')->default(true);
             $table->timestamps();
             $table->softDeletes();
-            $table->unique(['organization_id', 'name']);
         });
     }
+
     public function down(): void {
         Schema::dropIfExists('permission_groups');
     }

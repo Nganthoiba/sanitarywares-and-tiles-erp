@@ -128,4 +128,50 @@ class PlatformPermissionController extends Controller
             'permission' => $permission,
         ]);
     }
+
+    /**
+     * Delete a permission group if empty.
+     */
+    public function destroyGroup($id)
+    {
+        $group = PermissionGroup::withCount('permissions')->findOrFail($id);
+
+        if ($group->permissions_count > 0) {
+            return response()->json([
+                'message' => "Cannot delete group '{$group->name}' because it contains {$group->permissions_count} permission(s). Please reassign or delete the permissions first."
+            ], 422);
+        }
+
+        $group->delete();
+
+        return response()->json([
+            'message' => "Permission group '{$group->name}' deleted successfully."
+        ]);
+    }
+
+    /**
+     * Delete a permission if not linked to roles or menus.
+     */
+    public function destroyPermission($id)
+    {
+        $permission = Permission::withCount(['roles', 'menus'])->findOrFail($id);
+
+        if ($permission->roles_count > 0) {
+            return response()->json([
+                'message' => "Cannot delete permission '{$permission->slug}' because it is assigned to {$permission->roles_count} role(s)."
+            ], 422);
+        }
+
+        if ($permission->menus_count > 0) {
+            return response()->json([
+                'message' => "Cannot delete permission '{$permission->slug}' because it is linked to {$permission->menus_count} navigation menu(s)."
+            ], 422);
+        }
+
+        $permission->delete();
+
+        return response()->json([
+            'message' => "Permission '{$permission->slug}' deleted successfully."
+        ]);
+    }
 }
