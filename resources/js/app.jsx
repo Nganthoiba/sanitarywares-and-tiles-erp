@@ -156,9 +156,7 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
                     })}
                 </ul>
 
-                <hr />
-
-                <div className="sidebar-footer border-top p-3 mt-auto">
+                <div className="sidebar-footer border-top p-3">
                     <div className="d-flex align-items-center justify-content-between">
                         <div className="d-flex align-items-center">
                             <div className="rounded-circle d-flex justify-content-center align-items-center me-2 font-monospace fw-bold" style={{ width: '32px', height: '32px', fontSize: '0.85rem', backgroundColor: 'var(--border-color)', color: 'var(--accent-color)' }}>
