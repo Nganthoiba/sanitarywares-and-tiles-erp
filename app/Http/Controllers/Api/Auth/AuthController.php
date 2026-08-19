@@ -157,6 +157,8 @@ class AuthController extends Controller
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'profile_photo_path' => $user->profile_photo_path,
+            'profile_photo_url' => $user->profile_photo_path ? asset($user->profile_photo_path) : null,
             'is_super_admin' => $isSuperAdmin,
             'default_role_id' => $user->default_role_id,
             'organization' => $user->organization ? [
@@ -208,15 +210,38 @@ class AuthController extends Controller
 
         $user->name = $request->input('name');
         $user->email = $request->input('email');
+
+        if ($request->boolean('remove_photo')) {
+            if ($user->profile_photo_path && file_exists(public_path($user->profile_photo_path))) {
+                @unlink(public_path($user->profile_photo_path));
+            }
+            $user->profile_photo_path = null;
+        } elseif ($request->filled('profile_photo')) {
+            $photoData = $request->input('profile_photo');
+            if (str_starts_with($photoData, 'data:image')) {
+                preg_match('/data:image\/(.*?);base64,(.*)/', $photoData, $matches);
+                if (count($matches) === 3) {
+                    $ext = $matches[1] === 'jpeg' ? 'jpg' : ($matches[1] === 'svg+xml' ? 'svg' : $matches[1]);
+                    $imageContent = base64_decode($matches[2]);
+                    $uploadDir = public_path('uploads/avatars');
+                    if (!file_exists($uploadDir)) {
+                        mkdir($uploadDir, 0755, true);
+                    }
+                    if ($user->profile_photo_path && file_exists(public_path($user->profile_photo_path))) {
+                        @unlink(public_path($user->profile_photo_path));
+                    }
+                    $filename = 'avatar_' . $user->id . '_' . time() . '.' . $ext;
+                    file_put_contents($uploadDir . '/' . $filename, $imageContent);
+                    $user->profile_photo_path = 'uploads/avatars/' . $filename;
+                }
+            }
+        }
+
         $user->save();
 
         return response()->json([
             'message' => 'Profile updated successfully.',
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-            ]
+            'user' => $this->buildUserContext($user->fresh())
         ]);
     }
 }
