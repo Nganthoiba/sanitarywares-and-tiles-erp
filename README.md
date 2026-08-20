@@ -336,11 +336,11 @@ Every stock movement maintains an unalterable transactional audit record:
 
 ### Tech Stack
 
-- **Backend Framework:** Laravel 11 (PHP 8.3+)
+- **Backend Framework:** Laravel 12 (PHP 8.3+)
 - **Frontend Engine:** React 18, JSX, Bootstrap 5, FontAwesome 6
 - **Asset Pipeline:** Vite
-- **Database:** MySQL 8.0+ / MariaDB
-- **Testing Suite:** PHPUnit 11
+- **Database:** MySQL 8.0+ / MariaDB or psql (PostgreSQL) 16.14
+- **Testing Suite:** PHPUnit 12
 
 ### Quick Start Guide
 
@@ -360,7 +360,7 @@ Every stock movement maintains an unalterable transactional audit record:
     php artisan key:generate
     ```
 
-    _Configure your MySQL database credentials in `.env`._
+    _Configure your MySQL/Postgresql database credentials in `.env`._
 
 3. **Run Migrations & Seeders:**
 
