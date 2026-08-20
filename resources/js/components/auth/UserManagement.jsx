@@ -42,6 +42,26 @@ export default function UserManagement() {
 
     const token = localStorage.getItem('auth_token');
 
+    // Check if the currently authenticated user is system administrator / super admin
+    const isSystemAdmin = (() => {
+        try {
+            const activeRole = JSON.parse(localStorage.getItem('user_active_role') || 'null');
+            if (activeRole) {
+                const slug = typeof activeRole === 'object' ? activeRole.slug : activeRole;
+                if (['super-administrator', 'super-admin'].includes(slug)) {
+                    return true;
+                }
+            }
+            const roles = JSON.parse(localStorage.getItem('user_roles') || '[]');
+            return roles.some(r => {
+                const slug = typeof r === 'object' ? r.slug : r;
+                return ['system-administrator', 'super-administrator', 'super-admin'].includes(slug);
+            });
+        } catch (e) {
+            return false;
+        }
+    })();
+
     const fetchData = async () => {
         setLoading(true);
         setError(null);
@@ -525,8 +545,8 @@ export default function UserManagement() {
                                                             onClick={() => openEditRoleModal(r)}
                                                             data-bs-toggle="modal" 
                                                             data-bs-target="#roleModal"
-                                                            disabled={r.is_system}
-                                                            title={r.is_system ? "System roles cannot be modified" : "Edit custom role"}
+                                                            disabled={r.is_system && !isSystemAdmin}
+                                                            title={r.is_system && !isSystemAdmin ? "System roles cannot be modified" : (r.is_system ? "Edit system role" : "Edit custom role")}
                                                         >
                                                             <i className="fa-solid fa-pen-to-square me-1"></i> Edit
                                                         </button>

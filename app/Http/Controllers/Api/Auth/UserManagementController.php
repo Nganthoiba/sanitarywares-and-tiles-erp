@@ -191,7 +191,7 @@ class UserManagementController extends Controller
         $isAdmin = $user->roles()->where('slug', 'administrator')->exists();
         if ($isAdmin) {
             // Count administrators to prevent deleting the last admin/owner
-            $adminCount = User::whereHas('roles', function($q) {
+            $adminCount = User::whereHas('roles', function ($q) {
                 $q->where('slug', 'administrator');
             })->count();
 
@@ -261,9 +261,10 @@ class UserManagementController extends Controller
     {
         $role = Role::findOrFail($id);
 
-        if ($role->is_system) {
+        // If the role is system role and the user is not a System Administrator / Super Admin, return error.
+        if ($role->is_system && !in_array($request->user()->defaultRole?->slug, ['super-administrator', 'super-admin'])) {
             return response()->json([
-                'message' => 'System roles cannot be modified.'
+                'message' => 'System roles cannot be modified by you. Please contact the Super Administrator.'
             ], 403);
         }
 
