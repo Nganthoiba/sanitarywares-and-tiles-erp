@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import SlabInventoryView from './components/inventory/SlabInventoryView';
 import InventoryManager from './components/inventory/InventoryManager';
+import HomePage from './components/home/HomePage';
 import WorkflowMonitor from './components/workflow/WorkflowMonitor';
 import LedgerReports from './components/accounting/LedgerReports';
 import ReportingHub from './components/reporting/ReportingHub';
@@ -38,7 +39,7 @@ function ProtectedRoute({ user }) {
 
 function GuestRoute({ user }) {
     if (user) {
-        return <Navigate to="/inventory" replace />;
+        return <Navigate to="/home" replace />;
     }
     return <Outlet />;
 }
@@ -592,7 +593,7 @@ function App() {
         if (activeRole) localStorage.setItem('user_active_role', JSON.stringify(activeRole));
         localStorage.setItem('user_roles', JSON.stringify(roles));
         localStorage.setItem('user_permissions', JSON.stringify(permissions));
-        navigate('/inventory');
+        navigate('/home');
     };
 
     const handleLogout = () => {
@@ -603,7 +604,7 @@ function App() {
     };
 
     const hasPermission = (perm) => {
-        return user?.permissions?.includes(perm) || user?.permissions?.includes('administrator');
+        return user?.permissions?.includes(perm); // || user?.permissions?.includes('administrator');
     };
 
     return (
@@ -633,48 +634,49 @@ function App() {
                             handleSwitchRole={handleSwitchRole}
                         />
                     }>
-                        <Route path="/dashboard" element={<Navigate to="/inventory" replace />} />
+                        <Route path="/home" element={<HomePage />} />
+                        <Route path="/dashboard" element={<Navigate to="/home" replace />} />
                         <Route path="/inventory" element={<InventoryManager />} />
-                        
-                        <Route path="/grn" element={
-                            <GRNList 
-                                key="grn-list" 
-                                initialViewMode="list" 
-                                onViewModeChange={(mode) => {
-                                    if (mode === 'create') navigate('/grn/new');
-                                }} 
-                            />
-                        } />
-                        <Route path="/grn/new" element={
-                            <GRNList 
-                                key="grn-new" 
-                                initialViewMode="create" 
-                                onViewModeChange={(mode) => {
-                                    if (mode === 'list') navigate('/grn');
-                                }} 
-                            />
-                        } />
+                    
+                    <Route path="/grn" element={
+                        <GRNList 
+                            key="grn-list" 
+                            initialViewMode="list" 
+                            onViewModeChange={(mode) => {
+                                if (mode === 'create') navigate('/grn/new');
+                            }} 
+                        />
+                    } />
+                    <Route path="/grn/new" element={
+                        <GRNList 
+                            key="grn-new" 
+                            initialViewMode="create" 
+                            onViewModeChange={(mode) => {
+                                if (mode === 'list') navigate('/grn');
+                            }} 
+                        />
+                    } />
 
-                        <Route path="/purchase-orders" element={
-                            <PurchaseOrderList 
-                                key="po-list" 
-                                initialViewMode="list" 
-                                onViewModeChange={(mode) => {
-                                    if (mode === 'create') navigate('/purchase-orders/new');
-                                }} 
-                                userPermissions={user?.permissions || []}
-                            />
-                        } />
-                        <Route path="/purchase-orders/new" element={
-                            <PurchaseOrderList 
-                                key="po-new" 
-                                initialViewMode="create" 
-                                onViewModeChange={(mode) => {
-                                    if (mode === 'list') navigate('/purchase-orders');
-                                }} 
-                                userPermissions={user?.permissions || []}
-                            />
-                        } />
+                    <Route path="/purchase-orders" element={
+                        <PurchaseOrderList 
+                            key="po-list" 
+                            initialViewMode="list" 
+                            onViewModeChange={(mode) => {
+                                if (mode === 'create') navigate('/purchase-orders/new');
+                            }} 
+                            userPermissions={user?.permissions || []}
+                        />
+                    } />
+                    <Route path="/purchase-orders/new" element={
+                        <PurchaseOrderList 
+                            key="po-new" 
+                            initialViewMode="create" 
+                            onViewModeChange={(mode) => {
+                                if (mode === 'list') navigate('/purchase-orders');
+                            }} 
+                            userPermissions={user?.permissions || []}
+                        />
+                    } />
 
                         <Route path="/branches" element={<BranchManager />} />
                         <Route path="/warehouses" element={<WarehouseManager />} />
@@ -694,7 +696,7 @@ function App() {
                             hasPermission('platform.menus.manage') ? (
                                 <MenuManagement />
                             ) : (
-                                <Navigate to="/inventory" replace />
+                                <Navigate to="/home" replace />
                             )
                         } />
 
@@ -702,7 +704,7 @@ function App() {
                             hasPermission('platform.organizations.manage') ? (
                                 <OrganizationManagement />
                             ) : (
-                                <Navigate to="/inventory" replace />
+                                <Navigate to="/home" replace />
                             )
                         } />
 
@@ -710,7 +712,7 @@ function App() {
                             hasPermission('platform.permissions.manage') ? (
                                 <PermissionManagement />
                             ) : (
-                                <Navigate to="/inventory" replace />
+                                <Navigate to="/home" replace />
                             )
                         } />
 
@@ -718,14 +720,14 @@ function App() {
                             hasPermission('master.users.manage') ? (
                                 <UserManagement />
                             ) : (
-                                <Navigate to="/inventory" replace />
+                                <Navigate to="/home" replace />
                             )
                         } />
                     </Route>
                 </Route>
 
                 {/* Catch-all fallback */}
-                <Route path="*" element={<Navigate to={user ? "/inventory" : "/"} replace />} />
+                <Route path="*" element={<Navigate to={user ? "/home" : "/"} replace />} />
             </Routes>
             {/* Showing logout confirmation modal */}
             {showLogoutModal && (
