@@ -318,7 +318,7 @@ Sales orders and invoices deduct inventory in real time according to the configu
 
 ### 8.2 Pricing Models & Tax Profiles
 
-- **Pricing Unit Distinction:** Pricing units are decoupled from storage units. Tiles can be stored in `BOX` but priced in `SQ.FT.`, with auto-calculated totals.
+- **Pricing Unit Distinction:** Pricing units are decoupled from storage units. Tiles can be stored in `BOX` but can be priced in `PCS`, with auto-calculated totals. However, for the Granite/Marbles, the storage unit will be in `SLABS` and priced in `SQ.FT`.
 - **Tax Profiles:** Full GST compliance with configurable **HSN/SAC** codes, **CGST**, **SGST**, and **IGST** rates.
 
 ### 8.3 End-to-End Audit Trail
