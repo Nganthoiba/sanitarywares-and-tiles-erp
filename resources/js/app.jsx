@@ -11,6 +11,7 @@ import Login from './components/auth/Login';
 import RegisterOrganization from './components/auth/RegisterOrganization';
 import AcceptInvitation from './components/auth/AcceptInvitation';
 import UserManagement from './components/auth/UserManagement';
+import RoleManagement from './components/auth/RoleManagement';
 import ProductEntry from './components/product/ProductEntry';
 import GRNList from './components/grn/GRNList';
 import CategoryManager from './components/product/CategoryManager';
@@ -719,6 +720,14 @@ function App() {
                         <Route path="/users" element={
                             hasPermission('master.users.manage') ? (
                                 <UserManagement />
+                            ) : (
+                                <Navigate to="/home" replace />
+                            )
+                        } />
+
+                        <Route path="/roles" element={
+                            hasPermission('master.users.manage') ? (
+                                <RoleManagement />
                             ) : (
                                 <Navigate to="/home" replace />
                             )

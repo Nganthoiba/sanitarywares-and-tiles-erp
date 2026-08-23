@@ -25,12 +25,12 @@
 
     /* Light Theme (AppDashboard Default) */
     --background-color: #f4f7fb;
-    --default-color: #273447;
-    --heading-color: #111827;
+    --default-color: #475569;
+    --heading-color: #334155;
     --accent-color: #315cf6; /* Distinct Indigo-Blue Accent */
     --surface-color: #ffffff;
     --contrast-color: #ffffff;
-    --muted-color: #687789;
+    --muted-color: #64748b;
     --light-color: #9aa8b8;
     
     /* Borders */
@@ -52,8 +52,8 @@
     --header-border: var(--border-color);
     --sidebar-bg: #ffffff;
     --sidebar-border: #d9e2ec;
-    --sidebar-color: #324152;
-    --sidebar-muted-color: #8190a2;
+    --sidebar-color: #475569;
+    --sidebar-muted-color: #64748b;
     --sidebar-hover-bg: #edf3ff;
     --sidebar-active-bg: #315cf6;
     --sidebar-active-color: var(--contrast-color);
@@ -401,7 +401,7 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
     display: flex;
     align-items: center;
     padding: 10px 14px;
-    color: var(--default-color) !important;
+    color: var(--sidebar-color) !important;
     text-decoration: none;
     border-radius: 8px;
     font-weight: 500;
@@ -459,7 +459,7 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
     display: flex;
     align-items: center;
     padding: 8px 12px 8px 24px;
-    color: var(--default-color) !important;
+    color: var(--sidebar-color) !important;
     text-decoration: none;
     border-radius: 6px;
     font-weight: 500;

@@ -13,6 +13,7 @@ class Permission extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'id',
         'permission_group_id',
         'name',
         'display_name',

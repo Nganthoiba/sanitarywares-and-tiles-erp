@@ -10,7 +10,7 @@ class PermissionGroup extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['name', 'enabled'];
+    protected $fillable = ['id', 'name', 'enabled'];
 
     protected $casts = [
         'enabled' => 'boolean',

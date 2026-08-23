@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Domains\Security\Models\PermissionGroup;
 use App\Domains\Security\Models\Permission;
+use App\Library\Database\AutoIncrement;
 use Illuminate\Database\Seeder;
 
 class PermissionSeeder extends Seeder
@@ -18,7 +19,7 @@ class PermissionSeeder extends Seeder
             ],
             'Master Data' => [
                 'master.organizations.view'  => ['View Organization details', 'View tenant profile and settings'],
-                'master.organizations.update'=> ['Update Organization details', 'Update tenant profile and configuration'],
+                'master.organizations.update' => ['Update Organization details', 'Update tenant profile and configuration'],
                 'master.branches.manage'     => ['Manage Branches', 'Create, edit and manage organization branches'],
                 'master.warehouses.manage'   => ['Manage Warehouses', 'Create, edit and manage organization warehouses'],
                 'master.users.manage'        => ['Manage Users and Roles', 'Manage staff accounts, roles and permission assignments'],
@@ -58,24 +59,41 @@ class PermissionSeeder extends Seeder
             ],
         ];
 
-        foreach ($catalogue as $groupName => $permissions) {
-            $group = PermissionGroup::updateOrCreate(
-                ['name' => $groupName],
-                ['enabled' => true]
-            );
+        $permissionGroups = [];
+        $permissions = [];
+        $permissionGroupId = 1;
+        $permissionId = 1;
 
-            foreach ($permissions as $slug => $info) {
-                Permission::updateOrCreate(
-                    ['slug' => $slug],
-                    [
-                        'permission_group_id' => $group->id,
-                        'name' => $slug,
-                        'display_name' => $info[0],
-                        'description' => $info[1],
-                        'enabled' => true,
-                    ]
-                );
+        foreach ($catalogue as $groupName => $groupPermissions) {
+
+            $permissionGroups[] = [
+                'id' => $permissionGroupId,
+                'name' => $groupName,
+                'enabled' => true,
+            ];
+
+            foreach ($groupPermissions as $slug => $info) {
+                $permissions[] = [
+                    'id' => $permissionId,
+                    'permission_group_id' => $permissionGroupId,
+                    'slug' => $slug,
+                    'display_name' => $info[0],
+                    'description' => $info[1],
+                    'enabled' => true,
+                ];
+
+                $permissionId++;
             }
+
+
+            $permissionGroupId++;
         }
+
+
+        PermissionGroup::upsert($permissionGroups, ['name'], ['enabled']);
+        AutoIncrement::resetIndex((new PermissionGroup())->getTable(), 'id');
+
+        Permission::upsert($permissions, ['slug'], ['permission_group_id', 'display_name', 'description', 'enabled']);
+        AutoIncrement::resetIndex((new Permission())->getTable(), 'id');
     }
 }

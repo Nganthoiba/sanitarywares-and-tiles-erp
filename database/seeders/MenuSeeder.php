@@ -327,12 +327,25 @@ class MenuSeeder extends Seeder
         Menu::updateOrCreate(
             ['route_uri' => '/users'],
             [
-                'menu_name'     => 'User & Role Manager',
+                'menu_name'     => 'User Management',
                 'menu_type'     => 'PAGE',
-                'icon'          => 'fa-solid fa-users-gear',
+                'icon'          => 'fa-solid fa-users',
                 'parent_id'     => $systemGroup->id,
                 'permission_id' => $perm('master.users.manage'),
                 'order'         => 1,
+                'enabled'       => true,
+            ]
+        );
+
+        Menu::updateOrCreate(
+            ['route_uri' => '/roles'],
+            [
+                'menu_name'     => 'Role Permission Management',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-user-shield',
+                'parent_id'     => $systemGroup->id,
+                'permission_id' => $perm('master.users.manage'),
+                'order'         => 2,
                 'enabled'       => true,
             ]
         );
@@ -345,7 +358,7 @@ class MenuSeeder extends Seeder
                 'icon'          => 'fa-solid fa-diagram-project',
                 'parent_id'     => $systemGroup->id,
                 'permission_id' => $perm('workflow.definition.manage'),
-                'order'         => 2,
+                'order'         => 3,
                 'enabled'       => true,
             ]
         );
