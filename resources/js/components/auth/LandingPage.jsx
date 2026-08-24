@@ -7,12 +7,13 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
   const [tileWidth, setTileWidth] = useState(600); // mm
   const [pcsPerBox, setPcsPerBox] = useState(4);
   const [boxCount, setBoxCount] = useState(50);
+  const [tilePricePerPiece, setTilePricePerPiece] = useState(50); // ₹ per piece
 
   // Granite Slab inputs
-  const [slab1Length, setSlab1Length] = useState(120); // in
-  const [slab1Width, setSlab1Width] = useState(72); // in
-  const [slab2Length, setSlab2Length] = useState(118); // in
-  const [slab2Width, setSlab2Width] = useState(70); // in
+  const [slabLength, setSlabLength] = useState(10);
+  const [slabLengthUnit, setSlabLengthUnit] = useState('FOOT'); // 'FOOT' or 'Inches'
+  const [slabWidth, setSlabWidth] = useState(6);
+  const [slabWidthUnit, setSlabWidthUnit] = useState('FOOT'); // 'FOOT' or 'Inches'
   const [ratePerSqft, setRatePerSqft] = useState(180); // ₹
 
   // Calculations for Sandbox
@@ -21,11 +22,12 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
   const coveragePerBoxSqFt = coveragePerBoxSqM * 10.7639;
   const totalPieces = boxCount * pcsPerBox;
   const totalTileSqFt = boxCount * coveragePerBoxSqFt;
+  const totalTileCost = totalPieces * tilePricePerPiece;
 
-  const slab1SqFt = (slab1Length * slab1Width) / 144;
-  const slab2SqFt = (slab2Length * slab2Width) / 144;
-  const totalSlabSqFt = slab1SqFt + slab2SqFt;
-  const totalSlabValuation = totalSlabSqFt * ratePerSqft;
+  const lengthInFeet = slabLengthUnit === 'Inches' ? slabLength / 12 : slabLength;
+  const widthInFeet = slabWidthUnit === 'Inches' ? slabWidth / 12 : slabWidth;
+  const slabSqFt = lengthInFeet * widthInFeet;
+  const totalSlabValuation = slabSqFt * ratePerSqft;
 
   // Pipeline Stepper state
   const [activeStep, setActiveStep] = useState(0);
@@ -265,7 +267,7 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
                 {calcTab === 'tiles' ? (
                   <div className="animate__animated animate__fadeIn">
                     <div className="row g-2 mb-3">
-                      <div className="col-6">
+                      <div className="col-12 col-sm-4">
                         <label className="form-label small fw-bold text-secondary">Tile Size (mm)</label>
                         <div className="input-group input-group-sm">
                           <input type="number" className="form-control fw-bold" value={tileLength} onChange={(e) => setTileLength(Number(e.target.value))} />
@@ -273,53 +275,66 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
                           <input type="number" className="form-control fw-bold" value={tileWidth} onChange={(e) => setTileWidth(Number(e.target.value))} />
                         </div>
                       </div>
-                      <div className="col-3">
+                      <div className="col-4 col-sm-2">
                         <label className="form-label small fw-bold text-secondary">Pcs/Box</label>
                         <input type="number" className="form-control form-control-sm fw-bold" value={pcsPerBox} onChange={(e) => setPcsPerBox(Number(e.target.value))} />
                       </div>
-                      <div className="col-3">
+                      <div className="col-4 col-sm-3">
                         <label className="form-label small fw-bold text-secondary">Box Count</label>
                         <input type="number" className="form-control form-control-sm fw-bold text-primary" value={boxCount} onChange={(e) => setBoxCount(Number(e.target.value))} />
+                      </div>
+                      <div className="col-4 col-sm-3">
+                        <label className="form-label small fw-bold text-secondary">Price/Piece (₹)</label>
+                        <input type="number" className="form-control form-control-sm fw-bold text-success" value={tilePricePerPiece} onChange={(e) => setTilePricePerPiece(Number(e.target.value))} />
                       </div>
                     </div>
 
                     <div className="sandbox-result-box">
                       <div className="row g-2 text-center">
-                        <div className="col-4 border-end">
-                          <small className="text-muted d-block uppercase fw-semibold">Coverage / Box</small>
+                        <div className="col-3 border-end px-1">
+                          <small className="text-muted d-block uppercase fw-semibold" style={{ fontSize: '0.7rem' }}>Coverage / Box</small>
                           <span className="fs-6 fw-extrabold text-dark">{coveragePerBoxSqFt.toFixed(2)} SQ.FT</span>
                           <small className="d-block text-secondary">({coveragePerBoxSqM.toFixed(2)} SQ.M)</small>
                         </div>
-                        <div className="col-4 border-end">
-                          <small className="text-muted d-block uppercase fw-semibold">Total Stock Pcs</small>
+                        <div className="col-3 border-end px-1">
+                          <small className="text-muted d-block uppercase fw-semibold" style={{ fontSize: '0.7rem' }}>Total Stock Pcs</small>
                           <span className="fs-6 fw-extrabold text-info">{totalPieces} PCS</span>
                           <small className="d-block text-secondary">({boxCount} Boxes)</small>
                         </div>
-                        <div className="col-4">
-                          <small className="text-muted d-block uppercase fw-semibold">Total Coverage</small>
-                          <span className="fs-6 fw-extrabold text-success">{totalTileSqFt.toFixed(1)} SQ.FT</span>
-                          <small className="d-block text-success">Auto-Converted</small>
+                        <div className="col-3 border-end px-1">
+                          <small className="text-muted d-block uppercase fw-semibold" style={{ fontSize: '0.7rem' }}>Total Coverage</small>
+                          <span className="fs-6 fw-extrabold text-primary">{totalTileSqFt.toFixed(1)} SQ.FT</span>
+                          <small className="d-block text-primary">Auto-Converted</small>
+                        </div>
+                        <div className="col-3 px-1">
+                          <small className="text-muted d-block uppercase fw-semibold" style={{ fontSize: '0.7rem' }}>Total Cost</small>
+                          <span className="fs-6 fw-extrabold text-success">₹{Math.round(totalTileCost).toLocaleString()}</span>
+                          <small className="d-block text-success">({(tilePricePerPiece * pcsPerBox).toFixed(0)} ₹/Box)</small>
                         </div>
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div className="animate__animated animate__fadeIn">
-                    <div className="row g-2 mb-2">
+                    <div className="row g-2 mb-3">
                       <div className="col-6">
-                        <label className="form-label small fw-bold text-secondary">Slab #1 (L x W inches)</label>
+                        <label className="form-label small fw-bold text-secondary">Slab Length</label>
                         <div className="input-group input-group-sm">
-                          <input type="number" className="form-control fw-bold" value={slab1Length} onChange={(e) => setSlab1Length(Number(e.target.value))} />
-                          <span className="input-group-text">x</span>
-                          <input type="number" className="form-control fw-bold" value={slab1Width} onChange={(e) => setSlab1Width(Number(e.target.value))} />
+                          <input type="number" className="form-control fw-bold" value={slabLength} onChange={(e) => setSlabLength(Number(e.target.value))} />
+                          <select className="form-select form-select-sm fw-bold border-secondary-subtle" value={slabLengthUnit} onChange={(e) => setSlabLengthUnit(e.target.value)} style={{ maxWidth: '95px' }}>
+                            <option value="FOOT">FOOT</option>
+                            <option value="Inches">Inches</option>
+                          </select>
                         </div>
                       </div>
                       <div className="col-6">
-                        <label className="form-label small fw-bold text-secondary">Slab #2 (L x W inches)</label>
+                        <label className="form-label small fw-bold text-secondary">Slab Width</label>
                         <div className="input-group input-group-sm">
-                          <input type="number" className="form-control fw-bold" value={slab2Length} onChange={(e) => setSlab2Length(Number(e.target.value))} />
-                          <span className="input-group-text">x</span>
-                          <input type="number" className="form-control fw-bold" value={slab2Width} onChange={(e) => setSlab2Width(Number(e.target.value))} />
+                          <input type="number" className="form-control fw-bold" value={slabWidth} onChange={(e) => setSlabWidth(Number(e.target.value))} />
+                          <select className="form-select form-select-sm fw-bold border-secondary-subtle" value={slabWidthUnit} onChange={(e) => setSlabWidthUnit(e.target.value)} style={{ maxWidth: '95px' }}>
+                            <option value="FOOT">FOOT</option>
+                            <option value="Inches">Inches</option>
+                          </select>
                         </div>
                       </div>
                     </div>
@@ -332,16 +347,16 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
                     <div className="sandbox-result-box">
                       <div className="row g-2 text-center">
                         <div className="col-4 border-end">
-                          <small className="text-muted d-block uppercase fw-semibold">Slab #1 Area</small>
-                          <span className="fs-6 fw-bold text-dark">{slab1SqFt.toFixed(2)} SQ.FT</span>
+                          <small className="text-muted d-block uppercase fw-semibold">Dimensions</small>
+                          <span className="fs-6 fw-bold text-dark">{slabLength} {slabLengthUnit} × {slabWidth} {slabWidthUnit}</span>
                         </div>
                         <div className="col-4 border-end">
                           <small className="text-muted d-block uppercase fw-semibold">Total Stone Area</small>
-                          <span className="fs-6 fw-extrabold text-primary">{totalSlabSqFt.toFixed(2)} SQ.FT</span>
+                          <span className="fs-6 fw-extrabold text-primary">{slabSqFt.toFixed(2)} SQ.FT</span>
                         </div>
                         <div className="col-4">
                           <small className="text-muted d-block uppercase fw-semibold">Total Valuation</small>
-                          <span className="fs-6 fw-extrabold text-success">₹{totalSlabValuation.toLocaleString()}</span>
+                          <span className="fs-6 fw-extrabold text-success">₹{Math.round(totalSlabValuation).toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
