@@ -226,6 +226,37 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
     transition: border-color var(--transition-base), box-shadow var(--transition-base);
 }
 
+.form-control::placeholder,
+.form-select::placeholder,
+input::placeholder,
+textarea::placeholder {
+    color: var(--muted-color);
+    opacity: 0.7;
+}
+
+[data-theme="dark"] .form-control::placeholder,
+[data-theme="dark"] .form-select::placeholder,
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder,
+[data-theme="dark"] #po-search::placeholder {
+    color: #9aa8b9 !important;
+    opacity: 0.85 !important;
+}
+
+[data-theme="dark"] .form-control::-webkit-input-placeholder,
+[data-theme="dark"] input::-webkit-input-placeholder,
+[data-theme="dark"] #po-search::-webkit-input-placeholder {
+    color: #9aa8b9 !important;
+    opacity: 0.85 !important;
+}
+
+[data-theme="dark"] .form-control::-moz-placeholder,
+[data-theme="dark"] input::-moz-placeholder,
+[data-theme="dark"] #po-search::-moz-placeholder {
+    color: #9aa8b9 !important;
+    opacity: 0.85 !important;
+}
+
 .form-control:focus, .form-select:focus {
     border-color: var(--input-focus-border) !important;
     box-shadow: 0 0 0 0.18rem rgba(49, 92, 246, 0.16) !important;
@@ -424,10 +455,18 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
     font-weight: 600;
 }
 
+.main-window{
+    background-color: #dbecfd !important;
+}
+
 [data-theme="dark"] .sidebar-link:hover,
 [data-theme="dark"] .sidebar-link.active {
     background-color: rgba(255,255,255,0.05);
     color: var(--accent-color) !important;
+}
+[data-theme="dark"] .main-window{
+    background-color: #3e424b !important;
+    color: #f0f3f7 !important;
 }
 
 /* --- Avatar & Profile Photo Upload Styles --- */

@@ -163,8 +163,10 @@ export default function PurchaseOrderList({ initialViewMode = 'list', onViewMode
                     <i className="fa-solid fa-filter me-2 text-primary"></i> Filter Registry
                 </h6>
                 <div className="row g-3">
-                    <div className="col-md-3">
+                    <div className="col-md-2">
+                        <label htmlFor="po-search" className="form-label small mb-1">Search PO Number</label>
                         <input
+                            id='po-search'
                             type="text"
                             className="form-control form-control-sm"
                             placeholder="Search PO Number or remarks..."
@@ -173,7 +175,9 @@ export default function PurchaseOrderList({ initialViewMode = 'list', onViewMode
                         />
                     </div>
                     <div className="col-md-2">
+                        <label htmlFor="po-branch" className="form-label small mb-1">Select Branch</label>
                         <select
+                            id='po-branch'
                             className="form-select form-select-sm"
                             value={filters.branch_id}
                             onChange={(e) => handleFilterChange('branch_id', e.target.value)}
@@ -184,7 +188,8 @@ export default function PurchaseOrderList({ initialViewMode = 'list', onViewMode
                             ))}
                         </select>
                     </div>
-                    <div className="col-md-3">
+                    <div className="col-md-2">
+                        <label htmlFor="po-supplier" className="form-label small mb-1">Select Supplier</label>
                         <select
                             className="form-select form-select-sm"
                             value={filters.supplier_id}
@@ -197,6 +202,7 @@ export default function PurchaseOrderList({ initialViewMode = 'list', onViewMode
                         </select>
                     </div>
                     <div className="col-md-2">
+                        <label htmlFor="po-status" className="form-label small mb-1">Select Status</label>
                         <select
                             className="form-select form-select-sm"
                             value={filters.status}
@@ -213,7 +219,8 @@ export default function PurchaseOrderList({ initialViewMode = 'list', onViewMode
                             <option value="CANCELLED">CANCELLED</option>
                         </select>
                     </div>
-                    <div className="col-md-2 d-flex gap-2">
+                    <div className="col-md-2">
+                        <label htmlFor="po-date-from" className="form-label small mb-1">Select PO Date From</label>
                         <input
                             type="date"
                             className="form-control form-control-sm"
@@ -221,6 +228,9 @@ export default function PurchaseOrderList({ initialViewMode = 'list', onViewMode
                             onChange={(e) => handleFilterChange('date_from', e.target.value)}
                             title="PO Date From"
                         />
+                    </div>
+                    <div className="col-md-2">
+                        <label htmlFor="po-date-to" className="form-label small mb-1">Select PO Date To</label>
                         <input
                             type="date"
                             className="form-control form-control-sm"
