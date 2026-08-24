@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 
-export default function Login({ onLoginSuccess, onNavigateToRegister }) {
+export default function Login({ onLoginSuccess, onNavigateToRegister, onNavigateToHome }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
@@ -51,6 +52,9 @@ export default function Login({ onLoginSuccess, onNavigateToRegister }) {
                     <div className="row g-0">
                         {/* Branding Side */}
                         <div className="col-lg-6 d-none d-lg-flex flex-column justify-content-center align-items-center p-5 position-relative" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)', color: '#fff' }}>
+                            <Link to="/" onClick={onNavigateToHome} className="position-absolute top-0 start-0 m-4 text-white text-decoration-none small opacity-75 hover-opacity-100 d-inline-flex align-items-center gap-2 z-2">
+                                <i className="fa-solid fa-arrow-left"></i> Back to Home
+                            </Link>
                             <div className="position-absolute top-0 start-0 w-100 h-100" style={{ background: 'radial-gradient(circle at top left, rgba(255,255,255,0.1), transparent 50%)' }}></div>
                             <svg xmlns="http://www.w3.org/2000/svg" width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mb-4 shadow rounded-4 bg-white p-3 text-primary position-relative z-1"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                             <h2 className="fw-bolder mb-3 text-center position-relative z-1" style={{ letterSpacing: '-0.5px' }}>Tiles & Sanitary Portal</h2>
@@ -60,6 +64,12 @@ export default function Login({ onLoginSuccess, onNavigateToRegister }) {
                         {/* Login Form Side */}
                         <div className="col-lg-6 d-flex align-items-center bg-white p-4 p-sm-5">
                             <div className="w-100" style={{ maxWidth: '400px', margin: '0 auto' }}>
+                                <div className="mb-4">
+                                    <Link to="/" onClick={onNavigateToHome} className="text-decoration-none text-secondary d-inline-flex align-items-center gap-2 small fw-semibold">
+                                        <i className="fa-solid fa-arrow-left"></i> Back to Home
+                                    </Link>
+                                </div>
+
                                 <div className="text-center mb-5 d-lg-none">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mb-3"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                                     <h3 className="fw-bolder text-primary">CeramaFlow</h3>

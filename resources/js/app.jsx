@@ -691,8 +691,8 @@ function App() {
                 {/* Guest-only routes */}
                 <Route element={<GuestRoute user={user} />}>
                     <Route path="/" element={<LandingPage onNavigateToLogin={() => navigate('/login')} onNavigateToRegister={() => navigate('/register')} />} />
-                    <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} onNavigateToRegister={() => navigate('/register')} />} />
-                    <Route path="/register" element={<RegisterOrganization onRegistrationSuccess={handleLoginSuccess} onNavigateToLogin={() => navigate('/login')} />} />
+                    <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} onNavigateToRegister={() => navigate('/register')} onNavigateToHome={() => navigate('/')} />} />
+                    <Route path="/register" element={<RegisterOrganization onRegistrationSuccess={handleLoginSuccess} onNavigateToLogin={() => navigate('/login')} onNavigateToHome={() => navigate('/')} />} />
                     <Route path="/accept-invitation" element={<AcceptInvitation onNavigateToLogin={() => navigate('/login')} />} />
                 </Route>
 
