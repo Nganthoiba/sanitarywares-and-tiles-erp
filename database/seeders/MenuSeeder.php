@@ -195,7 +195,7 @@ class MenuSeeder extends Seeder
         );
 
         Menu::updateOrCreate(
-            ['route_uri' => '/products'],
+            ['route_uri' => '/products/catalog'],
             [
                 'menu_name'     => 'Product Catalog',
                 'menu_type'     => 'PAGE',
