@@ -41,12 +41,12 @@ class ResolveTenantContext
 
             $context->setBranch($branch);
 
-            // Resolve permissions from roles using 'name' column
+            // Resolve permissions from roles using 'slug' column
             $permissions = $user->roles()
                 ->with('permissions')
                 ->get()
                 ->flatMap(fn($role) => $role->permissions)
-                ->pluck('name')
+                ->pluck('slug')
                 ->filter()
                 ->unique()
                 ->toArray();

@@ -131,6 +131,8 @@ export default function RoleManagement() {
 
             setSuccessMessage(editingRole ? 'Role updated successfully!' : 'Role created successfully!');
             fetchData();
+            window.dispatchEvent(new CustomEvent('role-permissions-updated'));
+            window.dispatchEvent(new CustomEvent('navigation-refresh'));
         } catch (err) {
             setError(err.message);
         }
@@ -158,6 +160,8 @@ export default function RoleManagement() {
 
             setSuccessMessage(data.message);
             fetchData();
+            window.dispatchEvent(new CustomEvent('role-permissions-updated'));
+            window.dispatchEvent(new CustomEvent('navigation-refresh'));
         } catch (err) {
             setError(err.message);
         }

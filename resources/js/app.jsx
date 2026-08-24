@@ -50,24 +50,40 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
     const [navItems, setNavItems] = useState([]);
     const [openMenuId, setOpenMenuId] = useState(null);
 
-    useEffect(() => {
+    const fetchNavigation = () => {
         const token = localStorage.getItem('auth_token');
         if (token) {
             fetch('/api/navigation', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/json',
+                    'Cache-Control': 'no-cache',
                 }
             })
             .then(res => res.ok ? res.json() : [])
             .then(data => {
-                console.log(data);
-                if (Array.isArray(data) && data.length > 0) {
+                if (Array.isArray(data)) {
                     setNavItems(data);
                 }
             })
             .catch(() => {});
         }
+    };
+
+    useEffect(() => {
+        fetchNavigation();
+
+        const handleRefresh = () => {
+            fetchNavigation();
+        };
+
+        window.addEventListener('navigation-refresh', handleRefresh);
+        window.addEventListener('role-permissions-updated', handleRefresh);
+
+        return () => {
+            window.removeEventListener('navigation-refresh', handleRefresh);
+            window.removeEventListener('role-permissions-updated', handleRefresh);
+        };
     }, [user]);
 
     // Helper to find which parent group owns the active route
@@ -365,6 +381,67 @@ function App() {
         document.documentElement.style.setProperty('--app-font-size', `${fontSize}px`);
         localStorage.setItem('app_font_size', fontSize.toString());
     }, [fontSize]);
+
+    const fetchCurrentUser = () => {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+            fetch('/api/user', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache'
+                }
+            })
+            .then(res => res.ok ? res.json() : null)
+            .then(userData => {
+                if (userData) {
+                    const orgName = userData.organization?.name || 'Platform Administration';
+                    const permissions = userData.permissions || [];
+                    const roles = userData.roles || [];
+                    const activeRole = userData.active_role || (roles.length > 0 ? roles[0] : null);
+
+                    setUser({
+                        name: userData.name,
+                        email: userData.email,
+                        profile_photo_url: userData.profile_photo_url || null,
+                        organizationName: orgName,
+                        default_role_id: userData.default_role_id,
+                        activeRole: activeRole,
+                        roles: roles,
+                        permissions: permissions
+                    });
+
+                    localStorage.setItem('user_name', userData.name);
+                    localStorage.setItem('user_email', userData.email);
+                    localStorage.setItem('organization_name', orgName);
+                    if (userData.profile_photo_url) {
+                        localStorage.setItem('user_profile_photo_url', userData.profile_photo_url);
+                    } else {
+                        localStorage.removeItem('user_profile_photo_url');
+                    }
+                    if (userData.default_role_id) localStorage.setItem('default_role_id', userData.default_role_id.toString());
+                    if (activeRole) localStorage.setItem('user_active_role', JSON.stringify(activeRole));
+                    localStorage.setItem('user_roles', JSON.stringify(roles));
+                    localStorage.setItem('user_permissions', JSON.stringify(permissions));
+                }
+            })
+            .catch(() => {});
+        }
+    };
+
+    // Refresh user context on mount (web page refresh) and when role permissions are updated
+    useEffect(() => {
+        fetchCurrentUser();
+
+        const handleUserUpdate = () => {
+            fetchCurrentUser();
+        };
+
+        window.addEventListener('role-permissions-updated', handleUserUpdate);
+        return () => {
+            window.removeEventListener('role-permissions-updated', handleUserUpdate);
+        };
+    }, []);
 
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme);

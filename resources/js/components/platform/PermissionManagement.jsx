@@ -102,6 +102,8 @@ export default function PermissionManagement() {
             setSuccessMessage(data.message || 'Permission group saved successfully.');
             setShowGroupModal(false);
             await fetchData();
+            window.dispatchEvent(new CustomEvent('role-permissions-updated'));
+            window.dispatchEvent(new CustomEvent('navigation-refresh'));
         } catch (err) {
             setError(err.message);
         } finally {
@@ -110,11 +112,11 @@ export default function PermissionManagement() {
     };
 
     // --- Permission Handlers ---
-    const handleOpenPermissionModal = (perm = null) => {
+    const handleOpenPermissionModal = (perm = null, defaultGroupId = null) => {
         setError('');
         setEditingPermission(perm);
         setPermissionForm({
-            permission_group_id: perm ? perm.permission_group_id : (groups[0]?.id || ''),
+            permission_group_id: perm ? perm.permission_group_id : (defaultGroupId || groups[0]?.id || ''),
             name: perm ? perm.slug : '',
             display_name: perm ? (perm.display_name || perm.slug) : '',
             description: perm ? (perm.description || '') : '',
@@ -154,6 +156,8 @@ export default function PermissionManagement() {
             setSuccessMessage(data.message || 'Permission saved successfully.');
             setShowPermissionModal(false);
             await fetchData();
+            window.dispatchEvent(new CustomEvent('role-permissions-updated'));
+            window.dispatchEvent(new CustomEvent('navigation-refresh'));
         } catch (err) {
             setError(err.message);
         } finally {
@@ -177,6 +181,8 @@ export default function PermissionManagement() {
 
             setSuccessMessage(data.message);
             await fetchData();
+            window.dispatchEvent(new CustomEvent('role-permissions-updated'));
+            window.dispatchEvent(new CustomEvent('navigation-refresh'));
         } catch (err) {
             setError(err.message);
         }
@@ -206,6 +212,8 @@ export default function PermissionManagement() {
             setSuccessMessage(data.message);
             setDeletingItem(null);
             await fetchData();
+            window.dispatchEvent(new CustomEvent('role-permissions-updated'));
+            window.dispatchEvent(new CustomEvent('navigation-refresh'));
         } catch (err) {
             setError(err.message);
         } finally {
@@ -213,7 +221,7 @@ export default function PermissionManagement() {
         }
     };
 
-    // --- Filter Computations ---
+    // --- Filter & Group Computations ---
     const filteredPermissions = permissions.filter(p => {
         const matchesGroup = selectedGroupFilter === 'ALL' || String(p.permission_group_id) === String(selectedGroupFilter);
         const matchesStatus = statusFilter === 'ALL' ? true : statusFilter === 'ENABLED' ? p.enabled : !p.enabled;
@@ -232,37 +240,73 @@ export default function PermissionManagement() {
     const enabledCount = permissions.filter(p => p.enabled).length;
     const disabledCount = permissions.filter(p => !p.enabled).length;
 
+    // Grouping permissions by Permission Group for rowSpan rendering
+    const visibleGroups = groups.filter(g => {
+        if (selectedGroupFilter !== 'ALL' && String(g.id) !== String(selectedGroupFilter)) {
+            return false;
+        }
+        return true;
+    });
+
+    const groupedData = visibleGroups.map(grp => {
+        const groupPerms = filteredPermissions.filter(p => p.permission_group_id === grp.id);
+        return {
+            group: grp,
+            permissions: groupPerms
+        };
+    }).filter(item => {
+        const isFiltering = searchQuery.trim().length > 0 || statusFilter !== 'ALL';
+        if (isFiltering) {
+            return item.permissions.length > 0;
+        }
+        return true;
+    });
+
+    // Unassigned permissions group
+    const unassignedPerms = filteredPermissions.filter(p => !p.permission_group_id || !groups.some(g => g.id === p.permission_group_id));
+    if (unassignedPerms.length > 0 && (selectedGroupFilter === 'ALL' || selectedGroupFilter === 'UNASSIGNED')) {
+        groupedData.push({
+            group: { id: 'UNASSIGNED', name: 'Other / Unassigned' },
+            permissions: unassignedPerms
+        });
+    }
+
     return (
         <div className="container-fluid py-2">
             {/* Header */}
-            <div className="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+            <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 border-bottom gap-3">
                 <div>
-                    <h4 className="fw-bold text-dark mb-1">
-                        <i className="fa-solid fa-key text-primary me-2"></i> Permission & Group Management
+                    <h4 className="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                        <span className="rounded-3 bg-primary-subtle text-primary p-2 d-inline-flex align-items-center justify-content-center" style={{ width: '38px', height: '38px' }}>
+                            <i className="fa-solid fa-key fs-5"></i>
+                        </span>
+                        Permission & Group Management
                     </h4>
-                    <p className="text-muted mb-0 small">
+                    <p className="text-muted mb-0 small ps-1">
                         Manage global authorization permissions and logical permission categories across the ERP system.
                     </p>
                 </div>
                 <div className="d-flex gap-2">
                     <button 
-                        className="btn btn-outline-primary btn-sm shadow-sm font-monospace"
+                        className="btn btn-outline-primary btn-sm rounded-2 shadow-xs fw-semibold px-3 d-flex align-items-center gap-1.5"
                         onClick={() => handleOpenGroupModal()}
                     >
-                        <i className="fa-solid fa-folder-plus me-1"></i> + New Group
+                        <i className="fa-solid fa-folder-plus text-primary"></i>
+                        <span>New Group</span>
                     </button>
                     <button 
-                        className="btn btn-primary btn-sm shadow-sm font-monospace"
+                        className="btn btn-primary btn-sm rounded-2 shadow-xs fw-semibold px-3 d-flex align-items-center gap-1.5"
                         onClick={() => handleOpenPermissionModal()}
                     >
-                        <i className="fa-solid fa-plus me-1"></i> + New Permission
+                        <i className="fa-solid fa-plus"></i>
+                        <span>New Permission</span>
                     </button>
                 </div>
             </div>
 
             {/* Alert Messages */}
             {error && (
-                <div className="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                <div className="alert alert-danger alert-dismissible fade show shadow-sm rounded-3" role="alert">
                     <i className="fa-solid fa-triangle-exclamation me-2"></i>
                     <strong>Error:</strong> {error}
                     <button type="button" className="btn-close" onClick={() => setError('')}></button>
@@ -270,7 +314,7 @@ export default function PermissionManagement() {
             )}
 
             {successMessage && (
-                <div className="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+                <div className="alert alert-success alert-dismissible fade show shadow-sm rounded-3" role="alert">
                     <i className="fa-solid fa-circle-check me-2"></i>
                     {successMessage}
                     <button type="button" className="btn-close" onClick={() => setSuccessMessage('')}></button>
@@ -280,13 +324,15 @@ export default function PermissionManagement() {
             {/* Metrics Overview */}
             <div className="row g-3 mb-4">
                 <div className="col-12 col-sm-6 col-md-3">
-                    <div className="card border-0 shadow-sm p-3">
+                    <div className="card border-0 shadow-xs rounded-3 p-3 bg-white h-100">
                         <div className="d-flex align-items-center justify-content-between">
                             <div>
-                                <span className="text-muted small fw-semibold text-uppercase">Permission Groups</span>
+                                <span className="text-muted small fw-semibold text-uppercase" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                                    Permission Groups
+                                </span>
                                 <h3 className="fw-bold text-dark mb-0 mt-1">{groups.length}</h3>
                             </div>
-                            <div className="rounded-circle bg-primary-subtle text-primary p-3 d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
+                            <div className="rounded-3 bg-primary-subtle text-primary p-3 d-flex align-items-center justify-content-center" style={{ width: '46px', height: '46px' }}>
                                 <i className="fa-solid fa-folder-tree fs-5"></i>
                             </div>
                         </div>
@@ -294,13 +340,15 @@ export default function PermissionManagement() {
                 </div>
 
                 <div className="col-12 col-sm-6 col-md-3">
-                    <div className="card border-0 shadow-sm p-3">
+                    <div className="card border-0 shadow-xs rounded-3 p-3 bg-white h-100">
                         <div className="d-flex align-items-center justify-content-between">
                             <div>
-                                <span className="text-muted small fw-semibold text-uppercase">Total Permissions</span>
-                                <h3 className="fw-bold text-info mb-0 mt-1">{permissions.length}</h3>
+                                <span className="text-muted small fw-semibold text-uppercase" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                                    Total Permissions
+                                </span>
+                                <h3 className="fw-bold text-dark mb-0 mt-1">{permissions.length}</h3>
                             </div>
-                            <div className="rounded-circle bg-info-subtle text-info p-3 d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
+                            <div className="rounded-3 bg-info-subtle text-info p-3 d-flex align-items-center justify-content-center" style={{ width: '46px', height: '46px' }}>
                                 <i className="fa-solid fa-shield-halved fs-5"></i>
                             </div>
                         </div>
@@ -308,13 +356,15 @@ export default function PermissionManagement() {
                 </div>
 
                 <div className="col-12 col-sm-6 col-md-3">
-                    <div className="card border-0 shadow-sm p-3">
+                    <div className="card border-0 shadow-xs rounded-3 p-3 bg-white h-100">
                         <div className="d-flex align-items-center justify-content-between">
                             <div>
-                                <span className="text-muted small fw-semibold text-uppercase">Enabled</span>
+                                <span className="text-muted small fw-semibold text-uppercase" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                                    Active Permissions
+                                </span>
                                 <h3 className="fw-bold text-success mb-0 mt-1">{enabledCount}</h3>
                             </div>
-                            <div className="rounded-circle bg-success-subtle text-success p-3 d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
+                            <div className="rounded-3 bg-success-subtle text-success p-3 d-flex align-items-center justify-content-center" style={{ width: '46px', height: '46px' }}>
                                 <i className="fa-solid fa-check-circle fs-5"></i>
                             </div>
                         </div>
@@ -322,13 +372,15 @@ export default function PermissionManagement() {
                 </div>
 
                 <div className="col-12 col-sm-6 col-md-3">
-                    <div className="card border-0 shadow-sm p-3">
+                    <div className="card border-0 shadow-xs rounded-3 p-3 bg-white h-100">
                         <div className="d-flex align-items-center justify-content-between">
                             <div>
-                                <span className="text-muted small fw-semibold text-uppercase">Disabled</span>
+                                <span className="text-muted small fw-semibold text-uppercase" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                                    Inactive Permissions
+                                </span>
                                 <h3 className="fw-bold text-secondary mb-0 mt-1">{disabledCount}</h3>
                             </div>
-                            <div className="rounded-circle bg-secondary-subtle text-secondary p-3 d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
+                            <div className="rounded-3 bg-secondary-subtle text-secondary p-3 d-flex align-items-center justify-content-center" style={{ width: '46px', height: '46px' }}>
                                 <i className="fa-solid fa-ban fs-5"></i>
                             </div>
                         </div>
@@ -336,57 +388,19 @@ export default function PermissionManagement() {
                 </div>
             </div>
 
-            {/* Permission Groups Summary Ribbon */}
-            <div className="card border-0 shadow-sm mb-4">
-                <div className="card-header bg-light border-bottom d-flex align-items-center justify-content-between">
-                    <h6 className="fw-bold text-dark mb-0 font-monospace text-uppercase small">
-                        <i className="fa-solid fa-layer-group me-2 text-primary"></i> Registered Permission Groups ({groups.length})
-                    </h6>
-                </div>
-                <div className="card-body p-3">
-                    <div className="d-flex flex-wrap gap-2">
-                        {groups.map(grp => {
-                            const groupPermsCount = permissions.filter(p => p.permission_group_id === grp.id).length;
-                            return (
-                                <div key={grp.id} className="badge bg-white border text-dark p-2 d-flex align-items-center gap-2 shadow-xs">
-                                    <span className="fw-bold">{grp.name}</span>
-                                    <span className="badge bg-primary-subtle text-primary font-monospace">{groupPermsCount} perms</span>
-                                    <div className="btn-group btn-group-xs ms-1">
-                                        <button 
-                                            className="btn btn-link text-secondary p-0 me-1" 
-                                            onClick={() => handleOpenGroupModal(grp)}
-                                            title="Edit Group Name"
-                                        >
-                                            <i className="fa-solid fa-pen-to-square"></i>
-                                        </button>
-                                        <button 
-                                            className="btn btn-link text-danger p-0" 
-                                            onClick={() => setDeletingItem({ type: 'GROUP', id: grp.id, name: grp.name })}
-                                            title="Delete Empty Group"
-                                        >
-                                            <i className="fa-solid fa-trash-can"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
-
             {/* Filter Toolbar */}
-            <div className="card shadow-sm border-0 mb-4">
+            <div className="card shadow-xs border-0 rounded-3 mb-4 bg-white">
                 <div className="card-body p-3">
                     <div className="row g-3 align-items-center justify-content-between">
                         <div className="col-12 col-md-5">
-                            <div className="input-group">
-                                <span className="input-group-text bg-white text-muted">
+                            <div className="input-group input-group-sm">
+                                <span className="input-group-text bg-light border-end-0 text-muted ps-3">
                                     <i className="fa-solid fa-magnifying-glass"></i>
                                 </span>
                                 <input 
                                     type="text" 
-                                    className="form-control border-start-0" 
-                                    placeholder="Search by slug, display name, description, or group..." 
+                                    className="form-control form-control-sm bg-light border-start-0" 
+                                    placeholder="Search by key, display name, description, or group..." 
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
@@ -395,7 +409,7 @@ export default function PermissionManagement() {
 
                         <div className="col-12 col-md-4">
                             <select 
-                                className="form-select"
+                                className="form-select form-select-sm bg-light"
                                 value={selectedGroupFilter}
                                 onChange={(e) => setSelectedGroupFilter(e.target.value)}
                             >
@@ -409,22 +423,22 @@ export default function PermissionManagement() {
                         <div className="col-12 col-md-3 d-flex justify-content-md-end">
                             <div className="btn-group btn-group-sm w-100" role="group">
                                 <button 
-                                    className={`btn ${statusFilter === 'ALL' ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                    className={`btn ${statusFilter === 'ALL' ? 'btn-primary' : 'btn-light text-secondary'}`}
                                     onClick={() => setStatusFilter('ALL')}
                                 >
                                     All
                                 </button>
                                 <button 
-                                    className={`btn ${statusFilter === 'ENABLED' ? 'btn-success' : 'btn-outline-secondary'}`}
+                                    className={`btn ${statusFilter === 'ENABLED' ? 'btn-success' : 'btn-light text-secondary'}`}
                                     onClick={() => setStatusFilter('ENABLED')}
                                 >
-                                    Enabled ({enabledCount})
+                                    Active ({enabledCount})
                                 </button>
                                 <button 
-                                    className={`btn ${statusFilter === 'DISABLED' ? 'btn-secondary' : 'btn-outline-secondary'}`}
+                                    className={`btn ${statusFilter === 'DISABLED' ? 'btn-secondary' : 'btn-light text-secondary'}`}
                                     onClick={() => setStatusFilter('DISABLED')}
                                 >
-                                    Disabled ({disabledCount})
+                                    Inactive ({disabledCount})
                                 </button>
                             </div>
                         </div>
@@ -432,106 +446,160 @@ export default function PermissionManagement() {
                 </div>
             </div>
 
-            {/* Main Table */}
-            <div className="card shadow-sm border-0">
-                <div className="card-body p-0">
-                    {loading ? (
-                        <div className="text-center py-5">
-                            <div className="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
-                            <span className="text-muted small">Loading system permissions...</span>
-                        </div>
-                    ) : filteredPermissions.length === 0 ? (
-                        <div className="text-center py-5 text-muted">
-                            <i className="fa-solid fa-key-skeleton fs-3 mb-2 opacity-50 d-block"></i>
-                            No matching permissions found.
-                        </div>
-                    ) : (
-                        <div className="table-responsive">
-                            <table className="table table-hover align-middle mb-0">
-                                <thead className="bg-light text-muted text-uppercase font-monospace small">
-                                    <tr>
-                                        <th className="ps-4">Permission Key / Slug</th>
-                                        <th>Display Name</th>
-                                        <th>Group</th>
-                                        <th>Description</th>
-                                        <th>Status</th>
-                                        <th className="text-end pe-4">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredPermissions.map(perm => (
-                                        <tr key={perm.id}>
-                                            <td className="ps-4">
-                                                <span className="font-monospace fw-bold text-primary small">
-                                                    {perm.slug}
-                                                </span>
-                                            </td>
-
-                                            <td>
-                                                <span className="fw-semibold text-dark">
-                                                    {perm.display_name || perm.slug}
-                                                </span>
-                                            </td>
-
-                                            <td>
-                                                <span className="badge bg-light text-dark font-monospace border">
-                                                    <i className="fa-solid fa-folder me-1 text-secondary"></i>
-                                                    {perm.group?.name || 'Unassigned'}
-                                                </span>
-                                            </td>
-
-                                            <td className="text-muted small" style={{ maxWidth: '280px' }}>
-                                                {perm.description || <span className="opacity-50">No description provided</span>}
-                                            </td>
-
-                                            <td>
-                                                {perm.enabled ? (
-                                                    <span className="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
-                                                        <i className="fa-solid fa-circle-check me-1"></i> Enabled
-                                                    </span>
-                                                ) : (
-                                                    <span className="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill">
-                                                        <i className="fa-solid fa-ban me-1"></i> Disabled
-                                                    </span>
-                                                )}
-                                            </td>
-
-                                            <td className="text-end pe-4">
-                                                <div className="d-flex justify-content-end gap-2">
-                                                    <button 
-                                                        className="btn btn-xs btn-outline-secondary py-1 px-2"
-                                                        onClick={() => handleOpenPermissionModal(perm)}
-                                                        title="Edit Permission Details"
-                                                    >
-                                                        <i className="fa-solid fa-pen me-1"></i> Edit
-                                                    </button>
-
-                                                    <button 
-                                                        className={`btn btn-xs py-1 px-2 ${perm.enabled ? 'btn-outline-warning' : 'btn-outline-success'}`}
-                                                        onClick={() => handleTogglePermission(perm)}
-                                                        title={perm.enabled ? 'Disable Permission' : 'Enable Permission'}
-                                                    >
-                                                        <i className={`fa-solid ${perm.enabled ? 'fa-eye-slash' : 'fa-eye'} me-1`}></i>
-                                                        {perm.enabled ? 'Disable' : 'Enable'}
-                                                    </button>
-
-                                                    <button 
-                                                        className="btn btn-xs btn-outline-danger py-1 px-2"
-                                                        onClick={() => setDeletingItem({ type: 'PERMISSION', id: perm.id, name: perm.slug })}
-                                                        title="Delete Permission"
-                                                    >
-                                                        <i className="fa-solid fa-trash-can"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+            {/* Grouped Permission Cards */}
+            {loading ? (
+                <div className="card shadow-xs border-0 rounded-3 mb-4 p-5 text-center bg-white">
+                    <div className="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
+                    <span className="text-muted small">Loading system permissions...</span>
                 </div>
-            </div>
+            ) : groupedData.length === 0 ? (
+                <div className="card shadow-xs border-0 rounded-3 mb-4 p-5 text-center text-muted bg-white">
+                    <i className="fa-solid fa-key-skeleton fs-3 mb-2 opacity-50 d-block"></i>
+                    No matching permissions found.
+                </div>
+            ) : (
+                <div className="d-flex flex-column gap-4 mb-4">
+                    {groupedData.map(({ group, permissions: groupPerms }) => (
+                        <div key={group.id} className="card shadow-xs border-0 rounded-3 overflow-hidden bg-white">
+                            {/* Card Header */}
+                            <div className="card-header bg-white py-3 px-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 border-bottom border-light">
+                                <div className="d-flex align-items-center gap-3">
+                                    <div className="rounded-3 bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style={{ width: '38px', height: '38px' }}>
+                                        <i className="fa-solid fa-folder fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div className="d-flex align-items-center gap-2">
+                                            <h6 className="fw-bold text-dark mb-0 fs-6">
+                                                {group.name}
+                                            </h6>
+                                            <span className="badge bg-primary-subtle text-primary font-monospace rounded-pill px-2.5 py-1 small">
+                                                {groupPerms.length} {groupPerms.length === 1 ? 'permission' : 'permissions'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {group.id !== 'UNASSIGNED' && (
+                                    <div className="d-flex align-items-center gap-2">
+                                        <button 
+                                            className="btn btn-sm btn-outline-primary rounded-2 shadow-xs fw-semibold px-3"
+                                            onClick={() => handleOpenPermissionModal(null, group.id)}
+                                            title="Add Permission to this Group"
+                                        >
+                                            <i className="fa-solid fa-plus me-1.5"></i> Add Permission
+                                        </button>
+                                        <button 
+                                            className="btn btn-sm btn-light text-secondary border-0 rounded-2 px-2.5 fw-semibold"
+                                            onClick={() => handleOpenGroupModal(group)}
+                                            title="Edit Group Name"
+                                        >
+                                            <i className="fa-solid fa-pen-to-square me-1"></i> Edit Group
+                                        </button>
+                                        <button 
+                                            className="btn btn-sm btn-light text-danger border-0 rounded-2 px-2.5 fw-semibold"
+                                            onClick={() => setDeletingItem({ type: 'GROUP', id: group.id, name: group.name })}
+                                            title="Delete Group"
+                                        >
+                                            <i className="fa-solid fa-trash-can me-1"></i> Delete
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Card Body with Table inside */}
+                            <div className="card-body p-0">
+                                {groupPerms.length === 0 ? (
+                                    <div className="p-4 text-center text-muted bg-light-subtle">
+                                        <span className="opacity-75">No permissions assigned to this group yet.</span>
+                                        <button 
+                                            className="btn btn-link btn-sm text-primary ms-2 p-0 text-decoration-none font-monospace fw-semibold"
+                                            onClick={() => handleOpenPermissionModal(null, group.id)}
+                                        >
+                                            <i className="fa-solid fa-plus me-1"></i> Add first permission
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="table-responsive">
+                                        <table className="table table-hover align-middle mb-0">
+                                            <thead className="bg-light-subtle text-muted text-uppercase font-monospace" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                                                <tr>
+                                                    <th className="ps-4 py-3" style={{ width: '280px' }}>Permission Key / Slug</th>
+                                                    <th className="py-3">Display Name & Description</th>
+                                                    <th className="py-3" style={{ width: '130px' }}>Status</th>
+                                                    <th className="text-end pe-4 py-3" style={{ width: '240px' }}>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {groupPerms.map(perm => (
+                                                    <tr key={perm.id}>
+                                                        <td className="ps-4 py-3">
+                                                            <span className="font-monospace fw-semibold text-primary bg-primary-subtle px-2.5 py-1 rounded small" style={{ fontSize: '0.82rem' }}>
+                                                                {perm.slug}
+                                                            </span>
+                                                        </td>
+
+                                                        <td className="py-3">
+                                                            <div className="fw-semibold text-dark mb-0.5">
+                                                                {perm.display_name || perm.slug}
+                                                            </div>
+                                                            {perm.description && (
+                                                                <div className="text-muted small" style={{ fontSize: '0.82rem' }}>
+                                                                    {perm.description}
+                                                                </div>
+                                                            )}
+                                                        </td>
+
+                                                        <td className="py-3">
+                                                            {perm.enabled ? (
+                                                                <span className="badge bg-success-subtle text-success-emphasis border border-success-subtle rounded-pill px-2.5 py-1 small">
+                                                                    <i className="fa-solid fa-circle-check me-1"></i> Active
+                                                                </span>
+                                                            ) : (
+                                                                <span className="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle rounded-pill px-2.5 py-1 small">
+                                                                    <i className="fa-solid fa-ban me-1"></i> Inactive
+                                                                </span>
+                                                            )}
+                                                        </td>
+
+                                                        <td className="text-end pe-4 py-3">
+                                                            <div className="d-flex justify-content-end gap-1.5">
+                                                                <button 
+                                                                    className="btn btn-xs btn-light text-dark border-0 rounded-2 px-2.5 py-1 shadow-xs fw-semibold"
+                                                                    onClick={() => handleOpenPermissionModal(perm)}
+                                                                    title="Edit Permission Details"
+                                                                >
+                                                                    <i className="fa-solid fa-pen text-muted me-1"></i> Edit
+                                                                </button>
+
+                                                                <button 
+                                                                    className={`btn btn-xs rounded-2 px-2.5 py-1 shadow-xs fw-semibold ${perm.enabled ? 'btn-light text-warning-emphasis border-0' : 'btn-light text-success-emphasis border-0'}`}
+                                                                    onClick={() => handleTogglePermission(perm)}
+                                                                    title={perm.enabled ? 'Disable Permission' : 'Enable Permission'}
+                                                                >
+                                                                    <i className={`fa-solid ${perm.enabled ? 'fa-eye-slash text-warning me-1' : 'fa-eye text-success me-1'}`}></i>
+                                                                    {perm.enabled ? 'Disable' : 'Enable'}
+                                                                </button>
+
+                                                                <button 
+                                                                    className="btn btn-xs btn-light text-danger border-0 rounded-2 px-2.5 py-1 shadow-xs fw-semibold"
+                                                                    onClick={() => setDeletingItem({ type: 'PERMISSION', id: perm.id, name: perm.slug })}
+                                                                    title="Delete Permission"
+                                                                >
+                                                                    <i className="fa-solid fa-trash-can me-1"></i> Delete
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* Save Permission Group Modal */}
             {showGroupModal && (

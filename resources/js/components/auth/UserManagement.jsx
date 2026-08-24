@@ -151,6 +151,8 @@ export default function UserManagement() {
 
             setSuccessMessage('Staff member updated successfully!');
             fetchData();
+            window.dispatchEvent(new CustomEvent('role-permissions-updated'));
+            window.dispatchEvent(new CustomEvent('navigation-refresh'));
         } catch (err) {
             setError(err.message);
         }

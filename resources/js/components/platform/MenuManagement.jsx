@@ -202,6 +202,7 @@ export default function MenuManagement() {
             setSuccessMessage(data.message || 'Menu item saved successfully.');
             setIsDirty(false);
             await fetchMenus();
+            window.dispatchEvent(new CustomEvent('navigation-refresh'));
 
             if (!editingId && data.menu) {
                 selectMenuForEdit(data.menu);
@@ -242,6 +243,7 @@ export default function MenuManagement() {
                 resetFormForNew();
             }
             await fetchMenus();
+            window.dispatchEvent(new CustomEvent('navigation-refresh'));
         } catch (err) {
             setError(err.message);
             setDeletingMenu(null);
@@ -280,6 +282,7 @@ export default function MenuManagement() {
             });
             if (res.ok) {
                 await fetchMenus();
+                window.dispatchEvent(new CustomEvent('navigation-refresh'));
             }
         } catch (err) {
             console.error("Reorder failed:", err);

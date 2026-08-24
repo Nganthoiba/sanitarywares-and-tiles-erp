@@ -39,19 +39,6 @@ class MenuSeeder extends Seeder
         );
 
         Menu::updateOrCreate(
-            ['route_uri' => '/platform/permissions'],
-            [
-                'menu_name'     => 'Permissions',
-                'menu_type'     => 'PAGE',
-                'icon'          => 'fa-solid fa-key',
-                'parent_id'     => $platformGroup->id,
-                'permission_id' => $perm('platform.permissions.manage'),
-                'order'         => 2,
-                'enabled'       => true,
-            ]
-        );
-
-        Menu::updateOrCreate(
             ['route_uri' => '/platform/menus'],
             [
                 'menu_name'     => 'Menu Manager',
@@ -338,6 +325,19 @@ class MenuSeeder extends Seeder
         );
 
         Menu::updateOrCreate(
+            ['route_uri' => '/platform/permissions'],
+            [
+                'menu_name'     => 'Permissions',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-key',
+                'parent_id'     => $systemGroup->id,
+                'permission_id' => $perm('platform.permissions.manage'),
+                'order'         => 2,
+                'enabled'       => true,
+            ]
+        );
+
+        Menu::updateOrCreate(
             ['route_uri' => '/roles'],
             [
                 'menu_name'     => 'Role Permission Management',
@@ -346,19 +346,6 @@ class MenuSeeder extends Seeder
                 'parent_id'     => $systemGroup->id,
                 'permission_id' => $perm('master.users.manage'),
                 'order'         => 2,
-                'enabled'       => true,
-            ]
-        );
-
-        Menu::updateOrCreate(
-            ['route_uri' => '/workflows'],
-            [
-                'menu_name'     => 'BPM Workflows',
-                'menu_type'     => 'PAGE',
-                'icon'          => 'fa-solid fa-diagram-project',
-                'parent_id'     => $systemGroup->id,
-                'permission_id' => $perm('workflow.definition.manage'),
-                'order'         => 3,
                 'enabled'       => true,
             ]
         );
