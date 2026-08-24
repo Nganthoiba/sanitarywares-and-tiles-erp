@@ -24,10 +24,13 @@ class NavigationController extends Controller
 
         $permissions = $context->getPermissions() ?? collect();
         if ($permissions->isEmpty()) {
-            if ($user->relationLoaded('roles')) {
-                $permissions = $user->roles->flatMap(fn($r) => $r->permissions)->pluck('slug')->filter()->unique();
+            $user->load(['roles.permissions', 'defaultRole.permissions']);
+            $activeRole = $user->defaultRole ?? $user->roles->first();
+
+            if ($activeRole && $activeRole->relationLoaded('permissions')) {
+                $permissions = $activeRole->permissions->pluck('slug')->filter()->unique();
             } else {
-                $permissions = $user->roles()->with('permissions')->get()->flatMap(fn($r) => $r->permissions)->pluck('slug')->filter()->unique();
+                $permissions = $user->roles->flatMap(fn($r) => $r->permissions)->pluck('slug')->filter()->unique();
             }
         }
 
@@ -56,7 +59,13 @@ class NavigationController extends Controller
                 continue;
             }
 
+            $isAuthorized = $isSuperAdmin || !$menu->permission_id || $userPermissions->contains($menu->permission?->slug);
+
             if ($menu->menu_type === 'GROUP') {
+                if (!$isAuthorized) {
+                    continue;
+                }
+
                 $childrenCollection = $menu->children ? $menu->children->filter(fn($c) => $c->enabled) : collect();
                 $authorizedChildren = $this->buildAuthorizedTree($childrenCollection, $isSuperAdmin, $userPermissions);
 
@@ -74,7 +83,6 @@ class NavigationController extends Controller
                 }
             } else {
                 // PAGE menu
-                $isAuthorized = $isSuperAdmin || !$menu->permission_id || $userPermissions->contains($menu->permission?->slug);
                 if ($isAuthorized) {
                     $result[] = [
                         'id'        => $menu->id,
