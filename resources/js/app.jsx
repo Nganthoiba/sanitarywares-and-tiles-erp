@@ -212,7 +212,7 @@ function DashboardLayout({ user, handleLogout, hasPermission, fontSize, setFontS
             <div className="flex-grow-1 d-flex flex-column main-window">
                 {/* Navbar */}
                 <nav className="navbar navbar-expand navbar-light bg-white py-3 px-4 border-bottom shadow-sm">
-                    <span className="navbar-brand mb-0 h1 fs-5 fw-bold text-dark">Building Materials Core Manager</span>
+                    <span className="navbar-brand mb-0 h1 fs-5 fw-bold text-dark">Sanitary Wares & Tiles Core Manager</span>
                     <ul className="navbar-nav ms-auto align-items-center">
                         <li className="nav-item d-flex align-items-center me-4">
                             <span className="text-muted small me-2" style={{ fontSize: '0.8rem' }}>Aa:</span>
