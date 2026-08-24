@@ -3,11 +3,16 @@ import React, { useState } from 'react';
 export default function LandingPage({ onNavigateToLogin, onNavigateToRegister }) {
   // Live Sandbox state
   const [calcTab, setCalcTab] = useState('tiles');
+  const [tileCalcMode, setTileCalcMode] = useState('forward'); // 'forward' | 'reverse'
   const [tileLength, setTileLength] = useState(600); // mm
   const [tileWidth, setTileWidth] = useState(600); // mm
   const [pcsPerBox, setPcsPerBox] = useState(4);
   const [boxCount, setBoxCount] = useState(50);
   const [tilePricePerPiece, setTilePricePerPiece] = useState(50); // ₹ per piece
+
+  // Reverse Tile Calculation State
+  const [targetAreaSqFt, setTargetAreaSqFt] = useState(500); // Target SQ.FT
+  const [wastagePercent, setWastagePercent] = useState(5); // % Wastage
 
   // Granite Slab inputs
   const [slabLength, setSlabLength] = useState(10);
@@ -16,13 +21,20 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
   const [slabWidthUnit, setSlabWidthUnit] = useState('FOOT'); // 'FOOT' or 'Inches'
   const [ratePerSqft, setRatePerSqft] = useState(180); // ₹
 
-  // Calculations for Sandbox
+  // Calculations for Sandbox (Forward Tiles)
   const singleTileSqM = (tileLength / 1000) * (tileWidth / 1000);
   const coveragePerBoxSqM = singleTileSqM * pcsPerBox;
   const coveragePerBoxSqFt = coveragePerBoxSqM * 10.7639;
   const totalPieces = boxCount * pcsPerBox;
   const totalTileSqFt = boxCount * coveragePerBoxSqFt;
   const totalTileCost = totalPieces * tilePricePerPiece;
+
+  // Calculations for Sandbox (Reverse Tiles: Area ➔ Boxes, Pieces & Cost)
+  const effectiveAreaSqFt = targetAreaSqFt * (1 + (wastagePercent || 0) / 100);
+  const requiredBoxes = coveragePerBoxSqFt > 0 ? Math.ceil(effectiveAreaSqFt / coveragePerBoxSqFt) : 0;
+  const totalReversePieces = requiredBoxes * pcsPerBox;
+  const actualDeliveredSqFt = requiredBoxes * coveragePerBoxSqFt;
+  const totalReverseCost = totalReversePieces * tilePricePerPiece;
 
   const lengthInFeet = slabLengthUnit === 'Inches' ? slabLength / 12 : slabLength;
   const widthInFeet = slabWidthUnit === 'Inches' ? slabWidth / 12 : slabWidth;
@@ -266,53 +278,136 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
 
                 {calcTab === 'tiles' ? (
                   <div className="animate__animated animate__fadeIn">
-                    <div className="row g-2 mb-3">
-                      <div className="col-12 col-sm-4">
-                        <label className="form-label small fw-bold text-secondary">Tile Size (mm)</label>
-                        <div className="input-group input-group-sm">
-                          <input type="number" className="form-control fw-bold" value={tileLength} onChange={(e) => setTileLength(Number(e.target.value))} />
-                          <span className="input-group-text">x</span>
-                          <input type="number" className="form-control fw-bold" value={tileWidth} onChange={(e) => setTileWidth(Number(e.target.value))} />
-                        </div>
-                      </div>
-                      <div className="col-4 col-sm-2">
-                        <label className="form-label small fw-bold text-secondary">Pcs/Box</label>
-                        <input type="number" className="form-control form-control-sm fw-bold" value={pcsPerBox} onChange={(e) => setPcsPerBox(Number(e.target.value))} />
-                      </div>
-                      <div className="col-4 col-sm-3">
-                        <label className="form-label small fw-bold text-secondary">Box Count</label>
-                        <input type="number" className="form-control form-control-sm fw-bold text-primary" value={boxCount} onChange={(e) => setBoxCount(Number(e.target.value))} />
-                      </div>
-                      <div className="col-4 col-sm-3">
-                        <label className="form-label small fw-bold text-secondary">Price/Piece (₹)</label>
-                        <input type="number" className="form-control form-control-sm fw-bold text-success" value={tilePricePerPiece} onChange={(e) => setTilePricePerPiece(Number(e.target.value))} />
+                    {/* Sub-mode switcher */}
+                    <div className="d-flex justify-content-between align-items-center mb-3 p-1 bg-light rounded-3 border">
+                      <span className="small fw-semibold text-secondary ms-2" style={{ fontSize: '0.75rem' }}>
+                        <i className="fa-solid fa-sliders text-primary me-1"></i>Mode:
+                      </span>
+                      <div className="btn-group btn-group-sm" role="group">
+                        <button 
+                          type="button" 
+                          className={`btn ${tileCalcMode === 'forward' ? 'btn-primary active fw-bold' : 'btn-outline-secondary'}`} 
+                          onClick={() => setTileCalcMode('forward')}
+                          style={{ fontSize: '0.73rem', borderRadius: '6px 0 0 6px' }}
+                        >
+                          <i className="fa-solid fa-boxes-packing me-1"></i>Box ➔ SQ.FT & Cost
+                        </button>
+                        <button 
+                          type="button" 
+                          className={`btn ${tileCalcMode === 'reverse' ? 'btn-primary active fw-bold' : 'btn-outline-secondary'}`} 
+                          onClick={() => setTileCalcMode('reverse')}
+                          style={{ fontSize: '0.73rem', borderRadius: '0 6px 6px 0' }}
+                        >
+                          <i className="fa-solid fa-calculator me-1"></i>SQ.FT ➔ Boxes & Cost
+                        </button>
                       </div>
                     </div>
 
-                    <div className="sandbox-result-box">
-                      <div className="row g-2 text-center">
-                        <div className="col-3 border-end px-1">
-                          <small className="text-muted d-block uppercase fw-semibold" style={{ fontSize: '0.7rem' }}>Coverage / Box</small>
-                          <span className="fs-6 fw-extrabold text-dark">{coveragePerBoxSqFt.toFixed(2)} SQ.FT</span>
-                          <small className="d-block text-secondary">({coveragePerBoxSqM.toFixed(2)} SQ.M)</small>
+                    {tileCalcMode === 'forward' ? (
+                      <div>
+                        <div className="row g-2 mb-3">
+                          <div className="col-12 col-sm-4">
+                            <label className="form-label small fw-bold text-secondary">Tile Size (mm)</label>
+                            <div className="input-group input-group-sm">
+                              <input type="number" className="form-control fw-bold" value={tileLength} onChange={(e) => setTileLength(Number(e.target.value))} />
+                              <span className="input-group-text">x</span>
+                              <input type="number" className="form-control fw-bold" value={tileWidth} onChange={(e) => setTileWidth(Number(e.target.value))} />
+                            </div>
+                          </div>
+                          <div className="col-4 col-sm-2">
+                            <label className="form-label small fw-bold text-secondary">Pcs/Box</label>
+                            <input type="number" className="form-control form-control-sm fw-bold" value={pcsPerBox} onChange={(e) => setPcsPerBox(Number(e.target.value))} />
+                          </div>
+                          <div className="col-4 col-sm-3">
+                            <label className="form-label small fw-bold text-secondary">Box Count</label>
+                            <input type="number" className="form-control form-control-sm fw-bold text-primary" value={boxCount} onChange={(e) => setBoxCount(Number(e.target.value))} />
+                          </div>
+                          <div className="col-4 col-sm-3">
+                            <label className="form-label small fw-bold text-secondary">Price/Piece (₹)</label>
+                            <input type="number" className="form-control form-control-sm fw-bold text-success" value={tilePricePerPiece} onChange={(e) => setTilePricePerPiece(Number(e.target.value))} />
+                          </div>
                         </div>
-                        <div className="col-3 border-end px-1">
-                          <small className="text-muted d-block uppercase fw-semibold" style={{ fontSize: '0.7rem' }}>Total Stock Pcs</small>
-                          <span className="fs-6 fw-extrabold text-info">{totalPieces} PCS</span>
-                          <small className="d-block text-secondary">({boxCount} Boxes)</small>
-                        </div>
-                        <div className="col-3 border-end px-1">
-                          <small className="text-muted d-block uppercase fw-semibold" style={{ fontSize: '0.7rem' }}>Total Coverage</small>
-                          <span className="fs-6 fw-extrabold text-primary">{totalTileSqFt.toFixed(1)} SQ.FT</span>
-                          <small className="d-block text-primary">Auto-Converted</small>
-                        </div>
-                        <div className="col-3 px-1">
-                          <small className="text-muted d-block uppercase fw-semibold" style={{ fontSize: '0.7rem' }}>Total Cost</small>
-                          <span className="fs-6 fw-extrabold text-success">₹{Math.round(totalTileCost).toLocaleString()}</span>
-                          <small className="d-block text-success">({(tilePricePerPiece * pcsPerBox).toFixed(0)} ₹/Box)</small>
+
+                        <div className="sandbox-result-box">
+                          <div className="row g-2 text-center">
+                            <div className="col-3 border-end px-1">
+                              <small className="text-muted d-block uppercase fw-semibold" style={{ fontSize: '0.7rem' }}>Coverage / Box</small>
+                              <span className="fs-6 fw-extrabold text-dark">{coveragePerBoxSqFt.toFixed(2)} SQ.FT</span>
+                              <small className="d-block text-secondary">({coveragePerBoxSqM.toFixed(2)} SQ.M)</small>
+                            </div>
+                            <div className="col-3 border-end px-1">
+                              <small className="text-muted d-block uppercase fw-semibold" style={{ fontSize: '0.7rem' }}>Total Stock Pcs</small>
+                              <span className="fs-6 fw-extrabold text-info">{totalPieces} PCS</span>
+                              <small className="d-block text-secondary">({boxCount} Boxes)</small>
+                            </div>
+                            <div className="col-3 border-end px-1">
+                              <small className="text-muted d-block uppercase fw-semibold" style={{ fontSize: '0.7rem' }}>Total Coverage</small>
+                              <span className="fs-6 fw-extrabold text-primary">{totalTileSqFt.toFixed(1)} SQ.FT</span>
+                              <small className="d-block text-primary">Auto-Converted</small>
+                            </div>
+                            <div className="col-3 px-1">
+                              <small className="text-muted d-block uppercase fw-semibold" style={{ fontSize: '0.7rem' }}>Total Cost</small>
+                              <span className="fs-6 fw-extrabold text-success">₹{Math.round(totalTileCost).toLocaleString()}</span>
+                              <small className="d-block text-success">({(tilePricePerPiece * pcsPerBox).toFixed(0)} ₹/Box)</small>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div>
+                        <div className="row g-2 mb-3">
+                          <div className="col-12 col-sm-3">
+                            <label className="form-label small fw-bold text-secondary">Target Area (SQ.FT)</label>
+                            <input type="number" className="form-control form-control-sm fw-bold text-primary" value={targetAreaSqFt} onChange={(e) => setTargetAreaSqFt(Number(e.target.value))} />
+                          </div>
+                          <div className="col-12 col-sm-4">
+                            <label className="form-label small fw-bold text-secondary">Tile Size (mm)</label>
+                            <div className="input-group input-group-sm">
+                              <input type="number" className="form-control fw-bold" value={tileLength} onChange={(e) => setTileLength(Number(e.target.value))} />
+                              <span className="input-group-text">x</span>
+                              <input type="number" className="form-control fw-bold" value={tileWidth} onChange={(e) => setTileWidth(Number(e.target.value))} />
+                            </div>
+                          </div>
+                          <div className="col-4 col-sm-2">
+                            <label className="form-label small fw-bold text-secondary">Pcs/Box</label>
+                            <input type="number" className="form-control form-control-sm fw-bold" value={pcsPerBox} onChange={(e) => setPcsPerBox(Number(e.target.value))} />
+                          </div>
+                          <div className="col-4 col-sm-1.5">
+                            <label className="form-label small fw-bold text-secondary">Wastage %</label>
+                            <input type="number" className="form-control form-control-sm fw-bold text-warning" value={wastagePercent} onChange={(e) => setWastagePercent(Number(e.target.value))} />
+                          </div>
+                          <div className="col-4 col-sm-1.5">
+                            <label className="form-label small fw-bold text-secondary">Price/Piece (₹)</label>
+                            <input type="number" className="form-control form-control-sm fw-bold text-success" value={tilePricePerPiece} onChange={(e) => setTilePricePerPiece(Number(e.target.value))} />
+                          </div>
+                        </div>
+
+                        <div className="sandbox-result-box">
+                          <div className="row g-2 text-center">
+                            <div className="col-3 border-end px-1">
+                              <small className="text-muted d-block uppercase fw-semibold" style={{ fontSize: '0.7rem' }}>Required Boxes</small>
+                              <span className="fs-6 fw-extrabold text-primary">{requiredBoxes} BOXES</span>
+                              <small className="d-block text-secondary">({coveragePerBoxSqFt.toFixed(2)} SQ.FT/Box)</small>
+                            </div>
+                            <div className="col-3 border-end px-1">
+                              <small className="text-muted d-block uppercase fw-semibold" style={{ fontSize: '0.7rem' }}>Total Tiles Pcs</small>
+                              <span className="fs-6 fw-extrabold text-info">{totalReversePieces} PCS</span>
+                              <small className="d-block text-secondary">({pcsPerBox} Pcs/Box)</small>
+                            </div>
+                            <div className="col-3 border-end px-1">
+                              <small className="text-muted d-block uppercase fw-semibold" style={{ fontSize: '0.7rem' }}>Delivered Coverage</small>
+                              <span className="fs-6 fw-extrabold text-dark">{actualDeliveredSqFt.toFixed(1)} SQ.FT</span>
+                              <small className="d-block text-warning">({wastagePercent}% Wastage Incl.)</small>
+                            </div>
+                            <div className="col-3 px-1">
+                              <small className="text-muted d-block uppercase fw-semibold" style={{ fontSize: '0.7rem' }}>Total Estimated Cost</small>
+                              <span className="fs-6 fw-extrabold text-success">₹{Math.round(totalReverseCost).toLocaleString()}</span>
+                              <small className="d-block text-success">({(tilePricePerPiece * pcsPerBox).toFixed(0)} ₹/Box)</small>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="animate__animated animate__fadeIn">
