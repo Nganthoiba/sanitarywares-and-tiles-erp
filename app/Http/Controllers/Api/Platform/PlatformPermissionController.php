@@ -79,7 +79,7 @@ class PlatformPermissionController extends Controller
 
         $permission = Permission::create([
             'permission_group_id' => $request->input('permission_group_id'),
-            'name' => $slug,
+            //'name' => $slug,
             'slug' => $slug,
             'display_name' => $request->input('display_name'),
             'description' => $request->input('description'),
