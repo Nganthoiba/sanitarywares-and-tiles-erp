@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Domains\Security\Models\Menu;
+use App\Domains\Security\Models\Permission;
 use App\Shared\Context\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
@@ -23,6 +24,7 @@ class NavigationController extends Controller
         $isSuperAdmin = $user->organization_id === null || $user->roles()->where('slug', 'super-admin')->exists();
 
         $permissions = $context->getPermissions() ?? collect();
+
         if ($permissions->isEmpty()) {
             $user->load(['roles.permissions', 'defaultRole.permissions']);
             $activeRole = $user->defaultRole ?? $user->roles->first();
@@ -34,8 +36,10 @@ class NavigationController extends Controller
             }
         }
 
-        $topMenus = Menu::with(['children' => function ($query) {
-            $query->where('enabled', true)->orderBy('order', 'asc');
+        $permissionIds = Permission::whereIn('slug', $permissions)->pluck('id')->filter();
+
+        $topMenus = Menu::with(['children' => function ($query) use ($permissionIds) {
+            $query->where('enabled', true)->whereIn('permission_id', $permissionIds)->orderBy('order', 'asc');
         }, 'children.permission', 'permission'])
             ->whereNull('parent_id')
             ->where('enabled', true)
