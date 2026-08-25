@@ -252,10 +252,10 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
               <div id="sandbox" className="sandbox-wrapper">
                 <div className="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
                   <div>
-                    <h5 className="fw-bold mb-0 text-dark">
-                      <i className="fa-solid fa-calculator text-primary me-2"></i>Live Multi-Unit Sandbox
+                    <h5 className="fw-bold mb-0 text-primary">
+                      <i className="fa-solid fa-calculator text-primary me-2"></i>Tile & Granite/Marble Calculator
                     </h5>
-                    <small className="text-muted">Test how our engine calculates real-world inventory</small>
+                    <small className="text-muted">Calculate real-world inventory</small>
                   </div>
                   <span className="badge bg-success-subtle text-success border border-success px-2 py-1 rounded-pill small">
                     <i className="fa-solid fa-bolt me-1"></i>Real-Time Math
