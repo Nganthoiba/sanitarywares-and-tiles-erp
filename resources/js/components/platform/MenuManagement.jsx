@@ -4,13 +4,16 @@ export default function MenuManagement() {
     const [tree, setTree] = useState([]);
     const [flatList, setFlatList] = useState([]);
     const [permissions, setPermissions] = useState([]);
+    const [permissionGroups, setPermissionGroups] = useState([]);
+    const [permSearchQuery, setPermSearchQuery] = useState('');
+    const [permGroupFilter, setPermGroupFilter] = useState('ALL');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     
-    // Unsaved changes tracking
-    const [isDirty, setIsDirty] = useState(false);
+    // Modal state for Add/Edit Menu
+    const [showModal, setShowModal] = useState(false);
 
     // Currently editing menu or new draft
     const [editingId, setEditingId] = useState(null); // null = creating new
@@ -90,12 +93,18 @@ export default function MenuManagement() {
             });
             if (res.ok) {
                 const data = await res.json();
-                // Flattens permission groups or permissions array
                 if (Array.isArray(data)) {
                     setPermissions(data);
-                } else if (data.groups) {
-                    const allPerms = data.groups.flatMap(g => g.permissions || []);
-                    setPermissions(allPerms);
+                } else {
+                    if (data.groups) {
+                        setPermissionGroups(data.groups);
+                    }
+                    if (data.permissions) {
+                        setPermissions(data.permissions);
+                    } else if (data.groups) {
+                        const allPerms = data.groups.flatMap(g => g.permissions || []);
+                        setPermissions(allPerms);
+                    }
                 }
             }
         } catch (err) {
@@ -120,9 +129,10 @@ export default function MenuManagement() {
             order: 0,
             enabled: true,
         });
-        setIsDirty(false);
+        setPermSearchQuery('');
+        setPermGroupFilter('ALL');
         setError('');
-        setSuccessMessage('');
+        setShowModal(true);
     };
 
     const selectMenuForEdit = (menu) => {
@@ -137,14 +147,32 @@ export default function MenuManagement() {
             order: menu.order ?? 0,
             enabled: Boolean(menu.enabled),
         });
-        setIsDirty(false);
+        setPermSearchQuery('');
+        setPermGroupFilter('ALL');
         setError('');
-        setSuccessMessage('');
+        setShowModal(true);
+    };
+
+    const getFilteredPermissions = () => {
+        return permissions.filter(perm => {
+            const q = permSearchQuery.trim().toLowerCase();
+            const groupName = perm.group ? perm.group.name : (permissionGroups.find(g => String(g.id) === String(perm.permission_group_id))?.name || '');
+            
+            const matchesSearch = !q || 
+                (perm.name && perm.name.toLowerCase().includes(q)) ||
+                (perm.display_name && perm.display_name.toLowerCase().includes(q)) ||
+                (perm.description && perm.description.toLowerCase().includes(q)) ||
+                (groupName && groupName.toLowerCase().includes(q));
+
+            const permGroupId = perm.permission_group_id || perm.group_id || (perm.group ? perm.group.id : '');
+            const matchesGroup = permGroupFilter === 'ALL' || String(permGroupId) === String(permGroupFilter);
+
+            return matchesSearch && matchesGroup;
+        });
     };
 
     const handleInputChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
-        setIsDirty(true);
     };
 
     const handleSave = async (e) => {
@@ -200,13 +228,9 @@ export default function MenuManagement() {
             }
 
             setSuccessMessage(data.message || 'Menu item saved successfully.');
-            setIsDirty(false);
+            setShowModal(false);
             await fetchMenus();
             window.dispatchEvent(new CustomEvent('navigation-refresh'));
-
-            if (!editingId && data.menu) {
-                selectMenuForEdit(data.menu);
-            }
         } catch (err) {
             setError(err.message);
         } finally {
@@ -240,7 +264,7 @@ export default function MenuManagement() {
             setSuccessMessage(data.message || 'Menu item deleted successfully.');
             setDeletingMenu(null);
             if (editingId === deletingMenu.id) {
-                resetFormForNew();
+                setEditingId(null);
             }
             await fetchMenus();
             window.dispatchEvent(new CustomEvent('navigation-refresh'));
@@ -252,7 +276,6 @@ export default function MenuManagement() {
 
     // Reorder action (move up/down within same parent)
     const handleMoveOrder = async (menu, direction) => {
-        // Find siblings
         const siblings = flatList.filter(m => String(m.parent_id || '') === String(menu.parent_id || ''))
             .sort((a, b) => a.order - b.order);
 
@@ -264,7 +287,6 @@ export default function MenuManagement() {
 
         const otherMenu = siblings[targetIndex];
 
-        // Swap order numbers
         const itemsToUpdate = [
             { id: menu.id, order: otherMenu.order, parent_id: menu.parent_id },
             { id: otherMenu.id, order: menu.order, parent_id: otherMenu.parent_id }
@@ -295,7 +317,6 @@ export default function MenuManagement() {
             return flatList.filter(m => m.menu_type === 'GROUP');
         }
         
-        // Recursive helper to get all descendant IDs
         const getDescendantIds = (id) => {
             const children = flatList.filter(m => m.parent_id === id);
             let ids = children.map(c => c.id);
@@ -321,28 +342,22 @@ export default function MenuManagement() {
                     style={{ marginLeft: `${level * 20}px` }}
                 >
                     <div className="d-flex align-items-center gap-2 overflow-hidden me-2">
-                        {/* Drag Handle / Level Indicator */}
                         <span className="text-muted font-monospace opacity-50 cursor-grab" style={{ fontSize: '0.8rem' }}>⋮⋮</span>
 
-                        {/* Icon */}
                         <i className={`${item.icon || (item.menu_type === 'GROUP' ? 'fa-solid fa-folder' : 'fa-solid fa-circle-dot')} text-secondary`} style={{ width: '18px', textAlign: 'center' }}></i>
 
-                        {/* Menu Name & Type */}
                         <span className="fw-semibold text-truncate" style={{ fontSize: '0.88rem' }}>{item.menu_name}</span>
 
-                        {/* Type Badge */}
                         <span className={`badge ${item.menu_type === 'GROUP' ? 'bg-info-subtle text-info border border-info-subtle' : 'bg-secondary-subtle text-secondary border'} rounded-pill`} style={{ fontSize: '0.65rem' }}>
                             {item.menu_type}
                         </span>
 
-                        {/* Route display for page */}
                         {item.menu_type === 'PAGE' && item.route_uri && (
                             <span className="text-muted font-monospace text-truncate d-none d-md-inline" style={{ fontSize: '0.72rem' }}>
                                 {item.route_uri}
                             </span>
                         )}
 
-                        {/* Enabled / Disabled Badge */}
                         {!item.enabled && (
                             <span className="badge bg-danger-subtle text-danger border border-danger-subtle" style={{ fontSize: '0.65rem' }}>
                                 Disabled
@@ -350,9 +365,7 @@ export default function MenuManagement() {
                         )}
                     </div>
 
-                    {/* Actions */}
                     <div className="d-flex align-items-center gap-1 flex-shrink-0">
-                        {/* Up/Down Reorder Buttons */}
                         <button 
                             className="btn btn-xs btn-outline-secondary p-1 shadow-none border-0" 
                             title="Move Up" 
@@ -368,7 +381,6 @@ export default function MenuManagement() {
                             <i className="fa-solid fa-chevron-down" style={{ fontSize: '0.7rem' }}></i>
                         </button>
 
-                        {/* Add child button if GROUP */}
                         {item.menu_type === 'GROUP' && (
                             <button 
                                 className="btn btn-xs btn-outline-primary p-1 shadow-none border-0" 
@@ -379,7 +391,6 @@ export default function MenuManagement() {
                             </button>
                         )}
 
-                        {/* Edit Button */}
                         <button 
                             className={`btn btn-xs ${isSelected ? 'btn-primary' : 'btn-outline-secondary'} py-0 px-2 shadow-none`}
                             onClick={() => selectMenuForEdit(item)}
@@ -388,7 +399,6 @@ export default function MenuManagement() {
                             <i className="fa-solid fa-pen-to-square me-1"></i> Edit
                         </button>
 
-                        {/* Delete Button */}
                         <button 
                             className="btn btn-xs btn-outline-danger py-0 px-2 shadow-none border-0" 
                             onClick={() => confirmDelete(item)}
@@ -400,7 +410,6 @@ export default function MenuManagement() {
                     </div>
                 </div>
 
-                {/* Render Nested Children */}
                 {hasChildren && (
                     <div className="menu-tree-children mt-1">
                         {item.children.map(child => renderTreeNode(child, level + 1))}
@@ -439,7 +448,7 @@ export default function MenuManagement() {
             </div>
 
             {/* Alert Messages */}
-            {error && (
+            {error && !showModal && (
                 <div className="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
                     <i className="fa-solid fa-triangle-exclamation me-2"></i>
                     <strong>Error:</strong> {error}
@@ -455,23 +464,10 @@ export default function MenuManagement() {
                 </div>
             )}
 
-            {/* Unsaved changes banner */}
-            {isDirty && (
-                <div className="alert alert-warning py-2 mb-3 d-flex align-items-center justify-content-between shadow-sm">
-                    <span className="small">
-                        <i className="fa-solid fa-pen-clip me-2"></i> You have unsaved changes in the editor.
-                    </span>
-                    <button className="btn btn-xs btn-warning px-3 fw-bold" onClick={handleSave} disabled={saving}>
-                        {saving ? 'Saving...' : 'Save Changes Now'}
-                    </button>
-                </div>
-            )}
-
-            {/* Main Content Layout (2 Columns) */}
+            {/* Main Content Layout (Full Width Navigation Tree) */}
             <div className="row g-4">
-                {/* LEFT PANEL: Navigation Tree */}
-                <div className="col-12 col-lg-8">
-                    <div className="card shadow-sm border-0 h-100">
+                <div className="col-12">
+                    <div className="card shadow-sm border-0">
                         <div className="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
                             <h6 className="fw-bold mb-0 text-dark">
                                 <i className="fa-solid fa-sitemap me-2 text-secondary"></i> Navigation Tree
@@ -499,200 +495,339 @@ export default function MenuManagement() {
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {/* RIGHT PANEL: Menu Editor Form */}
-                <div className="col-12 col-lg-4">
-                    <div className="card shadow-sm border-0">
-                        <div className="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
-                            <h6 className="fw-bold mb-0 text-dark">
-                                <i className="fa-solid fa-sliders me-2 text-primary"></i> 
-                                {editingId ? `Edit Menu Item: ${formData.menu_name}` : 'Create New Menu Item'}
-                            </h6>
-                            {editingId && (
-                                <button 
-                                    className="btn btn-xs btn-outline-secondary shadow-none"
-                                    onClick={() => resetFormForNew()}
-                                >
-                                    <i className="fa-solid fa-xmark me-1"></i> Cancel Edit
-                                </button>
-                            )}
-                        </div>
-
-                        <div className="card-body p-4">
+            {/* Add / Edit Menu Bootstrap Modal */}
+            {showModal && (
+                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+                    <div className="modal-dialog modal-dialog-centered modal-lg">
+                        <div className="modal-content shadow-lg border-0">
+                            <div className="modal-header bg-light py-3 border-bottom">
+                                <h5 className="modal-title fw-bold text-dark fs-6">
+                                    <i className={`fa-solid ${editingId ? 'fa-pen-to-square text-primary' : 'fa-plus-circle text-success'} me-2`}></i>
+                                    {editingId ? `Edit Menu Item: ${formData.menu_name}` : (formData.menu_type === 'GROUP' ? 'Create New Group Container' : 'Create New Menu Item')}
+                                </h5>
+                                <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
+                            </div>
                             <form onSubmit={handleSave}>
-                                {/* Menu Type */}
-                                <div className="mb-3">
-                                    <label className="form-label fw-semibold small text-dark">Menu Type *</label>
-                                    <div className="btn-group w-100" role="group">
-                                        <input 
-                                            type="radio" 
-                                            className="btn-check" 
-                                            name="menu_type" 
-                                            id="typePage" 
-                                            value="PAGE" 
-                                            checked={formData.menu_type === 'PAGE'} 
-                                            onChange={() => handleInputChange('menu_type', 'PAGE')} 
-                                        />
-                                        <label className="btn btn-outline-secondary py-2" htmlFor="typePage">
-                                            <i className="fa-solid fa-file me-2"></i> Page Endpoint
-                                        </label>
+                                <div className="modal-body p-4">
+                                    {error && (
+                                        <div className="alert alert-danger py-2 mb-3 small d-flex align-items-center justify-content-between">
+                                            <div>
+                                                <i className="fa-solid fa-triangle-exclamation me-2"></i> {error}
+                                            </div>
+                                            <button type="button" className="btn-close" style={{ fontSize: '0.65rem' }} onClick={() => setError('')}></button>
+                                        </div>
+                                    )}
 
-                                        <input 
-                                            type="radio" 
-                                            className="btn-check" 
-                                            name="menu_type" 
-                                            id="typeGroup" 
-                                            value="GROUP" 
-                                            checked={formData.menu_type === 'GROUP'} 
-                                            onChange={() => handleInputChange('menu_type', 'GROUP')} 
-                                        />
-                                        <label className="btn btn-outline-secondary py-2" htmlFor="typeGroup">
-                                            <i className="fa-solid fa-folder me-2"></i> Group Container
-                                        </label>
-                                    </div>
-                                    <div className="form-text text-muted" style={{ fontSize: '0.75rem' }}>
-                                        {formData.menu_type === 'GROUP' 
-                                            ? 'Group containers group related child submenus in the sidebar.' 
-                                            : 'Page items link to specific React/Laravel routes.'}
-                                    </div>
-                                </div>
+                                    <div className="row g-3">
+                                        {/* Menu Type */}
+                                        <div className="col-12 mb-2">
+                                            <label className="form-label fw-semibold small text-dark">Menu Type *</label>
+                                            <div className="btn-group w-100" role="group">
+                                                <input 
+                                                    type="radio" 
+                                                    className="btn-check" 
+                                                    name="menu_type" 
+                                                    id="typePage" 
+                                                    value="PAGE" 
+                                                    checked={formData.menu_type === 'PAGE'} 
+                                                    onChange={() => handleInputChange('menu_type', 'PAGE')} 
+                                                />
+                                                <label className="btn btn-outline-secondary py-2" htmlFor="typePage">
+                                                    <i className="fa-solid fa-file me-2"></i> Page Endpoint
+                                                </label>
 
-                                {/* Menu Label */}
-                                <div className="mb-3">
-                                    <label className="form-label fw-semibold small text-dark">Menu Label *</label>
-                                    <input 
-                                        type="text" 
-                                        className="form-control" 
-                                        placeholder="e.g. Purchase Orders" 
-                                        value={formData.menu_name}
-                                        onChange={(e) => handleInputChange('menu_name', e.target.value)}
-                                        required 
-                                    />
-                                </div>
+                                                <input 
+                                                    type="radio" 
+                                                    className="btn-check" 
+                                                    name="menu_type" 
+                                                    id="typeGroup" 
+                                                    value="GROUP" 
+                                                    checked={formData.menu_type === 'GROUP'} 
+                                                    onChange={() => handleInputChange('menu_type', 'GROUP')} 
+                                                />
+                                                <label className="btn btn-outline-secondary py-2" htmlFor="typeGroup">
+                                                    <i className="fa-solid fa-folder me-2"></i> Group Container
+                                                </label>
+                                            </div>
+                                            <div className="form-text text-muted" style={{ fontSize: '0.75rem' }}>
+                                                {formData.menu_type === 'GROUP' 
+                                                    ? 'Group containers group related child submenus in the sidebar.' 
+                                                    : 'Page items link to specific React/Laravel routes.'}
+                                            </div>
+                                        </div>
 
-                                {/* Route URI (Required for PAGE) */}
-                                {formData.menu_type === 'PAGE' && (
-                                    <div className="mb-3">
-                                        <label className="form-label fw-semibold small text-dark">Route URI *</label>
-                                        <div className="input-group">
-                                            <span className="input-group-text font-monospace bg-light text-muted" style={{ fontSize: '0.8rem' }}>URL</span>
+                                        {/* Menu Label */}
+                                        <div className="col-12 col-md-6 mb-2">
+                                            <label className="form-label fw-semibold small text-dark">Menu Label *</label>
                                             <input 
                                                 type="text" 
-                                                className="form-control font-monospace" 
-                                                placeholder="/purchase-orders" 
-                                                value={formData.route_uri}
-                                                onChange={(e) => handleInputChange('route_uri', e.target.value)}
-                                                required={formData.menu_type === 'PAGE'}
+                                                className="form-control" 
+                                                placeholder="e.g. Purchase Orders" 
+                                                value={formData.menu_name}
+                                                onChange={(e) => handleInputChange('menu_name', e.target.value)}
+                                                required 
                                             />
                                         </div>
-                                        <div className="form-text text-muted" style={{ fontSize: '0.75rem' }}>
-                                            Must match an existing registered frontend/backend route endpoint.
+
+                                        {/* Parent Menu Dropdown */}
+                                        <div className="col-12 col-md-6 mb-2">
+                                            <label className="form-label fw-semibold small text-dark">Parent Menu</label>
+                                            <select 
+                                                className="form-select"
+                                                value={formData.parent_id}
+                                                onChange={(e) => handleInputChange('parent_id', e.target.value)}
+                                            >
+                                                <option value="">None (Root Level Navigation)</option>
+                                                {getAvailableParents().map(parent => (
+                                                    <option key={parent.id} value={parent.id}>
+                                                        📁 {parent.menu_name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <div className="form-text text-muted" style={{ fontSize: '0.75rem' }}>
+                                                Select a Group menu to embed this item as a child submenu.
+                                            </div>
+                                        </div>
+
+                                        {/* Route URI (Required for PAGE) */}
+                                        {formData.menu_type === 'PAGE' && (
+                                            <div className="col-12 col-md-6 mb-2">
+                                                <label className="form-label fw-semibold small text-dark">Route URI *</label>
+                                                <div className="input-group">
+                                                    <span className="input-group-text font-monospace bg-light text-muted" style={{ fontSize: '0.8rem' }}>URL</span>
+                                                    <input 
+                                                        type="text" 
+                                                        className="form-control font-monospace" 
+                                                        placeholder="/purchase-orders" 
+                                                        value={formData.route_uri}
+                                                        onChange={(e) => handleInputChange('route_uri', e.target.value)}
+                                                        required={formData.menu_type === 'PAGE'}
+                                                    />
+                                                </div>
+                                                <div className="form-text text-muted" style={{ fontSize: '0.75rem' }}>
+                                                    Must match an existing registered route endpoint.
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Database Permission Guard Picker (For PAGE) */}
+                                        {formData.menu_type === 'PAGE' && (
+                                            <div className="col-12 mb-3">
+                                                <div className="d-flex align-items-center justify-content-between mb-1">
+                                                    <label className="form-label fw-semibold small text-dark mb-0">
+                                                        Required Permission Guard
+                                                    </label>
+                                                    {formData.permission_id && (
+                                                        <button 
+                                                            type="button" 
+                                                            className="btn btn-xs btn-outline-danger py-0 px-2 shadow-none"
+                                                            onClick={() => handleInputChange('permission_id', '')}
+                                                            title="Remove permission requirement"
+                                                            style={{ fontSize: '0.72rem' }}
+                                                        >
+                                                            <i className="fa-solid fa-xmark me-1"></i> Clear Guard (Make Public)
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {/* Selected Permission Badge Banner */}
+                                                <div className="p-2 bg-light rounded border d-flex align-items-center justify-content-between">
+                                                    {(() => {
+                                                        const selectedPerm = permissions.find(p => String(p.id) === String(formData.permission_id));
+                                                        if (selectedPerm) {
+                                                            const groupName = selectedPerm.group?.name || permissionGroups.find(g => String(g.id) === String(selectedPerm.permission_group_id))?.name || 'General';
+                                                            return (
+                                                                <div className="d-flex align-items-center gap-2 overflow-hidden me-2">
+                                                                    <span className="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                                                        <i className="fa-solid fa-shield-halved me-1"></i>
+                                                                        {groupName}
+                                                                    </span>
+                                                                    <span className="fw-semibold text-dark text-truncate" style={{ fontSize: '0.85rem' }}>
+                                                                        {selectedPerm.display_name || selectedPerm.name}
+                                                                    </span>
+                                                                    <span className="text-muted font-monospace text-truncate d-none d-sm-inline" style={{ fontSize: '0.75rem' }}>
+                                                                        ({selectedPerm.slug || selectedPerm.name})
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <span className="text-muted small italic">
+                                                                <i className="fa-solid fa-lock-open me-1 text-success"></i> None (Publicly Accessible to Authenticated Users)
+                                                            </span>
+                                                        );
+                                                    })()}
+                                                </div>
+
+                                                {/** Here giving a hint to the user that, only the user assigned with the permission will be able to see this menu */}
+                                                <div className="fst-italic small text-muted mb-2">
+                                                    <i className="fa-solid fa-circle-info me-1"></i>
+                                                    Only the user assigned with the permission will be able to see this menu. And if no permission is set to the menu then everyone can see it.
+                                                </div>
+
+                                                {/* Permission Search & Filter Box */}
+                                                <div className="border rounded p-2 bg-white shadow-sm">
+                                                    <div className="row g-2 mb-2">
+                                                        <div className="col-12 col-md-7">
+                                                            <div className="input-group input-group-sm">
+                                                                <span className="input-group-text bg-light text-muted">
+                                                                    <i className="fa-solid fa-magnifying-glass"></i>
+                                                                </span>
+                                                                <input 
+                                                                    type="text" 
+                                                                    className="form-control"
+                                                                    placeholder="Search permissions (e.g. purchase, inventory)..." 
+                                                                    value={permSearchQuery}
+                                                                    onChange={(e) => setPermSearchQuery(e.target.value)}
+                                                                />
+                                                                {permSearchQuery && (
+                                                                    <button 
+                                                                        className="btn btn-outline-secondary" 
+                                                                        type="button"
+                                                                        onClick={() => setPermSearchQuery('')}
+                                                                    >
+                                                                        <i className="fa-solid fa-xmark"></i>
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="col-12 col-md-5">
+                                                            <select 
+                                                                className="form-select form-select-sm"
+                                                                value={permGroupFilter}
+                                                                onChange={(e) => setPermGroupFilter(e.target.value)}
+                                                            >
+                                                                <option value="ALL">All Modules / Groups ({permissions.length})</option>
+                                                                {permissionGroups.map(group => (
+                                                                    <option key={group.id} value={group.id}>
+                                                                        📁 {group.name}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Scrollable Picklist */}
+                                                    <div className="permission-picklist border rounded overflow-auto" style={{ maxHeight: '180px', backgroundColor: '#fafafa' }}>
+                                                        <div 
+                                                            className={`p-2 border-bottom cursor-pointer hover-bg-light d-flex align-items-center justify-content-between ${!formData.permission_id ? 'bg-primary-subtle fw-bold text-primary' : ''}`}
+                                                            onClick={() => handleInputChange('permission_id', '')}
+                                                            style={{ fontSize: '0.82rem' }}
+                                                        >
+                                                            <div>
+                                                                <i className="fa-solid fa-lock-open me-2 text-success"></i>
+                                                                <span>None (Publicly Accessible)</span>
+                                                            </div>
+                                                            {!formData.permission_id && <i className="fa-solid fa-check text-primary"></i>}
+                                                        </div>
+
+                                                        {getFilteredPermissions().length === 0 ? (
+                                                            <div className="p-3 text-center text-muted small">
+                                                                No permissions matching <strong>"{permSearchQuery}"</strong>
+                                                            </div>
+                                                        ) : (
+                                                            getFilteredPermissions().map(perm => {
+                                                                const isSelected = String(formData.permission_id) === String(perm.id);
+                                                                const groupName = perm.group?.name || permissionGroups.find(g => String(g.id) === String(perm.permission_group_id))?.name || 'General';
+
+                                                                return (
+                                                                    <div 
+                                                                        key={perm.id}
+                                                                        className={`p-2 border-bottom cursor-pointer transition-all d-flex align-items-center justify-content-between ${isSelected ? 'bg-primary-subtle text-primary border-primary' : 'hover-bg-white'}`}
+                                                                        onClick={() => handleInputChange('permission_id', String(perm.id))}
+                                                                        style={{ fontSize: '0.82rem' }}
+                                                                    >
+                                                                        <div className="d-flex align-items-center gap-2 overflow-hidden me-2">
+                                                                            <span className="badge bg-secondary-subtle text-secondary border font-monospace" style={{ fontSize: '0.65rem' }}>
+                                                                                {groupName}
+                                                                            </span>
+                                                                            <span className="fw-semibold text-truncate">{perm.display_name || perm.name}</span>
+                                                                            <span className="text-muted font-monospace text-truncate d-none d-md-inline" style={{ fontSize: '0.72rem' }}>
+                                                                                ({perm.slug || perm.name})
+                                                                            </span>
+                                                                        </div>
+                                                                        {isSelected && <i className="fa-solid fa-check text-primary"></i>}
+                                                                    </div>
+                                                                );
+                                                            })
+                                                        )}
+                                                    </div>
+                                                    <div className="form-text text-muted mt-1" style={{ fontSize: '0.75rem' }}>
+                                                        Showing {getFilteredPermissions().length} of {permissions.length} total system permissions.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Icon Selection */}
+                                        <div className="col-12 col-md-6 mb-2">
+                                            <label className="form-label fw-semibold small text-dark">Icon Selection</label>
+                                            <div className="input-group mb-2">
+                                                <span className="input-group-text bg-light">
+                                                    <i className={formData.icon || 'fa-solid fa-icons'}></i>
+                                                </span>
+                                                <select 
+                                                    className="form-select"
+                                                    value={formData.icon}
+                                                    onChange={(e) => handleInputChange('icon', e.target.value)}
+                                                >
+                                                    <option value="">-- Choose Icon Preset --</option>
+                                                    {commonIcons.map((ic, i) => (
+                                                        <option key={i} value={ic.value}>{ic.label} ({ic.value})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <input 
+                                                type="text" 
+                                                className="form-control form-control-sm font-monospace" 
+                                                placeholder="Or enter custom class, e.g. fa-solid fa-star" 
+                                                value={formData.icon}
+                                                onChange={(e) => handleInputChange('icon', e.target.value)}
+                                            />
+                                        </div>
+
+                                        {/* Display Order */}
+                                        <div className="col-12 col-md-3 mb-2">
+                                            <label className="form-label fw-semibold small text-dark">Display Order</label>
+                                            <input 
+                                                type="number" 
+                                                className="form-control" 
+                                                value={formData.order}
+                                                onChange={(e) => handleInputChange('order', e.target.value)}
+                                            />
+                                        </div>
+
+                                        {/* Enabled Toggle */}
+                                        <div className="col-12 col-md-3 mb-2 d-flex align-items-center">
+                                            <div className="form-check form-switch pt-3">
+                                                <input 
+                                                    className="form-check-input" 
+                                                    type="checkbox" 
+                                                    role="switch" 
+                                                    id="enabledSwitch" 
+                                                    checked={formData.enabled}
+                                                    onChange={(e) => handleInputChange('enabled', e.target.checked)}
+                                                />
+                                                <label className="form-check-label fw-semibold small text-dark" htmlFor="enabledSwitch">
+                                                    Enabled
+                                                </label>
+                                            </div>
                                         </div>
                                     </div>
-                                )}
-
-                                {/* Icon Selection */}
-                                <div className="mb-3">
-                                    <label className="form-label fw-semibold small text-dark">Icon Selection</label>
-                                    <div className="input-group mb-2">
-                                        <span className="input-group-text bg-light">
-                                            <i className={formData.icon || 'fa-solid fa-icons'}></i>
-                                        </span>
-                                        <select 
-                                            className="form-select"
-                                            value={formData.icon}
-                                            onChange={(e) => handleInputChange('icon', e.target.value)}
-                                        >
-                                            <option value="">-- Choose Icon Preset --</option>
-                                            {commonIcons.map((ic, i) => (
-                                                <option key={i} value={ic.value}>{ic.label} ({ic.value})</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <input 
-                                        type="text" 
-                                        className="form-control form-control-sm font-monospace" 
-                                        placeholder="Or enter custom class, e.g. fa-solid fa-star" 
-                                        value={formData.icon}
-                                        onChange={(e) => handleInputChange('icon', e.target.value)}
-                                    />
                                 </div>
 
-                                {/* Parent Menu Dropdown */}
-                                <div className="mb-3">
-                                    <label className="form-label fw-semibold small text-dark">Parent Menu</label>
-                                    <select 
-                                        className="form-select"
-                                        value={formData.parent_id}
-                                        onChange={(e) => handleInputChange('parent_id', e.target.value)}
-                                    >
-                                        <option value="">None (Root Level Navigation)</option>
-                                        {getAvailableParents().map(parent => (
-                                            <option key={parent.id} value={parent.id}>
-                                                📁 {parent.menu_name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <div className="form-text text-muted" style={{ fontSize: '0.75rem' }}>
-                                        Select a Group menu to embed this item as a child submenu.
-                                    </div>
-                                </div>
-
-                                {/* Database Permission (For PAGE) */}
-                                {formData.menu_type === 'PAGE' && (
-                                    <div className="mb-3">
-                                        <label className="form-label fw-semibold small text-dark">Required Permission Guard</label>
-                                        <select 
-                                            className="form-select"
-                                            value={formData.permission_id}
-                                            onChange={(e) => handleInputChange('permission_id', e.target.value)}
-                                        >
-                                            <option value="">None (Publicly Accessible to Authenticated Users)</option>
-                                            {permissions.map(perm => (
-                                                <option key={perm.id} value={perm.id}>
-                                                    {perm.display_name || perm.name} ({perm.slug || perm.name})
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="form-text text-muted" style={{ fontSize: '0.75rem' }}>
-                                            Selected from database permissions table. Only users possessing this permission will see the menu.
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Display Order */}
-                                <div className="mb-3">
-                                    <label className="form-label fw-semibold small text-dark">Display Order</label>
-                                    <input 
-                                        type="number" 
-                                        className="form-control" 
-                                        value={formData.order}
-                                        onChange={(e) => handleInputChange('order', e.target.value)}
-                                    />
-                                </div>
-
-                                {/* Enabled Toggle */}
-                                <div className="mb-4 form-check form-switch">
-                                    <input 
-                                        className="form-check-input" 
-                                        type="checkbox" 
-                                        role="switch" 
-                                        id="enabledSwitch" 
-                                        checked={formData.enabled}
-                                        onChange={(e) => handleInputChange('enabled', e.target.checked)}
-                                    />
-                                    <label className="form-check-label fw-semibold small text-dark" htmlFor="enabledSwitch">
-                                        Enabled (Visible in navigation tree)
-                                    </label>
-                                </div>
-
-                                {/* Buttons */}
-                                <div className="d-flex align-items-center justify-content-between pt-3 border-top">
+                                <div className="modal-footer bg-light border-top d-flex align-items-center justify-content-between">
                                     {editingId ? (
                                         <button 
                                             type="button" 
                                             className="btn btn-outline-danger shadow-sm"
-                                            onClick={() => confirmDelete({ id: editingId, menu_name: formData.menu_name })}
+                                            onClick={() => {
+                                                setShowModal(false);
+                                                confirmDelete({ id: editingId, menu_name: formData.menu_name });
+                                            }}
                                         >
                                             <i className="fa-solid fa-trash-can me-1"></i> Delete Item
                                         </button>
@@ -701,8 +836,8 @@ export default function MenuManagement() {
                                     <div className="d-flex gap-2">
                                         <button 
                                             type="button" 
-                                            className="btn btn-outline-secondary"
-                                            onClick={() => resetFormForNew()}
+                                            className="btn btn-secondary px-3"
+                                            onClick={() => setShowModal(false)}
                                         >
                                             Cancel
                                         </button>
@@ -728,7 +863,7 @@ export default function MenuManagement() {
                         </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* Delete Confirmation Modal */}
             {deletingMenu && (
@@ -758,3 +893,4 @@ export default function MenuManagement() {
         </div>
     );
 }
+
