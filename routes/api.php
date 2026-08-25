@@ -47,14 +47,14 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::get('/navigation', [NavigationController::class, 'index']);
 
     // Super Admin Platform Management Routes
-    Route::middleware(['permission:platform.organizations.manage'])->prefix('platform')->group(function () {
+    Route::prefix('platform')->group(function () {
         // Platform Organizations
-        Route::get('/organizations', [PlatformOrganizationController::class, 'index']);
-        Route::post('/organizations', [PlatformOrganizationController::class, 'store']);
-        Route::get('/organizations/{id}', [PlatformOrganizationController::class, 'show']);
-        Route::put('/organizations/{id}', [PlatformOrganizationController::class, 'update']);
-        Route::post('/organizations/{id}/suspend', [PlatformOrganizationController::class, 'suspend']);
-        Route::post('/organizations/{id}/activate', [PlatformOrganizationController::class, 'activate']);
+        Route::get('/organizations', [PlatformOrganizationController::class, 'index'])->middleware('permission:platform.organizations.manage');
+        Route::post('/organizations', [PlatformOrganizationController::class, 'store'])->middleware('permission:platform.organizations.manage');
+        Route::get('/organizations/{id}', [PlatformOrganizationController::class, 'show'])->middleware('permission:platform.organizations.manage');
+        Route::put('/organizations/{id}', [PlatformOrganizationController::class, 'update'])->middleware('permission:platform.organizations.manage');
+        Route::post('/organizations/{id}/suspend', [PlatformOrganizationController::class, 'suspend'])->middleware('permission:platform.organizations.manage');
+        Route::post('/organizations/{id}/activate', [PlatformOrganizationController::class, 'activate'])->middleware('permission:platform.organizations.manage');
 
         // Platform Permissions & Groups
         Route::get('/permissions', [PlatformPermissionController::class, 'index']);

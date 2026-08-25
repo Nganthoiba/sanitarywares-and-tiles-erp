@@ -27,11 +27,13 @@ class CheckPermission
         }
 
         // Platform-level permissions (platform.*) are strictly reserved for Super Admin
+        /*
         if (str_starts_with($permission, 'platform.')) {
             return response()->json([
                 'message' => 'Platform administration access required.'
             ], 403);
         }
+        */
 
         // Tenant Administrator role bypasses operational tenant permissions within their organization
         if ($user->hasRole('administrator')) {
@@ -47,7 +49,8 @@ class CheckPermission
 
         return response()->json([
             'message' => 'You do not have permission to perform this action.',
-            'required_permission' => $permission
+            'required_permission' => $permission,
+            'assigned_permissions' => $userPermissions,
         ], 403);
     }
 }
