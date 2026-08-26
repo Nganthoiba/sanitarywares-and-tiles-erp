@@ -30,7 +30,7 @@ class ProductSeeder extends Seeder
         $category = Category::where('organization_id', $org->id)->first();
         $graniteCat = Category::where('organization_id', $org->id)->where('slug', 'granite-slabs')->first() ?? $category;
         $brand = Brand::where('organization_id', $org->id)->first();
-        $taxProfile = TaxProfile::where('organization_id', $org->id)->first();
+        $taxProfile = TaxProfile::first();
         $mfg = Manufacturer::first();
 
         // Fetch global units
