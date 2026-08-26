@@ -383,6 +383,8 @@ function App() {
         setIsLoggingOut(true);
         localStorage.clear();
         setUser(null);
+        setShowLogoutModal(false);
+        setIsLoggingOut(false);
         navigate('/login');
     };
 
@@ -520,28 +522,100 @@ function App() {
                 {/* Catch-all fallback */}
                 <Route path="*" element={<Navigate to={user ? "/home" : "/"} replace />} />
             </Routes>
-            {/* Showing logout confirmation modal */}
+            {/* Enhanced Logout Confirmation Modal */}
             {showLogoutModal && (
-                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1050 }}>
-                    <div className="modal-dialog modal-dialog-centered">
-                        <div className="modal-content shadow-lg border-0" style={{ borderRadius: '12px' }}>
-                            <div className="modal-header border-bottom-0 pt-4 px-4">
-                                <h5 className="modal-title fw-bold fs-5">Logout Confirmation</h5>
-                                <button type="button" className="btn-close" onClick={() => setShowLogoutModal(false)} aria-label="Close"></button>
-                            </div>
-                            <form onSubmit={handleLogout}>
-                                <div className="modal-body px-4"> 
-                                    <h6 className="fw-bold mb-3" style={{ fontSize: '0.9rem' }}>
-                                        <i className="fa-solid fa-right-from-bracket me-2 text-muted"></i>Are you sure to logout?
-                                    </h6>
+                <div 
+                    className="modal fade show d-block" 
+                    tabIndex="-1" 
+                    style={{ backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)', zIndex: 1055 }}
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setShowLogoutModal(false);
+                    }}
+                >
+                    <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '420px' }}>
+                        <div className="modal-content border-0 shadow-lg overflow-hidden animate__animated animate__fadeInUp animate__faster" style={{ borderRadius: '20px' }}>
+                            {/* Modal Header & Icon */}
+                            <div className="p-4 text-center border-bottom bg-light bg-gradient position-relative">
+                                <button 
+                                    type="button" 
+                                    className="btn-close position-absolute top-0 end-0 m-3 shadow-none" 
+                                    onClick={() => setShowLogoutModal(false)} 
+                                    aria-label="Close"
+                                ></button>
+
+                                <div 
+                                    className="mx-auto rounded-circle d-flex align-items-center justify-content-center shadow-sm mb-3" 
+                                    style={{ 
+                                        width: '64px', 
+                                        height: '64px', 
+                                        background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                                        color: '#dc2626'
+                                    }}
+                                >
+                                    <i className="fa-solid fa-right-from-bracket fs-3"></i>
                                 </div>
-                                <div className="modal-footer border-top-0 pb-4 px-4">
-                                    <button type="button" className="btn btn-secondary px-3" onClick={() => setShowLogoutModal(false)}>Cancel</button>
-                                    <button type="submit" className="btn btn-danger px-4" disabled={isLoggingOut}>
-                                        {isUpdatingProfile ? (
-                                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                        ) : null}
-                                        Logout
+
+                                <h5 className="fw-bold text-dark mb-1 fs-5">Confirm Sign Out</h5>
+                                <p className="text-muted small mb-0">Are you sure you want to log out of your session?</p>
+                            </div>
+
+                            {/* User Account Context Card */}
+                            {user && (
+                                <div className="px-4 pt-3.5 pb-1">
+                                    <div className="p-3 rounded-3 bg-light border d-flex align-items-center gap-3">
+                                        <div 
+                                            className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm flex-shrink-0"
+                                            style={{ width: '42px', height: '42px', fontSize: '1rem' }}
+                                        >
+                                            {user.profile_photo_url ? (
+                                                <img src={user.profile_photo_url} alt={user.name} className="w-100 h-100 rounded-circle object-fit-cover" />
+                                            ) : (
+                                                (user.name || 'U').charAt(0).toUpperCase()
+                                            )}
+                                        </div>
+                                        <div className="overflow-hidden flex-grow-1">
+                                            <div className="fw-semibold text-dark text-truncate small">{user.name || 'Current User'}</div>
+                                            <div className="text-muted text-truncate" style={{ fontSize: '0.78rem' }}>{user.email}</div>
+                                        </div>
+                                        {user.active_role && (
+                                            <span className="badge bg-secondary-subtle text-secondary-emphasis text-uppercase" style={{ fontSize: '0.68rem' }}>
+                                                {user.active_role}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                handleLogout();
+                            }}>
+                                <div className="modal-footer border-top-0 p-4 pt-3 d-flex gap-2">
+                                    <button 
+                                        type="button" 
+                                        className="btn btn-outline-secondary flex-fill py-2.5 rounded-3 fw-semibold" 
+                                        onClick={() => setShowLogoutModal(false)}
+                                        disabled={isLoggingOut}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button 
+                                        type="submit" 
+                                        className="btn btn-danger flex-fill py-2.5 rounded-3 fw-semibold shadow-sm d-flex align-items-center justify-content-center gap-2" 
+                                        disabled={isLoggingOut}
+                                    >
+                                        {isLoggingOut ? (
+                                            <>
+                                                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                                Logging out...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <i className="fa-solid fa-right-from-bracket"></i>
+                                                Sign Out
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             </form>
