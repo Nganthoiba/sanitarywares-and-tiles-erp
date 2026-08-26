@@ -142,7 +142,7 @@ export default function CategoryManager() {
                 </button>
             </div>
 
-            <div className="alert alert-info bg-info-subtle text-info border-0 p-3 mb-4 small animate__animated animate__fadeIn">
+            <div className="alert alert-primary text-dark border-0 p-3 mb-4 small animate__animated animate__fadeIn">
                 <strong>What is a Product Category?</strong> Product categories organize your inventory hierarchically (e.g., <i>Tiles &gt; Ceramic Tiles</i>). Categories define logical classification, tax configurations, and properties structure, helping group similar items together for catalog browsing, sales analysis, and stock reporting.
             </div>
 
