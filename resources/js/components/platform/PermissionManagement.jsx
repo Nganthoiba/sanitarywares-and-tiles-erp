@@ -562,7 +562,7 @@ export default function PermissionManagement() {
                                                         </td>
 
                                                         <td className="text-end pe-4 py-3">
-                                                            <div className="d-flex justify-content-end gap-1.5">
+                                                            <div className="d-flex justify-content-end gap-1">
                                                                 <button 
                                                                     className="btn btn-xs btn-light text-dark border-0 rounded-2 px-2.5 py-1 shadow-xs fw-semibold"
                                                                     onClick={() => handleOpenPermissionModal(perm)}

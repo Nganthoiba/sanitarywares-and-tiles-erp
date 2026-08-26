@@ -5,6 +5,18 @@ function NavigationLayout({ user, handleLogout, hasPermission, fontSize, setFont
     const location = useLocation();
     const [navItems, setNavItems] = useState([]);
     const [openMenuId, setOpenMenuId] = useState(null);
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+        return localStorage.getItem('sidebar_collapsed') === 'true';
+    });
+
+    const toggleSidebarCollapse = () => {
+        setIsSidebarCollapsed(prev => {
+            const next = !prev;
+            localStorage.setItem('sidebar_collapsed', next.toString());
+            return next;
+        });
+    };
 
     const fetchNavigation = () => {
         const token = localStorage.getItem('auth_token');
@@ -54,8 +66,9 @@ function NavigationLayout({ user, handleLogout, hasPermission, fontSize, setFont
         return null;
     };
 
-    // Automatically expand the parent group of the current active route on route change
+    // Automatically expand the parent group of the current active route on route change, and close mobile drawer
     useEffect(() => {
+        setIsMobileOpen(false);
         if (navItems.length > 0) {
             const activeParentId = getActiveParentId(navItems, location.pathname);
             if (activeParentId) {
@@ -76,11 +89,29 @@ function NavigationLayout({ user, handleLogout, hasPermission, fontSize, setFont
 
     return (
         <div className="d-flex" style={{ minHeight: '100vh' }}>
+            {/* Mobile Backdrop Overlay */}
+            {isMobileOpen && (
+                <div 
+                    className="sidebar-mobile-backdrop d-md-none" 
+                    onClick={() => setIsMobileOpen(false)}
+                ></div>
+            )}
+
             {/* Dynamic Database-Driven Sidebar Navigation */}
-            <div className="sidebar-wrapper">
-                <div className="sidebar-brand">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="me-2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                    <span className="fs-6 text-uppercase fw-bold ls-tight sidebar-title">Tiles <span style={{color: 'var(--accent-color)'}}>ERP</span></span>
+            <div className={`sidebar-wrapper ${isMobileOpen ? 'mobile-open' : ''} ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+                <div className="sidebar-brand d-flex align-items-center justify-content-between">
+                    <div className="d-flex align-items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="me-2 flex-shrink-0"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                        <span className="fs-6 text-uppercase fw-bold ls-tight sidebar-title">Tiles <span style={{color: 'var(--accent-color)'}}>ERP</span></span>
+                    </div>
+                    <div className="d-flex align-items-center">
+                        <button className="btn btn-xs text-secondary d-none d-md-inline-block border-0 p-1 me-1 shadow-none" onClick={toggleSidebarCollapse} title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}>
+                            <i className={`fa-solid ${isSidebarCollapsed ? 'fa-angles-right' : 'fa-angles-left'}`}></i>
+                        </button>
+                        <button className="btn btn-xs text-secondary d-md-none border-0 p-1" onClick={() => setIsMobileOpen(false)}>
+                            <i className="fa-solid fa-xmark fs-5"></i>
+                        </button>
+                    </div>
                 </div>
                 
                 <ul className="sidebar-menu">
@@ -94,6 +125,7 @@ function NavigationLayout({ user, handleLogout, hasPermission, fontSize, setFont
                                     <button 
                                         className={`sidebar-link d-flex justify-content-between align-items-center ${(isOpen && isSubmenuActive(item)) ? 'active' : ''}`}
                                         onClick={() => toggleSubmenu(item.id)}
+                                        title={item.menu_name}
                                     >
                                         <span className="d-flex align-items-center">
                                             <i className={`${item.icon || 'fa-solid fa-folder'} me-3`}></i>
@@ -109,9 +141,10 @@ function NavigationLayout({ user, handleLogout, hasPermission, fontSize, setFont
                                                         to={child.route_uri}
                                                         end={child.route_uri === item.route_uri}
                                                         className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
+                                                        title={child.menu_name}
                                                     >
                                                         <i className={`${child.icon || 'fa-solid fa-angle-right'} me-2`} style={{ fontSize: '0.8rem' }}></i>
-                                                        {child.menu_name}
+                                                        <span className="sidebar-text">{child.menu_name}</span>
                                                     </NavLink>
                                                 </li>
                                             ))}
@@ -123,7 +156,7 @@ function NavigationLayout({ user, handleLogout, hasPermission, fontSize, setFont
 
                         return (
                             <li className="sidebar-menu-item" key={item.id}>
-                                <NavLink to={item.route_uri} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                                <NavLink to={item.route_uri} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={item.menu_name}>
                                     <i className={`${item.icon || 'fa-solid fa-circle-dot'} me-3`}></i>
                                     <span className="sidebar-text">{item.menu_name}</span>
                                 </NavLink>
@@ -139,20 +172,20 @@ function NavigationLayout({ user, handleLogout, hasPermission, fontSize, setFont
                                 <img 
                                     src={user.profile_photo_url} 
                                     alt={user.name} 
-                                    className="rounded-circle me-2 object-fit-cover shadow-sm border" 
+                                    className="rounded-circle me-2 object-fit-cover shadow-sm border flex-shrink-0" 
                                     style={{ width: '32px', height: '32px' }} 
                                 />
                             ) : (
-                                <div className="rounded-circle d-flex justify-content-center align-items-center me-2 font-monospace fw-bold" style={{ width: '32px', height: '32px', fontSize: '0.85rem', backgroundColor: 'var(--border-color)', color: 'var(--accent-color)' }}>
+                                <div className="rounded-circle d-flex justify-content-center align-items-center me-2 font-monospace fw-bold flex-shrink-0" style={{ width: '32px', height: '32px', fontSize: '0.85rem', backgroundColor: 'var(--border-color)', color: 'var(--accent-color)' }}>
                                     {user?.name?.substring(0, 2).toUpperCase() || 'US'}
                                 </div>
                             )}
-                            <div style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <div className="sidebar-footer-details" style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 <div className="fw-bold" style={{ fontSize: '0.85rem' }}>{user?.name || 'Operator'}</div>
                                 <span className="text-muted font-monospace" style={{ fontSize: '0.75rem' }}>{user?.organizationName || 'Acme'}</span>
                             </div>
                         </div>
-                        <div className="d-flex gap-1">
+                        <div className="d-flex gap-1 sidebar-footer-details">
                             <button className="btn btn-xs btn-link text-secondary p-1 shadow-none border-0 bg-transparent" onClick={() => setShowSettingsModal(true)} title="Profile Settings">
                                 <i className="fa-solid fa-gear"></i>
                             </button>
@@ -167,8 +200,10 @@ function NavigationLayout({ user, handleLogout, hasPermission, fontSize, setFont
             {/* Main Application Window */}
             <div className="flex-grow-1 d-flex flex-column main-window">
                 {/* Navbar */}
-                <nav className="navbar navbar-expand navbar-light bg-white py-3 px-4 border-bottom shadow-sm">
-                    <span className="navbar-brand mb-0 h1 fs-5 fw-bold text-dark">Sanitary Wares & Tiles Core Manager</span>
+                <nav className="navbar navbar-expand navbar-light bg-white py-2 px-3 border-bottom shadow-sm">
+                    <div className="d-flex align-items-center">                        
+                        <span className="navbar-brand mb-0 h1 fs-6 fw-bold text-secondary text-truncate">Sanitary Wares & Tiles Core Manager</span>
+                    </div>
                     <ul className="navbar-nav ms-auto align-items-center">
                         <li className="nav-item d-flex align-items-center me-4">
                             <span className="text-muted small me-2" style={{ fontSize: '0.8rem' }}>Aa:</span>
