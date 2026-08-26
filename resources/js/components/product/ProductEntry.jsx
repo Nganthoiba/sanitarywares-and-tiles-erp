@@ -123,6 +123,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
             setCategories(data.categories || []);
             setBrands(data.brands || []);
             setUnits(data.units || []);
+            console.log(data.tax_profiles);
             setTaxProfiles(data.tax_profiles || []);
             setManufacturers(data.manufacturers || []);
             setAttributes(data.attributes || []);
@@ -1145,41 +1146,38 @@ export default function ProductEntry({ initialSubTab = "list" }) {
 
                             {/* Section 5: Commercial Information */}
                             <div className="mb-4">
-                                <h6 className="text-primary fw-bold mb-3 border-bottom pb-2">5. Commercial Information</h6>
+                                <h6 className="text-primary fw-bold mb-3 border-bottom pb-2">5. Commercial Information — Optional</h6>
                                 <div className="row mb-3">
                                     <div className="col-md-4">
-                                        <label className="form-label small fw-semibold">Purchase Price (₹) *</label>
+                                        <label className="form-label small fw-semibold">Purchase Price (₹)</label>
                                         <input 
                                             type="number" 
                                             step="0.0001" 
                                             className="form-control form-control-sm" 
-                                            placeholder="₹"
+                                            placeholder="₹ (Default: 0.00)"
                                             value={productForm.cost_price} 
                                             onChange={(e) => setProductForm({ ...productForm, cost_price: e.target.value })} 
-                                            required 
                                         />
                                     </div>
                                     <div className="col-md-4">
-                                        <label className="form-label small fw-semibold">Sale Price (₹) *</label>
+                                        <label className="form-label small fw-semibold">Sale Price (₹)</label>
                                         <input 
                                             type="number" 
                                             step="0.0001" 
                                             className="form-control form-control-sm" 
-                                            placeholder="₹"
+                                            placeholder="₹ (Default: 0.00)"
                                             value={productForm.sale_price} 
                                             onChange={(e) => setProductForm({ ...productForm, sale_price: e.target.value })} 
-                                            required 
                                         />
                                     </div>
                                     <div className="col-md-4">
-                                        <label className="form-label small fw-semibold">Tax Profile *</label>
+                                        <label className="form-label small fw-semibold">Tax Profile</label>
                                         <select 
                                             className="form-select form-select-sm" 
                                             value={productForm.tax_profile_id} 
                                             onChange={(e) => setProductForm({ ...productForm, tax_profile_id: e.target.value })} 
-                                            required
                                         >
-                                            <option value="">Select Tax Profile</option>
+                                            <option value="">Select Tax Profile (Optional)</option>
                                             {taxProfiles.map(tp => <option key={tp.id} value={tp.id}>{tp.name} ({tp.igst_rate}%)</option>)}
                                         </select>
                                     </div>

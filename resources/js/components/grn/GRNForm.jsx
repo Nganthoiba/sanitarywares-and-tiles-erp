@@ -363,6 +363,12 @@ export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
                 units={contexts.units}
                 purchaseOrder={selectedPO}
                 readOnly={isReadOnly}
+                onProductCreated={(newVariant) => {
+                    setContexts(prev => ({
+                        ...prev,
+                        product_variants: [...prev.product_variants, newVariant]
+                    }));
+                }}
             />
 
             <GRNSummary

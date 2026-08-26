@@ -58,13 +58,11 @@ class ProductMasterTest extends TestCase
         ]);
 
         $this->manufacturer = Manufacturer::create([
-            'organization_id' => $this->org->id,
             'name' => 'Kajaria Ceramics Ltd',
-            'slug' => 'kajaria-ceramics-ltd',
+            'legal_name' => 'Kajaria Ceramics Ltd',
         ]);
 
         $this->taxProfile = TaxProfile::create([
-            'organization_id' => $this->org->id,
             'name' => 'GST 18%',
             'cgst_rate' => 9.00,
             'sgst_rate' => 9.00,
