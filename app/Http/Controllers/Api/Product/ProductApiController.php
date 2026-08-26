@@ -32,7 +32,7 @@ class ProductApiController extends Controller
             'categories' => Category::where('organization_id', $orgId)->where('is_active', true)->orderBy('name')->get(),
             'brands' => Brand::where('organization_id', $orgId)->where('is_active', true)->orderBy('name')->get(),
             'units' => Unit::where('is_active', true)->orderBy('name')->get(),
-            'tax_profiles' => TaxProfile::where('organization_id', $orgId)->where('is_active', true)->orderBy('name')->get(),
+            'tax_profiles' => TaxProfile::where('is_active', true)->orderBy('name')->get(),
             'manufacturers' => Manufacturer::where('is_active', true)->orderBy('legal_name')->get(),
             'attributes' => ProductAttribute::where('organization_id', $orgId)->with('unit')->orderBy('name')->get(),
             'inventory_behaviors' => ['STANDARD', 'CONVERTIBLE', 'SLAB', 'SERIAL', 'BATCH', 'BUNDLE', 'ROLL']
@@ -49,12 +49,12 @@ class ProductApiController extends Controller
         // Auto-fill inventory_behavior and UOMs based on product_type if omitted
         if ($request->has('product_type') || !$request->has('inventory_behavior')) {
             $productType = $request->input('product_type', 'STANDARD');
-            
+
             if ($productType === 'MEASURED_MATERIAL') {
                 $request->merge([
                     'inventory_behavior' => $request->input('inventory_behavior', 'SLAB'),
                 ]);
-                
+
                 if (!$request->has('purchase_unit_id') || !$request->has('sales_unit_id') || !$request->has('base_unit_id')) {
                     $sqftUnit = Unit::whereIn('symbol', ['SQFT', 'SQ.FT.', 'SQ_FT', 'sq.ft.', 'sq.m'])
                         ->first() ?? Unit::first();
@@ -70,7 +70,7 @@ class ProductApiController extends Controller
                 $request->merge([
                     'inventory_behavior' => $request->input('inventory_behavior', 'STANDARD'),
                 ]);
-                
+
                 if (!$request->has('purchase_unit_id') || !$request->has('sales_unit_id') || !$request->has('base_unit_id')) {
                     $pcsUnit = Unit::whereIn('symbol', ['PCS', 'pcs', 'PC', 'box'])
                         ->first() ?? Unit::first();
@@ -85,10 +85,17 @@ class ProductApiController extends Controller
             }
         }
 
+        // Defaults for commercial fields if empty or omitted
+        if ($request->input('cost_price') === null || $request->input('cost_price') === '') {
+            $request->merge(['cost_price' => 0]);
+        }
+        if ($request->input('sale_price') === null || $request->input('sale_price') === '') {
+            $request->merge(['sale_price' => 0]);
+        }
+
         // Fallback for tax_profile_id if not present
         if (!$request->has('tax_profile_id') || empty($request->input('tax_profile_id'))) {
-            $firstTaxProfile = TaxProfile::where('organization_id', $orgId)->where('is_active', true)->first()
-                ?? TaxProfile::where('is_active', true)->first();
+            $firstTaxProfile = TaxProfile::where('is_active', true)->first();
             if ($firstTaxProfile) {
                 $request->merge(['tax_profile_id' => $firstTaxProfile->id]);
             }
@@ -128,15 +135,15 @@ class ProductApiController extends Controller
                 Rule::exists('units', 'id')
             ],
             'tax_profile_id' => [
-                'required',
-                Rule::exists('tax_profiles', 'id')->where('organization_id', $orgId)
+                'nullable',
+                Rule::exists('tax_profiles', 'id')
             ],
             'manufacturer_id' => [
                 'nullable',
                 Rule::exists('manufacturers', 'id')
             ],
-            'cost_price' => 'required|numeric|min:0',
-            'sale_price' => 'required|numeric|min:0',
+            'cost_price' => 'nullable|numeric|min:0',
+            'sale_price' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
             'pieces_per_box' => 'nullable|numeric|min:0.0001',
             'product_type' => 'nullable|string|in:STANDARD,MEASURED_MATERIAL',
@@ -152,7 +159,7 @@ class ProductApiController extends Controller
 
         $variant = DB::transaction(function () use ($validated, $orgId) {
             $variantData = collect($validated)->except(['attributes', 'pieces_per_box', 'product_type', 'physical_object', 'measurement_unit'])->toArray();
-            
+
             $variant = Product::create(array_merge($variantData, [
                 'organization_id' => $orgId,
                 'is_active' => $validated['is_active'] ?? true
@@ -331,12 +338,12 @@ class ProductApiController extends Controller
         // Auto-fill inventory_behavior and UOMs based on product_type if omitted
         if ($request->has('product_type') || !$request->has('inventory_behavior')) {
             $productType = $request->input('product_type', 'STANDARD');
-            
+
             if ($productType === 'MEASURED_MATERIAL') {
                 $request->merge([
                     'inventory_behavior' => $request->input('inventory_behavior', 'SLAB'),
                 ]);
-                
+
                 if (!$request->has('purchase_unit_id') || !$request->has('sales_unit_id') || !$request->has('base_unit_id')) {
                     $sqftUnit = Unit::whereIn('symbol', ['SQFT', 'SQ.FT.', 'SQ_FT', 'sqft', 'sq.ft.'])
                         ->first() ?? Unit::first();
@@ -352,7 +359,7 @@ class ProductApiController extends Controller
                 $request->merge([
                     'inventory_behavior' => $request->input('inventory_behavior', 'STANDARD'),
                 ]);
-                
+
                 if (!$request->has('purchase_unit_id') || !$request->has('sales_unit_id') || !$request->has('base_unit_id')) {
                     $pcsUnit = Unit::whereIn('symbol', ['PCS', 'pcs', 'PC'])
                         ->first() ?? Unit::first();
@@ -466,40 +473,40 @@ class ProductApiController extends Controller
     {
         $orgId = $request->user()->organization_id;
         $variant = Product::where('organization_id', $orgId)->findOrFail($id);
-        
+
         $conversions = UnitConversion::where('organization_id', $orgId)
             ->where('product_variant_id', $variant->id)
             ->with(['fromUnit', 'toUnit'])
             ->get();
-            
+
         return response()->json($conversions);
     }
-    
+
     public function storeConversion(Request $request, $id)
     {
         $orgId = $request->user()->organization_id;
         $variant = Product::where('organization_id', $orgId)->findOrFail($id);
-        
+
         $validated = $request->validate([
             'from_unit_id' => 'required|exists:units,id',
             'to_unit_id' => 'required|exists:units,id',
             'multiplier' => 'required|numeric|min:0.000001'
         ]);
-        
+
         // Ensure no duplicate conversion from-to for this variant
         $exists = UnitConversion::where('organization_id', $orgId)
             ->where('product_variant_id', $variant->id)
             ->where('from_unit_id', $validated['from_unit_id'])
             ->where('to_unit_id', $validated['to_unit_id'])
             ->first();
-            
+
         if ($exists) {
             return response()->json([
                 'success' => false,
                 'message' => 'This unit conversion already exists.'
             ], 422);
         }
-        
+
         $conversion = UnitConversion::create([
             'organization_id' => $orgId,
             'product_variant_id' => $variant->id,
@@ -507,20 +514,20 @@ class ProductApiController extends Controller
             'to_unit_id' => $validated['to_unit_id'],
             'multiplier' => $validated['multiplier']
         ]);
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Unit conversion added successfully.',
             'data' => $conversion->load(['fromUnit', 'toUnit'])
         ], 201);
     }
-    
+
     public function deleteConversion(Request $request, $id)
     {
         $orgId = $request->user()->organization_id;
         $conversion = UnitConversion::where('organization_id', $orgId)->findOrFail($id);
         $conversion->delete();
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Unit conversion deleted successfully.'
@@ -531,37 +538,37 @@ class ProductApiController extends Controller
     {
         $orgId = $request->user()->organization_id;
         $variant = Product::where('organization_id', $orgId)->findOrFail($id);
-        
+
         $onHandCount = \App\Domains\Inventory\Models\InventoryObject::where('organization_id', $orgId)
             ->where('product_variant_id', $variant->id)
             ->whereIn('status', ['ON_HAND', 'RESERVED'])
             ->count();
-            
+
         $onHandQty = \App\Domains\Inventory\Models\InventoryObject::where('organization_id', $orgId)
             ->where('product_variant_id', $variant->id)
             ->whereIn('status', ['ON_HAND', 'RESERVED'])
             ->sum('quantity');
-            
+
         $reservedQty = \App\Domains\Inventory\Models\InventoryObject::where('organization_id', $orgId)
             ->where('product_variant_id', $variant->id)
             ->where('status', 'RESERVED')
             ->sum('quantity');
-            
+
         $availableQty = \App\Domains\Inventory\Models\InventoryObject::where('organization_id', $orgId)
             ->where('product_variant_id', $variant->id)
             ->where('status', 'ON_HAND')
             ->sum('quantity');
-            
+
         $totalArea = \App\Domains\Inventory\Models\InventoryObject::where('organization_id', $orgId)
             ->where('product_variant_id', $variant->id)
             ->whereIn('status', ['ON_HAND', 'RESERVED'])
             ->sum('area');
-            
+
         $reservedArea = \App\Domains\Inventory\Models\InventoryObject::where('organization_id', $orgId)
             ->where('product_variant_id', $variant->id)
             ->where('status', 'RESERVED')
             ->sum('area');
-            
+
         $availableArea = \App\Domains\Inventory\Models\InventoryObject::where('organization_id', $orgId)
             ->where('product_variant_id', $variant->id)
             ->where('status', 'ON_HAND')
