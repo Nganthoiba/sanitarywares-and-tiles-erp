@@ -39,6 +39,8 @@ class PermissionSeeder extends Seeder
                 'purchase.orders.approve'       => ['Approve Purchase Orders', 'Approve pending purchase orders'],
                 'purchase.orders.send'          => ['Send Purchase Orders', 'Dispatch POs to suppliers'],
                 'purchase.over_receipt.approve' => ['Approve Over-Receipt', 'Approve GRN quantities exceeding PO limits'],
+                'purchase.grn.create'           => ['Create GRN', 'Create Goods Receipt Note'],
+                'purchase.grn.approve'          => ['Approve GRN', 'Approve Goods Receipt Note'],
             ],
             'Inventory Management' => [
                 'inventory.stock.view'         => ['View Stock Levels', 'Inspect real-time warehouse stock'],
@@ -57,6 +59,12 @@ class PermissionSeeder extends Seeder
             'Workflow Management' => [
                 'workflow.definition.manage' => ['Manage Workflows Definitions', 'Define and configure BPM workflow processes'],
             ],
+            'Stackholder Administration' => [
+                'supplier.view'   => ['View Suppliers', 'View supplier details and information'],
+                'supplier.create' => ['Register New Supplier', 'Register new supplier and provide details'],
+                'supplier.update' => ['Update Supplier Details', 'Update existing supplier details'],
+                'supplier.delete' => ['Remove Supplier', 'Remove supplier'],
+            ]
         ];
 
         $permissionGroups = [];
@@ -84,7 +92,6 @@ class PermissionSeeder extends Seeder
 
                 $permissionId++;
             }
-
 
             $permissionGroupId++;
         }
