@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import QuickSupplierModal from '../grn/QuickSupplierModal';
+import QuickBranchModal from '../grn/QuickBranchModal';
 
 export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
+
+    // Quick Add Modal States
+    const [showQuickSupplierModal, setShowQuickSupplierModal] = useState(false);
+    const [showQuickBranchModal, setShowQuickBranchModal] = useState(false);
 
     // Form inputs reference context
     const [suppliers, setSuppliers] = useState([]);
@@ -12,6 +18,16 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
     const [units, setUnits] = useState([]);
     const [products, setProducts] = useState([]);
     const [conversions, setConversions] = useState([]);
+
+    const handleSupplierSaved = (newSupplier) => {
+        setSuppliers(prev => [...prev, newSupplier]);
+        setFormData(prev => ({ ...prev, supplier_id: newSupplier.id }));
+    };
+
+    const handleBranchSaved = (newBranch) => {
+        setBranches(prev => [...prev, newBranch]);
+        setFormData(prev => ({ ...prev, branch_id: newBranch.id }));
+    };
 
     // Form states
     const [formData, setFormData] = useState({
@@ -279,6 +295,7 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
     }
 
     return (
+        <>
         <form onSubmit={handleSubmit} id="po-form" className="animate__animated animate__fadeIn">
             {/* Top Navigation & Action Bar */}
             <div className="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom">
@@ -329,32 +346,70 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                     </h6>
                     <div className="row g-3">
                         <div className="col-md-6">
-                            <label className="form-label small fw-semibold text-dark">Supplier *</label>
-                            <select
-                                className="form-select"
-                                value={formData.supplier_id}
-                                onChange={(e) => handleHeaderChange('supplier_id', e.target.value)}
-                                required
-                            >
-                                <option value="">-- Select Supplier --</option>
-                                {suppliers.map(s => (
-                                    <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
-                                ))}
-                            </select>
+                            <div className="d-flex justify-content-between align-items-center mb-1">
+                                <label className="form-label small fw-semibold text-dark mb-0">Supplier *</label>
+                                <button 
+                                    type="button" 
+                                    className="btn btn-xs btn-link text-primary p-0 text-decoration-none shadow-none fw-semibold"
+                                    onClick={() => setShowQuickSupplierModal(true)}
+                                >
+                                    <i className="fa-solid fa-plus-circle me-1"></i>Quick Add Supplier
+                                </button>
+                            </div>
+                            <div className="input-group">
+                                <select
+                                    className="form-select"
+                                    value={formData.supplier_id}
+                                    onChange={(e) => handleHeaderChange('supplier_id', e.target.value)}
+                                    required
+                                >
+                                    <option value="">-- Select Supplier --</option>
+                                    {suppliers.map(s => (
+                                        <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
+                                    ))}
+                                </select>
+                                <button 
+                                    type="button" 
+                                    className="btn btn-outline-secondary" 
+                                    onClick={() => setShowQuickSupplierModal(true)}
+                                    title="Quick Add Supplier"
+                                >
+                                    <i className="fa-solid fa-plus"></i>
+                                </button>
+                            </div>
                         </div>
                         <div className="col-md-6">
-                            <label className="form-label small fw-semibold text-dark">Receiving Branch Location *</label>
-                            <select
-                                className="form-select"
-                                value={formData.branch_id}
-                                onChange={(e) => handleHeaderChange('branch_id', e.target.value)}
-                                required
-                            >
-                                <option value="">-- Select Branch --</option>
-                                {branches.map(b => (
-                                    <option key={b.id} value={b.id}>{b.name}</option>
-                                ))}
-                            </select>
+                            <div className="d-flex justify-content-between align-items-center mb-1">
+                                <label className="form-label small fw-semibold text-dark mb-0">Receiving Branch Location *</label>
+                                <button 
+                                    type="button" 
+                                    className="btn btn-xs btn-link text-primary p-0 text-decoration-none shadow-none fw-semibold"
+                                    onClick={() => setShowQuickBranchModal(true)}
+                                >
+                                    <i className="fa-solid fa-plus-circle me-1"></i>Quick Add Branch
+                                </button>
+                            </div>
+                            <div className="input-group">
+                                <select
+                                    className="form-select"
+                                    value={formData.branch_id}
+                                    onChange={(e) => handleHeaderChange('branch_id', e.target.value)}
+                                    required
+                                >
+                                    <option value="">-- Select Branch --</option>
+                                    {branches.map(b => (
+                                        <option key={b.id} value={b.id}>{b.name}</option>
+                                    ))}
+                                </select>
+                                <button 
+                                    type="button" 
+                                    className="btn btn-outline-secondary" 
+                                    onClick={() => setShowQuickBranchModal(true)}
+                                    title="Quick Add Branch Location"
+                                >
+                                    <i className="fa-solid fa-plus"></i>
+                                </button>
+                            </div>
                         </div>
                         <div className="col-md-4">
                             <label className="form-label small fw-semibold text-dark">PO Number</label>
@@ -748,5 +803,20 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                 </div>
             </div>
         </form>
+
+        {/* Quick Add Supplier Modal */}
+        <QuickSupplierModal 
+            show={showQuickSupplierModal}
+            onClose={() => setShowQuickSupplierModal(false)}
+            onSave={handleSupplierSaved}
+        />
+
+        {/* Quick Add Branch Location Modal */}
+        <QuickBranchModal 
+            show={showQuickBranchModal}
+            onClose={() => setShowQuickBranchModal(false)}
+            onSave={handleBranchSaved}
+        />
+        </>
     );
 }
