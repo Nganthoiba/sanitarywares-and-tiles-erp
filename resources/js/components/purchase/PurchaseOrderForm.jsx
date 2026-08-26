@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import QuickSupplierModal from '../grn/QuickSupplierModal';
 import QuickBranchModal from '../grn/QuickBranchModal';
+import SearchableSelect from '../common/SearchableSelect';
 
 export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
     const [loading, setLoading] = useState(false);
@@ -298,7 +299,7 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
         <>
         <form onSubmit={handleSubmit} id="po-form" className="animate__animated animate__fadeIn">
             {/* Top Navigation & Action Bar */}
-            <div className="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom">
+            <div className="d-flex align-items-center justify-content-between pb-3 border-bottom">
                 <div className="d-flex align-items-center gap-3">
                     <button 
                         type="button" 
@@ -311,9 +312,9 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                     </button>
                     <div>
                         <div className="d-flex align-items-center gap-2">
-                            <h3 className="fw-bold text-dark mb-0">
+                            <h5 className="text-dark mb-0">
                                 {poId ? 'Modify Purchase Order' : 'Raise New Purchase Order'}
-                            </h3>
+                            </h5>
                             <span className={`badge ${poId ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle'} px-2 py-1`}>
                                 {poId ? 'EDIT MODE' : 'NEW DRAFT'}
                             </span>
@@ -357,17 +358,17 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                                 </button>
                             </div>
                             <div className="input-group">
-                                <select
-                                    className="form-select"
+                                <SearchableSelect
+                                    options={suppliers.map(s => ({
+                                        value: s.id,
+                                        label: `${s.name} (${s.code})`,
+                                        searchText: `${s.name} ${s.code}`
+                                    }))}
                                     value={formData.supplier_id}
-                                    onChange={(e) => handleHeaderChange('supplier_id', e.target.value)}
+                                    onChange={(val) => handleHeaderChange('supplier_id', val)}
+                                    placeholder="-- Select Supplier --"
                                     required
-                                >
-                                    <option value="">-- Select Supplier --</option>
-                                    {suppliers.map(s => (
-                                        <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
-                                    ))}
-                                </select>
+                                />
                                 <button 
                                     type="button" 
                                     className="btn btn-outline-secondary" 
@@ -390,17 +391,17 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
                                 </button>
                             </div>
                             <div className="input-group">
-                                <select
-                                    className="form-select"
+                                <SearchableSelect
+                                    options={branches.map(b => ({
+                                        value: b.id,
+                                        label: b.name,
+                                        searchText: b.name
+                                    }))}
                                     value={formData.branch_id}
-                                    onChange={(e) => handleHeaderChange('branch_id', e.target.value)}
+                                    onChange={(val) => handleHeaderChange('branch_id', val)}
+                                    placeholder="-- Select Branch --"
                                     required
-                                >
-                                    <option value="">-- Select Branch --</option>
-                                    {branches.map(b => (
-                                        <option key={b.id} value={b.id}>{b.name}</option>
-                                    ))}
-                                </select>
+                                />
                                 <button 
                                     type="button" 
                                     className="btn btn-outline-secondary" 
