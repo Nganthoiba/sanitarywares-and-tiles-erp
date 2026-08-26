@@ -129,7 +129,7 @@ export default function SupplierManager() {
             {/* Header Banner */}
             <div className="d-flex align-items-center justify-content-between mb-4">
                 <div>
-                    <h3 className="fw-bold text-dark">
+                    <h3 className="fw-bold text-secondary">
                         <i className="fa-solid fa-truck-field me-2 text-primary"></i>Supplier Management
                     </h3>
                     <p className="text-muted small mb-0">Manage external suppliers, vendors, and material source profiles for your supply chain.</p>
@@ -143,6 +143,10 @@ export default function SupplierManager() {
                 <div className="alert alert-danger d-flex align-items-center mb-4 animate__animated animate__shakeX" role="alert">
                     <i className="fa-solid fa-circle-exclamation me-2"></i>
                     <div>{error}</div>
+                    {/* a button should be here to close the alert when clicked */}
+                    <button className="btn btn-danger btn-sm position-absolute top-0 end-0 m-2" onClick={() => setError(null)}>
+                        <i className="fa-solid fa-times"></i>
+                    </button>
                 </div>
             )}
 
@@ -150,6 +154,10 @@ export default function SupplierManager() {
                 <div className="alert alert-success d-flex align-items-center mb-4 animate__animated animate__fadeIn" role="alert">
                     <i className="fa-solid fa-circle-check me-2"></i>
                     <div>{success}</div>
+                    {/* a button should be here to close the alert when clicked */}
+                    <button className="btn btn-success btn-sm position-absolute top-0 end-0 m-2" onClick={() => setSuccess(null)}>
+                        <i className="fa-solid fa-times"></i>
+                    </button>
                 </div>
             )}
 
@@ -165,8 +173,7 @@ export default function SupplierManager() {
                         <table className="table table-hover align-middle">
                             <thead>
                                 <tr className="text-secondary font-monospace" style={{ fontSize: '0.8rem' }}>
-                                    <th>Supplier Code</th>
-                                    <th>Supplier Name</th>
+                                    <th>Supplier Code & Name</th>
                                     <th>GSTIN</th>
                                     <th>Contact Details</th>
                                     <th>About Supplier / Address</th>
@@ -177,10 +184,7 @@ export default function SupplierManager() {
                             <tbody>
                                 {suppliers.map((s) => (
                                     <tr key={s.id}>
-                                        <td className="fw-bold text-dark font-monospace">{s.code}</td>
-                                        <td>
-                                            <div className="fw-bold text-dark">{s.name}</div>
-                                        </td>
+                                        <td><div className="text-info small">{s.code}</div> <div className="text-dark fw-bold">{s.name}</div></td>
                                         <td className="font-monospace text-secondary">{s.gstin || 'N/A'}</td>
                                         <td>
                                             <div style={{ fontSize: '0.85rem' }}>
@@ -196,7 +200,7 @@ export default function SupplierManager() {
                                                 </div>
                                             )}
                                             {s.address ? (
-                                                <div className="text-muted small" style={{ fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                <div className="text-muted small" style={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                     <i className="fa-solid fa-location-dot me-1"></i>{s.address}
                                                 </div>
                                             ) : (
