@@ -12,6 +12,7 @@ export default function QuickSupplierModal({ show, onClose, onSave }) {
         phone: '',
         gstin: '',
         address: '',
+        about_supplier: '',
         is_active: true
     });
 
@@ -24,6 +25,7 @@ export default function QuickSupplierModal({ show, onClose, onSave }) {
                 phone: '',
                 gstin: '',
                 address: '',
+                about_supplier: '',
                 is_active: true
             });
             setError(null);
@@ -87,15 +89,17 @@ export default function QuickSupplierModal({ show, onClose, onSave }) {
 
                             <div className="row mb-3">
                                 <div className="col-md-6">
-                                    <label className="form-label small fw-semibold">Supplier Code</label>
+                                    <label className="form-label small fw-semibold">Supplier Code (Optional)</label>
                                     <input
                                         type="text"
                                         className="form-control form-control-sm font-monospace"
                                         value={form.code}
                                         onChange={(e) => handleChange('code', e.target.value.toUpperCase())}
-                                        placeholder="e.g. SPL-SOMANY"
-                                        required
+                                        placeholder="Auto-generated if empty"
                                     />
+                                    <span className="form-text text-muted" style={{ fontSize: '0.7rem' }}>
+                                        Leave empty to autogenerate code (e.g. SUP-00001)
+                                    </span>
                                 </div>
                                 <div className="col-md-6">
                                     <label className="form-label small fw-semibold">GSTIN</label>
@@ -131,6 +135,17 @@ export default function QuickSupplierModal({ show, onClose, onSave }) {
                                         placeholder="e.g. +919876543210"
                                     />
                                 </div>
+                            </div>
+
+                            <div className="mb-3">
+                                <label className="form-label small fw-semibold">About Supplier</label>
+                                <textarea
+                                    className="form-control form-control-sm"
+                                    rows="2"
+                                    value={form.about_supplier}
+                                    onChange={(e) => handleChange('about_supplier', e.target.value)}
+                                    placeholder="Information, background, or specializations..."
+                                ></textarea>
                             </div>
 
                             <div className="mb-3">

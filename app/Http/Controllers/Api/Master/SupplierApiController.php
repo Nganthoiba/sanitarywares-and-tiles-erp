@@ -32,7 +32,7 @@ class SupplierApiController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'code' => [
-                'required',
+                'nullable',
                 'string',
                 'max:50',
                 Rule::unique('suppliers')->where(function ($query) use ($orgId) {
@@ -43,8 +43,22 @@ class SupplierApiController extends Controller
             'phone' => 'nullable|string|max:20',
             'gstin' => 'nullable|string|max:15',
             'address' => 'nullable|string',
+            'about_supplier' => 'nullable|string',
             'is_active' => 'nullable|boolean'
         ]);
+
+        if (empty($validated['code'])) {
+            $prefix = 'SUP-';
+            $count = Supplier::where('organization_id', $orgId)->withTrashed()->count() + 1;
+            do {
+                $generatedCode = $prefix . str_pad((string)$count, 5, '0', STR_PAD_LEFT);
+                $exists = Supplier::where('organization_id', $orgId)->where('code', $generatedCode)->exists();
+                if ($exists) {
+                    $count++;
+                }
+            } while ($exists);
+            $validated['code'] = $generatedCode;
+        }
 
         $supplier = Supplier::create(array_merge($validated, [
             'organization_id' => $orgId,
@@ -89,6 +103,7 @@ class SupplierApiController extends Controller
             'phone' => 'nullable|string|max:20',
             'gstin' => 'nullable|string|max:15',
             'address' => 'nullable|string',
+            'about_supplier' => 'nullable|string',
             'is_active' => 'nullable|boolean'
         ]);
 

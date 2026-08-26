@@ -19,6 +19,7 @@ export default function SupplierManager() {
         phone: '',
         gstin: '',
         address: '',
+        about_supplier: '',
         is_active: true
     });
 
@@ -52,6 +53,7 @@ export default function SupplierManager() {
             phone: '',
             gstin: '',
             address: '',
+            about_supplier: '',
             is_active: true
         });
         setError(null);
@@ -68,6 +70,7 @@ export default function SupplierManager() {
             phone: supplier.phone || '',
             gstin: supplier.gstin || '',
             address: supplier.address || '',
+            about_supplier: supplier.about_supplier || '',
             is_active: supplier.is_active === 1 || supplier.is_active === true
         });
         setError(null);
@@ -166,7 +169,7 @@ export default function SupplierManager() {
                                     <th>Supplier Name</th>
                                     <th>GSTIN</th>
                                     <th>Contact Details</th>
-                                    <th>Physical Address</th>
+                                    <th>About Supplier / Address</th>
                                     <th>Status</th>
                                     <th className="text-end">Actions</th>
                                 </tr>
@@ -175,7 +178,9 @@ export default function SupplierManager() {
                                 {suppliers.map((s) => (
                                     <tr key={s.id}>
                                         <td className="fw-bold text-dark font-monospace">{s.code}</td>
-                                        <td>{s.name}</td>
+                                        <td>
+                                            <div className="fw-bold text-dark">{s.name}</div>
+                                        </td>
                                         <td className="font-monospace text-secondary">{s.gstin || 'N/A'}</td>
                                         <td>
                                             <div style={{ fontSize: '0.85rem' }}>
@@ -184,8 +189,19 @@ export default function SupplierManager() {
                                                 {!s.email && !s.phone && <span className="text-muted small">No contact provided</span>}
                                             </div>
                                         </td>
-                                        <td className="text-secondary small" style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {s.address || 'N/A'}
+                                        <td style={{ maxWidth: '240px' }}>
+                                            {s.about_supplier && (
+                                                <div className="text-dark small mb-1" style={{ fontSize: '0.82rem' }}>
+                                                    <i className="fa-solid fa-info-circle text-primary me-1"></i>{s.about_supplier}
+                                                </div>
+                                            )}
+                                            {s.address ? (
+                                                <div className="text-muted small" style={{ fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    <i className="fa-solid fa-location-dot me-1"></i>{s.address}
+                                                </div>
+                                            ) : (
+                                                !s.about_supplier && <span className="text-muted small">N/A</span>
+                                            )}
                                         </td>
                                         <td>
                                             {s.is_active === 1 || s.is_active === true ? (
@@ -259,15 +275,17 @@ export default function SupplierManager() {
 
                                     <div className="row mb-3">
                                         <div className="col-md-6">
-                                            <label className="form-label small fw-semibold">Supplier Code</label>
+                                            <label className="form-label small fw-semibold">Supplier Code (Optional)</label>
                                             <input
                                                 type="text"
                                                 className="form-control form-control-sm font-monospace"
                                                 value={form.code}
                                                 onChange={(e) => handleChange('code', e.target.value.toUpperCase())}
-                                                placeholder="e.g. SPL-KAJARIA"
-                                                required
+                                                placeholder="Auto-generated if empty"
                                             />
+                                            <span className="form-text text-muted" style={{ fontSize: '0.7rem' }}>
+                                                Leave empty to autogenerate code (e.g. SUP-00001)
+                                            </span>
                                         </div>
                                         <div className="col-md-6">
                                             <label className="form-label small fw-semibold">GSTIN</label>
@@ -303,6 +321,17 @@ export default function SupplierManager() {
                                                 placeholder="e.g. +91228493028"
                                             />
                                         </div>
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">About Supplier</label>
+                                        <textarea
+                                            className="form-control form-control-sm"
+                                            rows="2"
+                                            value={form.about_supplier}
+                                            onChange={(e) => handleChange('about_supplier', e.target.value)}
+                                            placeholder="Information, background, product specializations, or trade terms..."
+                                        ></textarea>
                                     </div>
 
                                     <div className="mb-3">

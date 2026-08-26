@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Supplier extends Model {
     use BelongsToOrganization;
     use SoftDeletes;
-    protected $fillable = ['organization_id', 'name', 'code', 'email', 'phone', 'gstin', 'address', 'is_active'];
+    protected $fillable = ['organization_id', 'name', 'code', 'email', 'phone', 'gstin', 'address', 'about_supplier', 'is_active'];
     protected $casts = ['is_active' => 'boolean'];
 
     public function organization(): BelongsTo {
