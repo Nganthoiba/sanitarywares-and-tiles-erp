@@ -419,8 +419,8 @@ textarea::placeholder {
 .ls-wide { letter-spacing: 0.5px; }
 
 .sidebar-wrapper {
-    width: 225px;
-    min-width: 220px;
+    width: 245px;
+    min-width: 230px;
     flex-shrink: 0;
     background: var(--sidebar-bg);
     border-right: 1px solid var(--sidebar-border);
