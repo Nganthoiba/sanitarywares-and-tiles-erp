@@ -287,6 +287,7 @@ export default function SupplierManager() {
                             <table className="table table-hover align-middle">
                                 <thead>
                                     <tr className="text-secondary font-monospace" style={{ fontSize: '0.8rem' }}>
+                                        <th>#</th>
                                         <th>Supplier Code & Name</th>
                                         <th>GSTIN</th>
                                         <th>Contact Details</th>
@@ -296,8 +297,9 @@ export default function SupplierManager() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {paginatedSuppliers.map((s) => (
+                                    {paginatedSuppliers.map((s, index) => (
                                         <tr key={s.id}>
+                                            <td>{indexOfFirstItem + index + 1}</td>
                                             <td><div className="text-info small">{s.code}</div> <div className="text-dark fw-bold">{s.name}</div></td>
                                             <td className="font-monospace text-secondary">{s.gstin || 'N/A'}</td>
                                             <td>
