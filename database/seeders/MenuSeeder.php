@@ -65,7 +65,7 @@ class MenuSeeder extends Seeder
         );
 
         Menu::updateOrCreate(
-            ['route_uri' => '/purchase-orders'],
+            ['route_uri' => '/purchase-orders/index'],
             [
                 'menu_name'     => 'Purchase Orders',
                 'menu_type'     => 'PAGE',

@@ -440,7 +440,7 @@ function App() {
                             />
                         } />
 
-                        <Route path="/purchase-orders" element={
+                        <Route path="/purchase-orders/index" element={
                             <PurchaseOrderList 
                                 key="po-list" 
                                 initialViewMode="list" 
@@ -455,7 +455,7 @@ function App() {
                                 key="po-new" 
                                 initialViewMode="create" 
                                 onViewModeChange={(mode) => {
-                                    if (mode === 'list') navigate('/purchase-orders');
+                                    if (mode === 'list') navigate('/purchase-orders/index');
                                 }} 
                                 userPermissions={user?.permissions || []}
                             />
