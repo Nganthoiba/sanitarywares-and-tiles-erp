@@ -67,38 +67,44 @@ class PermissionSeeder extends Seeder
             ]
         ];
 
-        $permissionGroups = [];
+        // $permissionGroups = [];
         $permissions = [];
-        $permissionGroupId = 1;
-        $permissionId = 1;
+        // $permissionGroupId = 1;
+        // $permissionId = 1;
 
         foreach ($catalogue as $groupName => $groupPermissions) {
 
-            $permissionGroups[] = [
-                'id' => $permissionGroupId,
+            // $permissionGroups[] = [
+            //     'id' => $permissionGroupId,
+            //     'name' => $groupName,
+            //     'enabled' => true,
+            // ];
+
+            $permissionGroup = PermissionGroup::updateOrCreate([
                 'name' => $groupName,
+            ], [
                 'enabled' => true,
-            ];
+            ]);
 
             foreach ($groupPermissions as $slug => $info) {
                 $permissions[] = [
-                    'id' => $permissionId,
-                    'permission_group_id' => $permissionGroupId,
+                    //'id' => $permissionId,
+                    'permission_group_id' => $permissionGroup->id,
                     'slug' => $slug,
                     'display_name' => $info[0],
                     'description' => $info[1],
                     'enabled' => true,
                 ];
 
-                $permissionId++;
+                //$permissionId++;
             }
 
-            $permissionGroupId++;
+            //$permissionGroupId++;
         }
 
 
-        PermissionGroup::upsert($permissionGroups, ['name'], ['enabled']);
-        AutoIncrement::resetIndex((new PermissionGroup())->getTable(), 'id');
+        // PermissionGroup::upsert($permissionGroups, ['name'], ['enabled']);
+        // AutoIncrement::resetIndex((new PermissionGroup())->getTable(), 'id');
 
         Permission::upsert($permissions, ['slug'], ['permission_group_id', 'display_name', 'description', 'enabled']);
         AutoIncrement::resetIndex((new Permission())->getTable(), 'id');
