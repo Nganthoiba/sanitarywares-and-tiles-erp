@@ -15,7 +15,7 @@ export default function UserManagement() {
     const [inviteForm, setInviteForm] = useState({
         name: '',
         email: '',
-        role_id: '',
+        role_ids: [],
         branch_id: '',
         warehouse_id: '',
     });
@@ -24,7 +24,7 @@ export default function UserManagement() {
     const [editingUser, setEditingUser] = useState(null);
     const [editForm, setEditForm] = useState({
         name: '',
-        role_id: '',
+        role_ids: [],
         branch_id: '',
         warehouse_id: '',
     });
@@ -67,13 +67,12 @@ export default function UserManagement() {
             if (rolesData.length > 0 && branchesData.length > 0 && warehousesData.length > 0) {
                 const defaultBranchId = branchesData[0]?.id || '';
                 const defaultWarehouse = warehousesData.find(w => String(w.branch_id) === String(defaultBranchId)) || warehousesData[0];
-                setInviteForm({
-                    name: '',
-                    email: '',
-                    role_id: rolesData[0]?.id || '',
-                    branch_id: defaultBranchId,
-                    warehouse_id: defaultWarehouse?.id || '',
-                });
+                setInviteForm(prev => ({
+                    ...prev,
+                    role_ids: (prev.role_ids && prev.role_ids.length > 0) ? prev.role_ids : [rolesData[0]?.id],
+                    branch_id: prev.branch_id || defaultBranchId,
+                    warehouse_id: prev.warehouse_id || defaultWarehouse?.id || '',
+                }));
             }
         } catch (err) {
             setError(err.message);
@@ -100,14 +99,36 @@ export default function UserManagement() {
         }
     };
 
+    const handleRoleCheckboxChange = (roleId) => {
+        setInviteForm(prev => {
+            const currentRoles = prev.role_ids || [];
+            if (currentRoles.includes(roleId)) {
+                return { ...prev, role_ids: currentRoles.filter(id => id !== roleId) };
+            } else {
+                return { ...prev, role_ids: [...currentRoles, roleId] };
+            }
+        });
+    };
+
+    const handleEditRoleCheckboxChange = (roleId) => {
+        setEditForm(prev => {
+            const currentRoles = prev.role_ids || [];
+            if (currentRoles.includes(roleId)) {
+                return { ...prev, role_ids: currentRoles.filter(id => id !== roleId) };
+            } else {
+                return { ...prev, role_ids: [...currentRoles, roleId] };
+            }
+        });
+    };
+
     const openEditUserModal = (user) => {
         setEditingUser(user);
-        const roleId = user.roles[0]?.id || '';
+        const userRoleIds = (user.roles || []).map(r => r.id);
         const branchId = user.scopes[0]?.branch_id || user.scopes[0]?.branch?.id || '';
         const warehouseId = user.scopes[0]?.warehouse_id || user.scopes[0]?.warehouse?.id || '';
         setEditForm({
             name: user.name || '',
-            role_id: roleId,
+            role_ids: userRoleIds.length > 0 ? userRoleIds : (roles[0] ? [roles[0].id] : []),
             branch_id: branchId,
             warehouse_id: warehouseId,
         });
@@ -127,10 +148,18 @@ export default function UserManagement() {
         }
     };
 
+    const [inviting, setInviting] = useState(false);
+    const [modalError, setModalError] = useState(null);
+
     const handleUpdateUser = async (e) => {
         e.preventDefault();
         setError(null);
         setSuccessMessage(null);
+
+        if (!editForm.role_ids || editForm.role_ids.length === 0) {
+            setError('Please select at least one system access role.');
+            return;
+        }
 
         try {
             const response = await fetch(`/api/users/${editingUser.id}`, {
@@ -161,8 +190,16 @@ export default function UserManagement() {
     const handleInvite = async (e) => {
         e.preventDefault();
         setError(null);
+        setModalError(null);
         setSuccessMessage(null);
         setInviteLink(null);
+
+        if (!inviteForm.role_ids || inviteForm.role_ids.length === 0) {
+            setModalError('Please select at least one system access role.');
+            return;
+        }
+
+        setInviting(true);
 
         try {
             const response = await fetch('/api/users/invite', {
@@ -178,23 +215,35 @@ export default function UserManagement() {
             const data = await response.json();
 
             if (!response.ok) {
+                if (data.errors) {
+                    const firstErr = Object.values(data.errors).flat()[0];
+                    throw new Error(firstErr || data.message || 'Invitation failed');
+                }
                 throw new Error(data.message || 'Invitation failed');
             }
 
-            setSuccessMessage('Employee invited successfully!');
+            // Close modal programmatically on success
+            const modalEl = document.getElementById('inviteModal');
+            if (modalEl && window.bootstrap) {
+                const modalInstance = window.bootstrap.Modal.getInstance(modalEl) || new window.bootstrap.Modal(modalEl);
+                modalInstance.hide();
+            }
+
+            setSuccessMessage(data.message || 'Employee invited successfully and invitation email sent!');
             setInviteLink(data.invitation_link);
             
             // Reset invite form fields
-            setInviteForm({
-                ...inviteForm,
+            setInviteForm(prev => ({
+                ...prev,
                 name: '',
                 email: '',
-            });
+            }));
 
-            // Reload user list
             fetchData();
         } catch (err) {
-            setError(err.message);
+            setModalError(err.message);
+        } finally {
+            setInviting(false);
         }
     };
 
@@ -215,10 +264,10 @@ export default function UserManagement() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.message || 'Deletion failed');
+                throw new Error(data.message || 'Deleting employee failed');
             }
 
-            setSuccessMessage(data.message);
+            setSuccessMessage('Employee removed successfully!');
             fetchData();
         } catch (err) {
             setError(err.message);
@@ -226,28 +275,30 @@ export default function UserManagement() {
     };
 
     return (
-        <div className="card shadow-sm border-0">
-            <div className="card-header bg-white py-3 border-bottom d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                <div>
-                    <h5 className="mb-1 fw-bold text-dark">User Management</h5>
-                    <p className="text-muted small mb-0">Manage employee accounts, invitations, and resource access scopes.</p>
-                </div>
-                <div>
-                    <button className="btn btn-primary btn-sm d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#inviteModal">
+        <div className="container-fluid py-3">
+            <div className="card shadow-sm border-0 p-4">
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h4 className="fw-bold text-dark mb-1">
+                            <i className="fa-solid fa-users-gear text-primary me-2"></i> User & Staff Management
+                        </h4>
+                        <p className="text-muted small mb-0">Manage organization staff accounts, multi-role permissions, and operational scopes.</p>
+                    </div>
+                    <button className="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#inviteModal">
                         <i className="fa-solid fa-user-plus me-1"></i> Invite Staff Member
                     </button>
                 </div>
-            </div>
 
-            <div className="card-body">
                 {error && (
-                    <div className="alert alert-danger py-2" role="alert">
+                    <div className="alert alert-danger alert-dismissible fade show mb-4" role="alert">
                         {error}
+                        <button type="button" className="btn-close" onClick={() => setError(null)}></button>
                     </div>
                 )}
                 {successMessage && (
-                    <div className="alert alert-success py-2" role="alert">
+                    <div className="alert alert-success alert-dismissible fade show mb-4" role="alert">
                         {successMessage}
+                        <button type="button" className="btn-close" onClick={() => setSuccessMessage(null)}></button>
                     </div>
                 )}
 
@@ -323,7 +374,7 @@ export default function UserManagement() {
                                                     <button 
                                                         className="btn btn-outline-danger btn-sm px-2 py-1" 
                                                         onClick={() => handleDelete(u.id)}
-                                                        disabled={users.length <= 1} // Protection if single user
+                                                        disabled={users.length <= 1}
                                                     >
                                                         <i className="fa-solid fa-trash me-1"></i> Remove
                                                     </button>
@@ -348,21 +399,53 @@ export default function UserManagement() {
                         </div>
                         <form onSubmit={handleInvite}>
                             <div className="modal-body">
+                                {modalError && (
+                                    <div className="alert alert-danger py-2 mb-3 small d-flex align-items-center justify-content-between" role="alert">
+                                        <div>
+                                            <i className="fa-solid fa-triangle-exclamation me-2"></i> {modalError}
+                                        </div>
+                                        <button type="button" className="btn-close ms-2" style={{ fontSize: '0.65rem' }} onClick={() => setModalError(null)}></button>
+                                    </div>
+                                )}
+
                                 <div className="mb-3">
                                     <label className="form-label small fw-semibold">Employee Name</label>
                                     <input type="text" name="name" className="form-control" value={inviteForm.name} onChange={handleFormChange} placeholder="e.g. Saikhom Manimatum" required />
                                 </div>
                                 <div className="mb-3">
                                     <label className="form-label small fw-semibold">Email Address</label>
-                                    <input type="email" name="email" className="form-control" value={inviteForm.email} onChange={handleFormChange} placeholder="e.g. rahul@organization.com" required />
+                                    <input type="email" name="email" className="form-control" value={inviteForm.email} onChange={handleFormChange} placeholder="e.g. manimatum@gmail.com" required />
                                 </div>
                                 <div className="mb-3">
-                                    <label className="form-label small fw-semibold">System Access Role</label>
-                                    <select name="role_id" className="form-select" value={inviteForm.role_id} onChange={handleFormChange} required>
-                                        {roles.map(r => (
-                                            <option key={r.id} value={r.id}>{r.name}</option>
-                                        ))}
-                                    </select>
+                                    <label className="form-label small fw-semibold d-block">System Access Roles *</label>
+                                    <div className="border rounded p-3 bg-light" style={{ maxHeight: '170px', overflowY: 'auto' }}>
+                                        {roles.length === 0 ? (
+                                            <span className="text-muted small">No roles available.</span>
+                                        ) : (
+                                            roles.map(r => {
+                                                const isChecked = (inviteForm.role_ids || []).includes(r.id);
+                                                return (
+                                                    <div key={r.id} className="form-check mb-2">
+                                                        <input 
+                                                            className="form-check-input" 
+                                                            type="checkbox" 
+                                                            id={`invite_role_${r.id}`}
+                                                            checked={isChecked}
+                                                            onChange={() => handleRoleCheckboxChange(r.id)}
+                                                        />
+                                                        <label className="form-check-label small fw-medium text-dark cursor-pointer ms-1" htmlFor={`invite_role_${r.id}`}>
+                                                            {r.name}
+                                                        </label>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                    {(inviteForm.role_ids || []).length === 0 && (
+                                        <div className="form-text text-danger small">
+                                            <i className="fa-solid fa-triangle-exclamation me-1"></i> Please select at least one role.
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="mb-3">
                                     <label className="form-label small fw-semibold">Branch Scoping</label>
@@ -386,8 +469,19 @@ export default function UserManagement() {
                                 </div>
                             </div>
                             <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                <button type="submit" className="btn btn-primary" data-bs-dismiss="modal">Generate Invitation Link</button>
+                                <button type="button" className="btn btn-secondary" data-bs-dismiss="modal" disabled={inviting}>Close</button>
+                                <button type="submit" className="btn btn-primary px-4 shadow-sm" disabled={inviting || (inviteForm.role_ids || []).length === 0}>
+                                    {inviting ? (
+                                        <>
+                                            <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                                            Sending Invitation...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <i className="fa-solid fa-paper-plane me-1"></i> Send Invitation & Generate Link
+                                        </>
+                                    )}
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -429,18 +523,35 @@ export default function UserManagement() {
                                         <div className="form-text small text-muted">Email address cannot be changed.</div>
                                     </div>
                                     <div className="mb-3">
-                                        <label className="form-label small fw-semibold">System Access Role</label>
-                                        <select 
-                                            name="role_id" 
-                                            className="form-select" 
-                                            value={editForm.role_id} 
-                                            onChange={handleEditFormChange} 
-                                            required
-                                        >
-                                            {roles.map(r => (
-                                                <option key={r.id} value={r.id}>{r.name}</option>
-                                            ))}
-                                        </select>
+                                        <label className="form-label small fw-semibold d-block">System Access Roles *</label>
+                                        <div className="border rounded p-3 bg-light" style={{ maxHeight: '170px', overflowY: 'auto' }}>
+                                            {roles.length === 0 ? (
+                                                <span className="text-muted small">No roles available.</span>
+                                            ) : (
+                                                roles.map(r => {
+                                                    const isChecked = (editForm.role_ids || []).includes(r.id);
+                                                    return (
+                                                        <div key={r.id} className="form-check mb-2">
+                                                            <input 
+                                                                className="form-check-input" 
+                                                                type="checkbox" 
+                                                                id={`edit_role_${r.id}`}
+                                                                checked={isChecked}
+                                                                onChange={() => handleEditRoleCheckboxChange(r.id)}
+                                                            />
+                                                            <label className="form-check-label small fw-medium text-dark cursor-pointer ms-1" htmlFor={`edit_role_${r.id}`}>
+                                                                {r.name}
+                                                            </label>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                        {(editForm.role_ids || []).length === 0 && (
+                                            <div className="form-text text-danger small">
+                                                <i className="fa-solid fa-triangle-exclamation me-1"></i> Please select at least one role.
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="mb-3">
                                         <label className="form-label small fw-semibold">Branch Scoping</label>
@@ -476,8 +587,8 @@ export default function UserManagement() {
                                     </div>
                                 </div>
                                 <div className="modal-footer">
-                                    <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                    <button type="submit" className="btn btn-primary" data-bs-dismiss="modal">Save Changes</button>
+                                    <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" className="btn btn-primary" data-bs-dismiss="modal" disabled={(editForm.role_ids || []).length === 0}>Save Changes</button>
                                 </div>
                             </form>
                         )}

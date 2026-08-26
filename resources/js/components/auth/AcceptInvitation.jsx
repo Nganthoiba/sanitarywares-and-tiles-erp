@@ -7,6 +7,7 @@ export default function AcceptInvitation({ onNavigateToLogin }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
+    const [serverMessage, setServerMessage] = useState('');
 
     useEffect(() => {
         // Parse token from query parameter
@@ -48,9 +49,14 @@ export default function AcceptInvitation({ onNavigateToLogin }) {
             const data = await response.json();
 
             if (!response.ok) {
+                if (data.errors) {
+                    const firstErr = Object.values(data.errors).flat()[0];
+                    throw new Error(firstErr || data.message || 'Failed to accept invitation');
+                }
                 throw new Error(data.message || 'Failed to accept invitation');
             }
 
+            setServerMessage(data.message || 'Invitation accepted. You can now login to the ERP.');
             setSuccess(true);
         } catch (err) {
             setError(err.message);
@@ -75,12 +81,20 @@ export default function AcceptInvitation({ onNavigateToLogin }) {
                     )}
 
                     {success ? (
-                        <div className="text-center">
-                            <div className="alert alert-success text-center py-3 border mb-4" style={{ backgroundColor: '#ecfdf5', color: '#065f46', borderColor: '#a7f3d0', borderRadius: '8px' }}>
-                                Account activated successfully! You can now access your workspace.
+                        <div className="text-center py-2">
+                            <div className="mb-3 text-success">
+                                <i className="fa-solid fa-circle-check" style={{ fontSize: '3rem' }}></i>
                             </div>
-                            <button onClick={onNavigateToLogin} className="btn btn-primary w-100 py-2.5 fw-bold" style={{ borderRadius: '8px', backgroundColor: '#4f46e5', border: 'none' }}>
-                                Back to Login
+                            <h5 className="fw-bold text-dark mb-2">Account Activated Successfully!</h5>
+                            <div className="alert alert-success text-center py-2.5 border mb-4" style={{ backgroundColor: '#ecfdf5', color: '#065f46', borderColor: '#a7f3d0', borderRadius: '8px', fontSize: '0.88rem' }}>
+                                {serverMessage || 'Invitation accepted. You can now login to the ERP.'}
+                            </div>
+                            <button 
+                                onClick={onNavigateToLogin} 
+                                className="btn btn-primary w-100 py-2.5 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2" 
+                                style={{ borderRadius: '8px', backgroundColor: '#4f46e5', border: 'none' }}
+                            >
+                                <i className="fa-solid fa-right-to-bracket"></i> Proceed to Login
                             </button>
                         </div>
                     ) : (

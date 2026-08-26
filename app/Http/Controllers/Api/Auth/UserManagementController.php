@@ -65,8 +65,15 @@ class UserManagementController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:8',
-            'role_id' => [
+            'role_ids' => 'required_without:role_id|array|min:1',
+            'role_ids.*' => [
                 'required',
+                Rule::exists('roles', 'id')->where(function ($q) use ($orgId) {
+                    $q->where('organization_id', $orgId)->orWhereNull('organization_id');
+                })
+            ],
+            'role_id' => [
+                'required_without:role_ids',
                 Rule::exists('roles', 'id')->where(function ($q) use ($orgId) {
                     $q->where('organization_id', $orgId)->orWhereNull('organization_id');
                 })
@@ -81,16 +88,23 @@ class UserManagementController extends Controller
             ],
         ]);
 
-        $user = DB::transaction(function () use ($request, $orgId) {
+        $roleIds = $request->input('role_ids');
+        if (empty($roleIds) && $request->has('role_id')) {
+            $roleIds = [$request->input('role_id')];
+        }
+
+        $user = DB::transaction(function () use ($request, $orgId, $roleIds) {
             $user = User::create([
                 'organization_id' => $orgId,
-                'default_role_id' => $request->input('role_id'),
+                'default_role_id' => $roleIds[0] ?? null,
                 'name' => $request->input('name'),
                 'email' => $request->input('email'),
                 'password' => Hash::make($request->input('password')),
             ]);
 
-            $user->roles()->attach($request->input('role_id'), ['organization_id' => $orgId]);
+            foreach ($roleIds as $rId) {
+                $user->roles()->attach($rId, ['organization_id' => $orgId]);
+            }
 
             UserScope::create([
                 'organization_id' => $orgId,
@@ -118,6 +132,13 @@ class UserManagementController extends Controller
 
         $request->validate([
             'name' => 'sometimes|required|string|max:255',
+            'role_ids' => 'sometimes|required|array|min:1',
+            'role_ids.*' => [
+                'required',
+                Rule::exists('roles', 'id')->where(function ($q) use ($orgId) {
+                    $q->where('organization_id', $orgId)->orWhereNull('organization_id');
+                })
+            ],
             'role_id' => [
                 'sometimes',
                 'required',
@@ -143,7 +164,12 @@ class UserManagementController extends Controller
                 $user->save();
             }
 
-            if ($request->has('role_id')) {
+            if ($request->has('role_ids')) {
+                $roleIds = $request->input('role_ids');
+                $user->roles()->syncWithPivotValues($roleIds, ['organization_id' => $user->organization_id]);
+                $user->default_role_id = $roleIds[0] ?? null;
+                $user->save();
+            } elseif ($request->has('role_id')) {
                 $user->roles()->syncWithPivotValues([$request->input('role_id')], ['organization_id' => $user->organization_id]);
                 $user->default_role_id = $request->input('role_id');
                 $user->save();

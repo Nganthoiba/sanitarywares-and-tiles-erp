@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Api\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Domains\Security\Models\UserScope;
+use App\Mail\UserInvitationMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -24,9 +27,18 @@ class UserInvitationController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
-            'role_id' => [
+            'role_ids' => 'required_without:role_id|array|min:1',
+            'role_ids.*' => [
                 'required',
-                Rule::exists('roles', 'id')->where('organization_id', $orgId)
+                Rule::exists('roles', 'id')->where(function ($q) use ($orgId) {
+                    $q->where('organization_id', $orgId)->orWhereNull('organization_id');
+                })
+            ],
+            'role_id' => [
+                'required_without:role_ids',
+                Rule::exists('roles', 'id')->where(function ($q) use ($orgId) {
+                    $q->where('organization_id', $orgId)->orWhereNull('organization_id');
+                })
             ],
             'branch_id' => [
                 'required',
@@ -38,22 +50,29 @@ class UserInvitationController extends Controller
             ],
         ]);
 
+        $roleIds = $request->input('role_ids');
+        if (empty($roleIds) && $request->has('role_id')) {
+            $roleIds = [$request->input('role_id')];
+        }
+
         // Perform transactional setup
-        $inviteResult = DB::transaction(function () use ($request, $orgId) {
+        $inviteResult = DB::transaction(function () use ($request, $orgId, $roleIds) {
             $token = Str::random(40);
 
             // Create user
             $user = User::create([
                 'organization_id' => $orgId,
-                'default_role_id' => $request->input('role_id'),
+                'default_role_id' => $roleIds[0] ?? null,
                 'name' => $request->input('name'),
                 'email' => $request->input('email'),
                 'password' => Hash::make(Str::random(16)), // Temporary password
                 'invitation_token' => $token,
             ]);
 
-            // Assign role
-            $user->roles()->attach($request->input('role_id'), ['organization_id' => $orgId]);
+            // Assign multiple roles
+            foreach ($roleIds as $rId) {
+                $user->roles()->attach($rId, ['organization_id' => $orgId]);
+            }
 
             // Assign scope
             UserScope::create([
@@ -72,11 +91,21 @@ class UserInvitationController extends Controller
         // Generate invitation link
         $invitationLink = url('/accept-invitation?token=' . $inviteResult['token']);
 
+        // Dispatch invitation email
+        try {
+            $orgName = ($admin && $admin->organization) ? $admin->organization->name : 'Sanitary Wares & Tiles ERP';
+            Mail::to($inviteResult['user']->email)->send(
+                new UserInvitationMail($inviteResult['user'], $invitationLink, $orgName)
+            );
+        } catch (\Exception $e) {
+            Log::error("Failed sending invitation email to {$inviteResult['user']->email}: " . $e->getMessage());
+        }
+
         return response()->json([
-            'message' => 'Employee invited successfully.',
+            'message' => 'Employee invited successfully and invitation email sent.',
             'invitation_link' => $invitationLink,
             'invitation_token' => $inviteResult['token'],
-            'user' => $inviteResult['user']
+            'user' => $inviteResult['user']->load(['roles', 'scopes.branch', 'scopes.warehouse'])
         ], 201);
     }
 
