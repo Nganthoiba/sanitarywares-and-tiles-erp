@@ -23,6 +23,7 @@ class PermissionSeeder extends Seeder
                 'master.branches.manage'     => ['Manage Branches', 'Create, edit and manage organization branches'],
                 'master.warehouses.manage'   => ['Manage Warehouses', 'Create, edit and manage organization warehouses'],
                 'master.users.manage'        => ['Manage Users and Roles', 'Manage staff accounts, roles and permission assignments'],
+                'master.storage_locations.manage' => ['Manage Storage Locations', 'Create, edit and manage organization storage locations'],
             ],
             'Product Management' => [
                 'products.view'                 => ['View Products', 'Access product catalog and details'],
