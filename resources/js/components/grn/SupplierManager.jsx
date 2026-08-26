@@ -356,7 +356,7 @@ export default function SupplierManager() {
                                     ))}
                                     {filteredSuppliers.length === 0 && (
                                         <tr>
-                                            <td colSpan="6" className="text-center py-5">
+                                            <td colSpan="7" className="text-center py-5">
                                                 <div className="text-muted mb-2">
                                                     <i className="fa-solid fa-filter-circle-xmark fs-2 opacity-50"></i>
                                                 </div>
