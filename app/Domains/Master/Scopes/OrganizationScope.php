@@ -24,6 +24,7 @@ class OrganizationScope implements Scope
             $model instanceof \App\Domains\Security\Models\PermissionGroup ||
             $model instanceof \App\Domains\Master\Models\Manufacturer ||
             $model instanceof \App\Domains\Master\Models\Unit ||
+            $model instanceof \App\Domains\Master\Models\TaxProfile ||
             $model instanceof \App\Domains\Security\Models\Menu
         ) {
             return;
