@@ -115,4 +115,34 @@ class SupplierCRUDTest extends TestCase
 
         $response->assertStatus(404);
     }
+
+    public function test_supplier_code_autogeneration_when_left_empty()
+    {
+        $payload = [
+            'name' => 'Auto Code Supplier',
+            'about_supplier' => 'Leading manufacturer of ceramic floor tiles.',
+        ];
+
+        $response = $this->actingAs($this->user, 'sanctum')
+            ->postJson('/api/suppliers-crud', $payload);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('suppliers', [
+            'organization_id' => $this->org->id,
+            'name' => 'Auto Code Supplier',
+            'code' => 'SUP-00001',
+            'about_supplier' => 'Leading manufacturer of ceramic floor tiles.',
+        ]);
+
+        // Second supplier without code should generate SUP-00002
+        $response2 = $this->actingAs($this->user, 'sanctum')
+            ->postJson('/api/suppliers-crud', ['name' => 'Second Supplier']);
+
+        $response2->assertStatus(201);
+        $this->assertDatabaseHas('suppliers', [
+            'organization_id' => $this->org->id,
+            'name' => 'Second Supplier',
+            'code' => 'SUP-00002',
+        ]);
+    }
 }
