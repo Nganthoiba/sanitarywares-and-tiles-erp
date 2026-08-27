@@ -6,6 +6,7 @@ use App\Domains\Master\Models\Organization;
 use App\Domains\Master\Models\Warehouse;
 use App\Domains\Master\Models\StorageLocation;
 use App\Domains\Master\Models\Supplier;
+use App\Domains\Master\Models\TaxProfile;
 use App\Domains\Master\Models\Unit;
 use App\Domains\Product\Models\Product;
 use App\Domains\Product\Models\ProductBatchPrice;
@@ -72,7 +73,7 @@ class ProductBatchPriceTest extends TestCase
             'is_active' => true,
         ]);
 
-        $taxProfile = \App\Domains\Product\Models\TaxProfile::create([
+        $taxProfile = TaxProfile::create([
             'name' => 'Standard GST',
             'code' => 'GST18',
             'tax_rate' => 18.00,

@@ -23,6 +23,6 @@ return new class extends Migration {
         });
     }
     public function down(): void {
-        \Illuminate\Support\Facades\DB::statement('DROP TABLE IF EXISTS goods_receipt_items CASCADE;');
+        Schema::dropIfExists('goods_receipt_items');
     }
 };
