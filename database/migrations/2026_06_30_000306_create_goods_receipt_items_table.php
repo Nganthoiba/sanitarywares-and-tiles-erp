@@ -15,14 +15,14 @@ return new class extends Migration {
             // Link to newly auto-created inventory object on receipt
             $table->foreignId('inventory_object_id')->index()->nullable()->constrained('inventory_objects')->onDelete('set null');
             
-            $table->decimal('quantity_received', 15, 4);
-            $table->decimal('quantity_accepted', 15, 4);
-            $table->decimal('quantity_rejected', 15, 4)->default(0.0000);
+            $table->integer('quantity_received');
+            $table->integer('quantity_accepted');
+            $table->integer('quantity_rejected')->default(0);
             $table->timestamps();
             $table->softDeletes();
         });
     }
     public function down(): void {
-        Schema::dropIfExists('goods_receipt_items');
+        \Illuminate\Support\Facades\DB::statement('DROP TABLE IF EXISTS goods_receipt_items CASCADE;');
     }
 };
