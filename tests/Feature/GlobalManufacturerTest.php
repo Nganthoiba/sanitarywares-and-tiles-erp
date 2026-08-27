@@ -240,8 +240,6 @@ class GlobalManufacturerTest extends TestCase
             'sales_unit_id' => $this->unit->id,
             'base_unit_id' => $this->unit->id,
             'tax_profile_id' => $this->taxProfileA->id,
-            'cost_price' => 500,
-            'sale_price' => 750,
             'min_stock' => 10,
         ]);
         $prodA->assertStatus(201);
@@ -261,8 +259,6 @@ class GlobalManufacturerTest extends TestCase
             'sales_unit_id' => $this->unit->id,
             'base_unit_id' => $this->unit->id,
             'tax_profile_id' => $this->taxProfileB->id,
-            'cost_price' => 300,
-            'sale_price' => 450,
             'min_stock' => 5,
         ]);
         $prodB->assertStatus(201);
@@ -303,8 +299,6 @@ class GlobalManufacturerTest extends TestCase
             'sales_unit_id' => $this->unit->id,
             'base_unit_id' => $this->unit->id,
             'tax_profile_id' => $this->taxProfileA->id,
-            'cost_price' => 1200,
-            'sale_price' => 1800
         ])->assertStatus(201);
 
         // Super Admin attempts to delete referenced manufacturer

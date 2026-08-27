@@ -129,8 +129,6 @@ class ProductAttributeTest extends TestCase
             'sales_unit_id' => $this->boxUnit->id,
             'base_unit_id' => $this->boxUnit->id,
             'tax_profile_id' => $this->taxProfile->id,
-            'cost_price' => 50,
-            'sale_price' => 80,
             'is_active' => true
         ]);
 
@@ -159,8 +157,6 @@ class ProductAttributeTest extends TestCase
             'sales_unit_id' => $this->boxUnit->id,
             'base_unit_id' => $this->boxUnit->id,
             'tax_profile_id' => $this->taxProfile->id,
-            'cost_price' => 500,
-            'sale_price' => 700,
             'is_active' => true
         ]);
 
@@ -175,8 +171,6 @@ class ProductAttributeTest extends TestCase
             'sales_unit_id' => $this->boxUnit->id,
             'base_unit_id' => $this->boxUnit->id,
             'tax_profile_id' => $this->taxProfile->id,
-            'cost_price' => 600,
-            'sale_price' => 850,
             'is_active' => true
         ]);
 
@@ -228,8 +222,6 @@ class ProductAttributeTest extends TestCase
             'sales_unit_id' => $this->boxUnit->id,
             'base_unit_id' => $this->boxUnit->id,
             'tax_profile_id' => $this->taxProfile->id,
-            'cost_price' => 500,
-            'sale_price' => 700,
             'is_active' => true
         ]);
 
@@ -244,8 +236,6 @@ class ProductAttributeTest extends TestCase
             'sales_unit_id' => $this->boxUnit->id,
             'base_unit_id' => $this->boxUnit->id,
             'tax_profile_id' => $this->taxProfile->id,
-            'cost_price' => 600,
-            'sale_price' => 850,
             'is_active' => true
         ]);
 
@@ -321,8 +311,6 @@ class ProductAttributeTest extends TestCase
             'sales_unit_id' => $unitB->id,
             'base_unit_id' => $unitB->id,
             'tax_profile_id' => TaxProfile::create(['organization_id' => $orgB->id, 'name' => 'B Tax', 'igst_rate' => 18, 'cgst_rate' => 9, 'sgst_rate' => 9])->id,
-            'cost_price' => 100,
-            'sale_price' => 150,
             'is_active' => true
         ]);
 
@@ -356,8 +344,6 @@ class ProductAttributeTest extends TestCase
             'sales_unit_id' => $this->boxUnit->id,
             'base_unit_id' => $this->boxUnit->id,
             'tax_profile_id' => $this->taxProfile->id,
-            'cost_price' => 500,
-            'sale_price' => 700,
             'is_active' => true
         ]);
     }

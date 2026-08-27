@@ -108,7 +108,7 @@ export default function GRNList({ initialViewMode = 'list', onViewModeChange }) 
         <div className="animate__animated animate__fadeIn">
             <div className="d-flex align-items-center justify-content-between mb-4">
                 <div>
-                    <h3 className="fw-bold text-dark">Goods Receipt Registry (GRN)</h3>
+                    <h3 className="fw-bold text-dark">Goods Receipt Notes (GRN)</h3>
                     <p className="text-muted small mb-0">Monitor and create Goods Receipt Notes from suppliers to track inbound material inventory.</p>
                 </div>
                 <button

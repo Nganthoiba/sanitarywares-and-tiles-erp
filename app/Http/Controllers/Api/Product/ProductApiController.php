@@ -85,14 +85,6 @@ class ProductApiController extends Controller
             }
         }
 
-        // Defaults for commercial fields if empty or omitted
-        if ($request->input('cost_price') === null || $request->input('cost_price') === '') {
-            $request->merge(['cost_price' => 0]);
-        }
-        if ($request->input('sale_price') === null || $request->input('sale_price') === '') {
-            $request->merge(['sale_price' => 0]);
-        }
-
         // Fallback for tax_profile_id if not present
         if (!$request->has('tax_profile_id') || empty($request->input('tax_profile_id'))) {
             $firstTaxProfile = TaxProfile::where('is_active', true)->first();
@@ -142,8 +134,6 @@ class ProductApiController extends Controller
                 'nullable',
                 Rule::exists('manufacturers', 'id')
             ],
-            'cost_price' => 'nullable|numeric|min:0',
-            'sale_price' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
             'pieces_per_box' => 'nullable|numeric|min:0.0001',
             'product_type' => 'nullable|string|in:STANDARD,MEASURED_MATERIAL',
@@ -376,8 +366,7 @@ class ProductApiController extends Controller
 
         // Fallback for tax_profile_id if not present
         if (!$request->has('tax_profile_id') || empty($request->input('tax_profile_id'))) {
-            $firstTaxProfile = TaxProfile::where('organization_id', $orgId)->where('is_active', true)->first()
-                ?? TaxProfile::where('is_active', true)->first();
+            $firstTaxProfile = TaxProfile::where('is_active', true)->first();
             if ($firstTaxProfile) {
                 $request->merge(['tax_profile_id' => $firstTaxProfile->id]);
             }
@@ -420,14 +409,12 @@ class ProductApiController extends Controller
             ],
             'tax_profile_id' => [
                 'required',
-                Rule::exists('tax_profiles', 'id')->where('organization_id', $orgId)
+                Rule::exists('tax_profiles', 'id')
             ],
             'manufacturer_id' => [
                 'nullable',
                 Rule::exists('manufacturers', 'id')
             ],
-            'cost_price' => 'required|numeric|min:0',
-            'sale_price' => 'required|numeric|min:0',
             'is_active' => 'boolean',
             'attributes' => 'nullable|array',
             'attributes.*.attribute_id' => [

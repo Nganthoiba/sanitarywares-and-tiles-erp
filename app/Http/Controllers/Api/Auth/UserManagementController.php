@@ -22,7 +22,7 @@ class UserManagementController extends Controller
      */
     public function index(Request $request)
     {
-        $users = User::with(['roles', 'scopes.branch', 'scopes.warehouse'])->get();
+        $users = User::with(['organization', 'roles', 'scopes.branch', 'scopes.warehouse'])->get();
 
         return response()->json($users);
     }

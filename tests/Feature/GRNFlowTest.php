@@ -488,22 +488,52 @@ class GRNFlowTest extends TestCase
             'received_date' => '2026-08-09'
         ]);
 
-        $this->tileVariant->update(['cost_price' => 120.00]);
+        $po = \App\Domains\Purchase\Models\PurchaseOrder::create([
+            'organization_id' => $this->org->id,
+            'branch_id' => $this->warehouse->branch_id,
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'po_number' => 'PO-ACT-1',
+            'po_date' => '2026-08-09',
+            'status' => 'APPROVED',
+        ]);
+
+        $poItem1 = $po->items()->create([
+            'organization_id' => $this->org->id,
+            'product_variant_id' => $this->tileVariant->id,
+            'unit_id' => $this->boxUnit->id,
+            'quantity' => 2,
+            'unit_price' => 120.00,
+            'subtotal' => 240.00,
+            'tax_amount' => 0,
+            'total_amount' => 240.00,
+        ]);
+
+        $poItem2 = $po->items()->create([
+            'organization_id' => $this->org->id,
+            'product_variant_id' => $this->graniteVariant->id,
+            'unit_id' => $this->sqftUnit->id,
+            'quantity' => 50,
+            'unit_price' => 250.00,
+            'subtotal' => 12500.00,
+            'tax_amount' => 0,
+            'total_amount' => 12500.00,
+        ]);
 
         // Bulk item: 2 Boxes (Cost: 120.00 each -> Total Bulk = 240.00)
         $bulkItem = $grn->items()->create([
             'organization_id' => $this->org->id,
+            'purchase_order_item_id' => $poItem1->id,
             'product_variant_id' => $this->tileVariant->id,
             'unit_id' => $this->boxUnit->id,
             'quantity_received' => 2.0000,
             'quantity_accepted' => 2.0000,
             'quantity_rejected' => 0.0000,
         ]);
-
-        $this->graniteVariant->update(['cost_price' => 250.00]);
         
         $slabItem = $grn->items()->create([
             'organization_id' => $this->org->id,
+            'purchase_order_item_id' => $poItem2->id,
             'product_variant_id' => $this->graniteVariant->id,
             'unit_id' => $this->sqftUnit->id,
             'quantity_received' => 1.0000,

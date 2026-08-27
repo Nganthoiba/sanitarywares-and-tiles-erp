@@ -52,8 +52,6 @@ export default function ProductEntry({ initialSubTab = "list" }) {
         product_type: "STANDARD",
         physical_object: "SLAB",
         measurement_unit: "SQFT",
-        cost_price: "",
-        sale_price: "",
         tax_profile_id: "",
         is_active: true,
         attributes: {} // { attribute_id: value }
@@ -199,8 +197,6 @@ export default function ProductEntry({ initialSubTab = "list" }) {
             product_type: "STANDARD",
             physical_object: "SLAB",
             measurement_unit: "SQFT",
-            cost_price: "0",
-            sale_price: "0",
             tax_profile_id: taxProfiles[0]?.id?.toString() || "",
             is_active: true,
             attributes: {}
@@ -271,8 +267,6 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                 product_type: (p.inventory_behavior === 'SLAB') ? "MEASURED_MATERIAL" : "STANDARD",
                 physical_object: p.physical_object || "SLAB",
                 measurement_unit: p.measurement_unit || "SQFT",
-                cost_price: p.cost_price,
-                sale_price: p.sale_price,
                 tax_profile_id: p.tax_profile_id?.toString() || "",
                 is_active: !!p.is_active,
                 attributes: mappedAttrs
@@ -378,8 +372,6 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                 sku: product.sku,
                 gtin: product.gtin,
                 barcode: product.barcode,
-                cost_price: product.cost_price,
-                sale_price: product.sale_price,
                 tax_profile_id: product.tax_profile_id,
                 brand_id: product.brand_id,
                 manufacturer_id: product.manufacturer_id,
@@ -422,8 +414,6 @@ export default function ProductEntry({ initialSubTab = "list" }) {
 
         const submissionData = {
             ...productForm,
-            cost_price: parseFloat(productForm.cost_price || 0),
-            sale_price: parseFloat(productForm.sale_price || 0),
             attributes: mappedAttributes
         };
 
@@ -1144,61 +1134,11 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                 )}
                             </div>
 
-                            {/* Section 5: Commercial Information */}
-                            <div className="mb-4">
-                                <h6 className="text-primary fw-bold mb-3 border-bottom pb-2">5. Commercial Information — Optional</h6>
-                                <div className="row mb-3">
-                                    <div className="col-md-4">
-                                        <label className="form-label small fw-semibold">Purchase Price (₹)</label>
-                                        <input 
-                                            type="number" 
-                                            step="0.0001" 
-                                            className="form-control form-control-sm" 
-                                            placeholder="₹ (Default: 0.00)"
-                                            value={productForm.cost_price} 
-                                            onChange={(e) => setProductForm({ ...productForm, cost_price: e.target.value })} 
-                                        />
-                                    </div>
-                                    <div className="col-md-4">
-                                        <label className="form-label small fw-semibold">Sale Price (₹)</label>
-                                        <input 
-                                            type="number" 
-                                            step="0.0001" 
-                                            className="form-control form-control-sm" 
-                                            placeholder="₹ (Default: 0.00)"
-                                            value={productForm.sale_price} 
-                                            onChange={(e) => setProductForm({ ...productForm, sale_price: e.target.value })} 
-                                        />
-                                    </div>
-                                    <div className="col-md-4">
-                                        <label className="form-label small fw-semibold">Tax Profile</label>
-                                        <select 
-                                            className="form-select form-select-sm" 
-                                            value={productForm.tax_profile_id} 
-                                            onChange={(e) => setProductForm({ ...productForm, tax_profile_id: e.target.value })} 
-                                        >
-                                            <option value="">Select Tax Profile (Optional)</option>
-                                            {taxProfiles.map(tp => <option key={tp.id} value={tp.id}>{tp.name} ({tp.igst_rate}%)</option>)}
-                                        </select>
-                                    </div>
-                                </div>
-                                <div className="form-check mt-3">
-                                    <input 
-                                        type="checkbox" 
-                                        className="form-check-input" 
-                                        id="isActiveProd" 
-                                        checked={productForm.is_active} 
-                                        onChange={(e) => setProductForm({ ...productForm, is_active: e.target.checked })} 
-                                    />
-                                    <label className="form-check-label small fw-semibold text-dark" htmlFor="isActiveProd">Product is Active and Purchasable</label>
-                                </div>
-                            </div>
-
-                            {/* Section 6: Dynamic Specifications */}
+                            {/* Section 5: Dynamic Specifications */}
                             <div className="mb-4">
                                 <div className="d-flex justify-content-between align-items-center mb-2 border-bottom pb-2">
                                     <div>
-                                        <h6 className="text-primary fw-bold mb-0">6. Specifications / Custom Attributes — Optional</h6>
+                                        <h6 className="text-primary fw-bold mb-0">5. Specifications / Custom Attributes — Optional</h6>
                                         <small className="text-muted">Add product-specific specifications only when they are relevant to this product.</small>
                                     </div>
                                     <button 
@@ -1533,34 +1473,20 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                             {/* Pricing Pane */}
                                             <div className="tab-pane fade" id="pane-pricing" role="tabpanel">
                                                 <h5 className="fw-bold mb-4 text-dark">Pricing & Valuation Profile</h5>
-                                                <div className="row g-3">
-                                                    <div className="col-md-6">
-                                                        <div className="card bg-danger-subtle border-0 p-3 rounded-3 text-center">
-                                                            <span className="text-muted small d-block mb-1">Default Purchase Cost</span>
-                                                            <h3 className="fw-bold text-danger">₹{parseFloat(selectedProduct.cost_price).toFixed(2)}</h3>
-                                                            <small className="text-muted">Master catalogue cost unit rate basis</small>
+                                                <div className="alert alert-info border-0 rounded-3 mb-4">
+                                                    <i className="fa-solid fa-circle-info me-2"></i>
+                                                    <strong>Batch-Based Dynamic Pricing:</strong> Purchase prices (cost price) and sale prices are tracked per inventory batch number upon goods receipt at the warehouse, rather than set statically at the product level.
+                                                </div>
+                                                <div className="p-3 bg-light rounded-3">
+                                                    <h6 className="fw-bold mb-3 small text-uppercase text-muted">Tax & Commercial Profile</h6>
+                                                    <div className="row">
+                                                        <div className="col-md-6">
+                                                            <span className="text-muted d-block small">GST Tax Profile</span>
+                                                            <strong className="text-dark">{selectedProduct.tax_profile?.name || "None"}</strong>
                                                         </div>
-                                                    </div>
-                                                    <div className="col-md-6">
-                                                        <div className="card bg-success-subtle border-0 p-3 rounded-3 text-center">
-                                                            <span className="text-muted small d-block mb-1">Default Sales Price</span>
-                                                            <h3 className="fw-bold text-success">₹{parseFloat(selectedProduct.sale_price).toFixed(2)}</h3>
-                                                            <small className="text-muted">Standard Catalogue list rate basis</small>
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-12 mt-4">
-                                                        <div className="p-3 bg-light rounded-3">
-                                                            <h6 className="fw-bold mb-3 small text-uppercase text-muted">Commercial Profile Specs</h6>
-                                                            <div className="row">
-                                                                <div className="col-md-6">
-                                                                    <span className="text-muted d-block small">GST Tax Profile</span>
-                                                                    <strong className="text-dark">{selectedProduct.tax_profile?.name || "None"}</strong>
-                                                                </div>
-                                                                <div className="col-md-6">
-                                                                    <span className="text-muted d-block small">IGST Tax Rate</span>
-                                                                    <strong className="text-dark">{selectedProduct.tax_profile?.igst_rate || 0}%</strong>
-                                                                </div>
-                                                            </div>
+                                                        <div className="col-md-6">
+                                                            <span className="text-muted d-block small">IGST Tax Rate</span>
+                                                            <strong className="text-dark">{selectedProduct.tax_profile?.igst_rate || 0}%</strong>
                                                         </div>
                                                     </div>
                                                 </div>

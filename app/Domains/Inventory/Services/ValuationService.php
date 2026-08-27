@@ -17,13 +17,12 @@ class ValuationService
     {
         $obj = InventoryObject::findOrFail($objectId);
 
-        // Standard default pricing from variations
-        $variant = $obj->variant;
-        $costBasis = $variant ? floatval($variant->cost_price) : 0.00;
+        // Standard default cost basis
+        $costBasis = 0.00;
 
         if ($method === 'SPECIFIC_ID') {
             // For Granite/Marble: unique cost recorded at receipt / creation
-            $unitCost = $costBasis > 0 ? $costBasis : 120.00; // fallback
+            $unitCost = 120.00; // fallback
         } else {
             // FIFO / LIFO / WAC calculations from movements history
             $movements = InventoryMovement::where('inventory_object_id', $obj->id)
@@ -31,12 +30,7 @@ class ValuationService
                 ->orderBy('created_at', $method === 'LIFO' ? 'desc' : 'asc')
                 ->get();
 
-            if ($movements->count() > 0) {
-                // Approximate unit cost based on average or first receipts
-                $unitCost = $costBasis;
-            } else {
-                $unitCost = $costBasis;
-            }
+            $unitCost = $costBasis;
         }
 
         $totalValue = $unitCost * ($obj->area > 0 ? $obj->area : $obj->quantity);

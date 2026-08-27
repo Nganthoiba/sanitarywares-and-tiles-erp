@@ -110,8 +110,6 @@ class ProductMasterTestAdditional extends TestCase
             'sku' => 'KAJ-WHT-GLO-600',
             'inventory_behavior' => 'STANDARD',
             'tax_profile_id' => $this->taxProfile->id,
-            'cost_price' => 800.00,
-            'sale_price' => 1000.00,
         ]);
 
         $response = $this->actingAs($this->user, 'sanctum')
@@ -145,8 +143,6 @@ class ProductMasterTestAdditional extends TestCase
             'category_id' => $newCategory->id,
             'brand_id' => $newBrand->id,
             'product_type' => 'STANDARD',
-            'cost_price' => 500.00,
-            'sale_price' => 700.00,
         ];
 
         $response = $this->actingAs($this->user, 'sanctum')
@@ -178,8 +174,6 @@ class ProductMasterTestAdditional extends TestCase
             'sku' => 'KAJ-WHT-GLO-600',
             'inventory_behavior' => 'STANDARD',
             'tax_profile_id' => $this->taxProfile->id,
-            'cost_price' => 800.00,
-            'sale_price' => 1000.00,
         ]);
 
         $payload = [
@@ -187,8 +181,6 @@ class ProductMasterTestAdditional extends TestCase
             'brand_id' => $this->brand->id,
             'name' => 'Kajaria White Glossy 600x600 Updated',
             'sku' => 'KAJ-WHT-GLO-600-UPD',
-            'cost_price' => 850.00,
-            'sale_price' => 1050.00,
             'is_active' => true,
         ];
 
@@ -200,8 +192,6 @@ class ProductMasterTestAdditional extends TestCase
             'id' => $variant->id,
             'name' => 'Kajaria White Glossy 600x600 Updated',
             'sku' => 'KAJ-WHT-GLO-600-UPD',
-            'cost_price' => 850.00,
-            'sale_price' => 1050.00,
         ]);
     }
 
@@ -221,8 +211,6 @@ class ProductMasterTestAdditional extends TestCase
             'sku' => 'SKU-ONE',
             'inventory_behavior' => 'STANDARD',
             'tax_profile_id' => $this->taxProfile->id,
-            'cost_price' => 100.00,
-            'sale_price' => 150.00,
         ]);
 
         $variant2 = Product::create([
@@ -236,8 +224,6 @@ class ProductMasterTestAdditional extends TestCase
             'sku' => 'SKU-TWO',
             'inventory_behavior' => 'STANDARD',
             'tax_profile_id' => $this->taxProfile->id,
-            'cost_price' => 100.00,
-            'sale_price' => 150.00,
         ]);
 
         // Try updating Product 2 to use Product 1's SKU
@@ -246,8 +232,6 @@ class ProductMasterTestAdditional extends TestCase
             'brand_id' => $this->brand->id,
             'name' => 'Product 2 Updated',
             'sku' => 'SKU-ONE',
-            'cost_price' => 100.00,
-            'sale_price' => 150.00,
         ];
 
         $response = $this->actingAs($this->user, 'sanctum')
@@ -273,8 +257,6 @@ class ProductMasterTestAdditional extends TestCase
             'sku' => 'TILE-CONV',
             'inventory_behavior' => 'STANDARD',
             'tax_profile_id' => $this->taxProfile->id,
-            'cost_price' => 100.00,
-            'sale_price' => 150.00,
         ]);
 
         // 1. Create a unit conversion (1 BOX = 4 PCS)
@@ -332,8 +314,6 @@ class ProductMasterTestAdditional extends TestCase
             'sku' => 'TILE-INV',
             'inventory_behavior' => 'STANDARD',
             'tax_profile_id' => $this->taxProfile->id,
-            'cost_price' => 100.00,
-            'sale_price' => 150.00,
         ]);
 
         $response = $this->actingAs($this->user, 'sanctum')

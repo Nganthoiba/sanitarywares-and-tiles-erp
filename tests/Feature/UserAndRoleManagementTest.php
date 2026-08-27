@@ -60,6 +60,7 @@ class UserAndRoleManagementTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonCount(1);
         $this->assertEquals('Admin A', $response->json('0.name'));
+        $this->assertEquals('Org A', $response->json('0.organization.name'));
     }
 
     public function test_admin_can_list_organization_roles()
@@ -353,7 +354,7 @@ class UserAndRoleManagementTest extends TestCase
             'slug' => 'hr-manager',
             'is_system' => false
         ]);
-        $manageUsersPermission = Permission::where('name', 'master.users.manage')->first();
+        $manageUsersPermission = Permission::where('slug', 'master.users.manage')->first();
         if ($manageUsersPermission) {
             $staffRole->permissions()->attach($manageUsersPermission->id, ['organization_id' => $this->orgA->id]);
         }

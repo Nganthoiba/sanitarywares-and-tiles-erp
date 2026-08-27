@@ -11,6 +11,33 @@ export default function UserManagement() {
     const [successMessage, setSuccessMessage] = useState(null);
     const [inviteLink, setInviteLink] = useState(null);
 
+    // Search & Pagination State
+    const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [perPage, setPerPage] = useState(10);
+
+    // Filter Users based on search query
+    const filteredUsers = users.filter(u => {
+        if (!searchTerm.trim()) return true;
+        const term = searchTerm.toLowerCase();
+
+        const nameMatch = (u.name || '').toLowerCase().includes(term);
+        const emailMatch = (u.email || '').toLowerCase().includes(term);
+        const orgMatch = (u.organization?.name || u.organization_name || '').toLowerCase().includes(term);
+        const rolesMatch = (u.roles || []).some(r => (r.name || '').toLowerCase().includes(term));
+        const branchMatch = (u.scopes?.[0]?.branch?.name || '').toLowerCase().includes(term);
+        const warehouseMatch = (u.scopes?.[0]?.warehouse?.name || '').toLowerCase().includes(term);
+        const statusMatch = (u.invitation_token ? 'pending password' : 'active').includes(term);
+
+        return nameMatch || emailMatch || orgMatch || rolesMatch || branchMatch || warehouseMatch || statusMatch;
+    });
+
+    const totalPages = Math.ceil(filteredUsers.length / perPage) || 1;
+    const safeCurrentPage = Math.min(currentPage, totalPages);
+    const indexOfFirstItem = (safeCurrentPage - 1) * perPage;
+    const indexOfLastItem = Math.min(safeCurrentPage * perPage, filteredUsers.length);
+    const paginatedUsers = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
+
     // Invite Employee Form State
     const [inviteForm, setInviteForm] = useState({
         name: '',
@@ -316,76 +343,202 @@ export default function UserManagement() {
                     </div>
                 )}
 
+                {/* Search & Per-Page Controls */}
+                <div className="row g-3 align-items-center mb-4">
+                    <div className="col-md-6">
+                        <div className="input-group">
+                            <span className="input-group-text bg-white border-end-0 text-muted">
+                                <i className="fa-solid fa-magnifying-glass"></i>
+                            </span>
+                            <input
+                                type="text"
+                                className="form-control border-start-0 ps-0"
+                                placeholder="Search by name, email, organization, role, branch, warehouse..."
+                                value={searchTerm}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                            />
+                            {searchTerm && (
+                                <button 
+                                    className="btn btn-outline-secondary border-start-0 bg-white text-muted"
+                                    onClick={() => {
+                                        setSearchTerm('');
+                                        setCurrentPage(1);
+                                    }}
+                                    type="button"
+                                >
+                                    <i className="fa-solid fa-xmark"></i>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="col-md-3 col-6 ms-auto">
+                        <select 
+                            className="form-select"
+                            value={perPage}
+                            onChange={(e) => {
+                                setPerPage(Number(e.target.value));
+                                setCurrentPage(1);
+                            }}
+                        >
+                            <option value={5}>5 per page</option>
+                            <option value={10}>10 per page</option>
+                            <option value={25}>25 per page</option>
+                            <option value={50}>50 per page</option>
+                        </select>
+                    </div>
+                </div>
+
                 {loading ? (
                     <div className="text-center py-5">
                         <div className="spinner-border text-primary" role="status"></div>
                     </div>
                 ) : (
-                    <div className="table-responsive">
-                        <table className="table table-hover align-middle">
-                            <thead className="table-light">
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Assigned Roles</th>
-                                    <th>Branch / Warehouse</th>
-                                    <th>Invitation Status</th>
-                                    <th className="text-end">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {users.length === 0 ? (
+                    <>
+                        <div className="table-responsive">
+                            <table className="table table-hover align-middle">
+                                <thead className="table-light">
                                     <tr>
-                                        <td colSpan="6" className="text-center py-4 text-muted">No staff members found.</td>
+                                        <th>Name & Email</th>
+                                        <th>Organization</th>
+                                        <th>Assigned Roles</th>
+                                        <th>Branch / Warehouse</th>
+                                        <th>Invitation Status</th>
+                                        <th className="text-end">Actions</th>
                                     </tr>
-                                ) : (
-                                    users.map(u => (
-                                        <tr key={u.id}>
-                                            <td>
-                                                <div className="fw-bold text-dark">{u.name}</div>
-                                            </td>
-                                            <td>{u.email}</td>
-                                            <td>
-                                                {u.roles.map(r => (
-                                                    <span key={r.id} className="badge bg-primary-subtle text-primary border border-primary-subtle me-1 px-2 py-1">{r.name}</span>
-                                                ))}
-                                            </td>
-                                            <td>
-                                                <div className="fw-semibold text-secondary">{u.scopes[0]?.branch?.name || 'N/A'}</div>
-                                                <div className="text-muted small">{u.scopes[0]?.warehouse?.name || 'N/A'}</div>
-                                            </td>
-                                            <td>
-                                                {u.invitation_token ? (
-                                                    <span className="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">Pending Password</span>
+                                </thead>
+                                <tbody>
+                                    {paginatedUsers.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="6" className="text-center py-4 text-muted">
+                                                {searchTerm ? (
+                                                    <div>
+                                                        <i className="fa-solid fa-filter-circle-xmark fs-3 opacity-50 mb-2"></i>
+                                                        <div>No matching staff members found for "{searchTerm}".</div>
+                                                        <button 
+                                                            className="btn btn-link btn-sm mt-1"
+                                                            onClick={() => { setSearchTerm(''); setCurrentPage(1); }}
+                                                        >
+                                                            Clear Search Filter
+                                                        </button>
+                                                    </div>
                                                 ) : (
-                                                    <span className="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Active</span>
+                                                    'No staff members found.'
                                                 )}
                                             </td>
-                                            <td className="text-end">
-                                                <div className="btn-group">
-                                                    <button 
-                                                        className="btn btn-outline-secondary btn-sm px-2 py-1" 
-                                                        onClick={() => openEditUserModal(u)}
-                                                        data-bs-toggle="modal" 
-                                                        data-bs-target="#editUserModal"
-                                                    >
-                                                        <i className="fa-solid fa-pen-to-square me-1"></i> Edit
-                                                    </button>
-                                                    <button 
-                                                        className="btn btn-outline-danger btn-sm px-2 py-1" 
-                                                        onClick={() => handleDelete(u.id)}
-                                                        disabled={users.length <= 1}
-                                                    >
-                                                        <i className="fa-solid fa-trash me-1"></i> Remove
-                                                    </button>
-                                                </div>
-                                            </td>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                    ) : (
+                                        paginatedUsers.map(u => (
+                                            <tr key={u.id}>
+                                                <td>
+                                                    <div className="fw-bold text-dark">{u.name}</div>
+                                                    <div className="text-primary small">{u.email}</div>
+                                                </td>
+                                                <td>
+                                                    <span className="fw-semibold text-secondary">
+                                                        {u.organization?.name || u.organization_name || '-'}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {u.roles.map(r => (
+                                                        <span key={r.id} className="badge bg-primary-subtle text-primary border border-primary-subtle me-1 px-2 py-1">{r.name}</span>
+                                                    ))}
+                                                </td>
+                                                <td>
+                                                    <div className="fw-semibold text-secondary">{u.scopes[0]?.branch?.name || 'N/A'}</div>
+                                                    <div className="text-muted small">{u.scopes[0]?.warehouse?.name || 'N/A'}</div>
+                                                </td>
+                                                <td>
+                                                    {u.invitation_token ? (
+                                                        <span className="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">Pending Password</span>
+                                                    ) : (
+                                                        <span className="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Active</span>
+                                                    )}
+                                                </td>
+                                                <td className="text-end">
+                                                    <div className="btn-group">
+                                                        <button 
+                                                            className="btn btn-outline-secondary btn-sm px-2 py-1" 
+                                                            onClick={() => openEditUserModal(u)}
+                                                            data-bs-toggle="modal" 
+                                                            data-bs-target="#editUserModal"
+                                                        >
+                                                            <i className="fa-solid fa-pen-to-square me-1"></i> Edit
+                                                        </button>
+                                                        <button 
+                                                            className="btn btn-outline-danger btn-sm px-2 py-1" 
+                                                            onClick={() => handleDelete(u.id)}
+                                                            disabled={users.length <= 1}
+                                                        >
+                                                            <i className="fa-solid fa-trash me-1"></i> Remove
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Pagination & Summary Footer */}
+                        {filteredUsers.length > 0 && (
+                            <div className="d-flex flex-column flex-md-row align-items-center justify-content-between pt-3 border-top gap-3">
+                                <div className="text-muted small">
+                                    Showing <span className="fw-bold text-dark">{indexOfFirstItem + 1}</span> to <span className="fw-bold text-dark">{indexOfLastItem}</span> of <span className="fw-bold text-dark">{filteredUsers.length}</span> staff members
+                                    {users.length !== filteredUsers.length && (
+                                        <span className="ms-1 text-secondary">(filtered from {users.length} total)</span>
+                                    )}
+                                </div>
+
+                                <nav aria-label="Staff members pagination">
+                                    <ul className="pagination pagination-sm mb-0">
+                                        <li className={`page-item ${safeCurrentPage === 1 ? 'disabled' : ''}`}>
+                                            <button className="page-link" onClick={() => setCurrentPage(1)} disabled={safeCurrentPage === 1} title="First Page">
+                                                <i className="fa-solid fa-angles-left"></i>
+                                            </button>
+                                        </li>
+                                        <li className={`page-item ${safeCurrentPage === 1 ? 'disabled' : ''}`}>
+                                            <button className="page-link" onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={safeCurrentPage === 1}>
+                                                Previous
+                                            </button>
+                                        </li>
+
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                            .filter(page => page === 1 || page === totalPages || Math.abs(page - safeCurrentPage) <= 1)
+                                            .map((page, idx, arr) => {
+                                                const prevPage = arr[idx - 1];
+                                                const showEllipsis = prevPage && page - prevPage > 1;
+                                                return (
+                                                    <React.Fragment key={page}>
+                                                        {showEllipsis && <li className="page-item disabled"><span className="page-link">...</span></li>}
+                                                        <li className={`page-item ${safeCurrentPage === page ? 'active' : ''}`}>
+                                                            <button className="page-link" onClick={() => setCurrentPage(page)}>
+                                                                {page}
+                                                            </button>
+                                                        </li>
+                                                    </React.Fragment>
+                                                );
+                                            })}
+
+                                        <li className={`page-item ${safeCurrentPage === totalPages ? 'disabled' : ''}`}>
+                                            <button className="page-link" onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={safeCurrentPage === totalPages}>
+                                                Next
+                                            </button>
+                                        </li>
+                                        <li className={`page-item ${safeCurrentPage === totalPages ? 'disabled' : ''}`}>
+                                            <button className="page-link" onClick={() => setCurrentPage(totalPages)} disabled={safeCurrentPage === totalPages} title="Last Page">
+                                                <i className="fa-solid fa-angles-right"></i>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 
@@ -504,12 +657,12 @@ export default function UserManagement() {
                                         <input 
                                             type="text" 
                                             name="name" 
-                                            className="form-control" 
+                                            className="form-control bg-light" 
                                             value={editForm.name} 
-                                            onChange={handleEditFormChange} 
-                                            placeholder="e.g. Saikhom Manimatum" 
-                                            required 
+                                            disabled 
+                                            readOnly 
                                         />
+                                        <div className="form-text small text-muted">Employee name can only be changed by the employee.</div>
                                     </div>
                                     <div className="mb-3">
                                         <label className="form-label small fw-semibold">Email Address</label>
@@ -520,7 +673,7 @@ export default function UserManagement() {
                                             disabled 
                                             readOnly 
                                         />
-                                        <div className="form-text small text-muted">Email address cannot be changed.</div>
+                                        <div className="form-text small text-muted">Email address can only be changed by the employee.</div>
                                     </div>
                                     <div className="mb-3">
                                         <label className="form-label small fw-semibold d-block">System Access Roles *</label>

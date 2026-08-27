@@ -23,11 +23,9 @@ class Product extends Model {
     protected $fillable = [
         'organization_id', 'category_id', 'purchase_unit_id', 'sales_unit_id', 'base_unit_id',
         'name', 'sku', 'gtin', 'barcode', 'inventory_behavior', 'tax_profile_id', 'brand_id',
-        'manufacturer_id', 'cost_price', 'sale_price', 'is_active'
+        'manufacturer_id', 'is_active'
     ];
     protected $casts = [
-        'cost_price' => 'decimal:4',
-        'sale_price' => 'decimal:4',
         'is_active' => 'boolean'
     ];
 

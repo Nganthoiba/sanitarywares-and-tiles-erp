@@ -23,8 +23,6 @@ export default function QuickProductVariantModal({ show, onClose, onSave }) {
         purchase_unit_id: '',
         sales_unit_id: '',
         base_unit_id: '',
-        cost_price: '',
-        sale_price: '',
         tax_profile_id: '',
         is_active: true
     });
@@ -60,8 +58,6 @@ export default function QuickProductVariantModal({ show, onClose, onSave }) {
                         purchase_unit_id: defaultUnit,
                         sales_unit_id: defaultUnit,
                         base_unit_id: defaultUnit,
-                        cost_price: '',
-                        sale_price: '',
                         tax_profile_id: defaultTax,
                         is_active: true
                     });
@@ -224,50 +220,19 @@ export default function QuickProductVariantModal({ show, onClose, onSave }) {
                                         ))}
                                     </select>
                                 </div>
-                            </div>
-
-                            {/* Section: Commercial (Optional) */}
-                            <div className="p-3 border rounded-3 bg-light mb-2">
-                                <span className="fw-semibold text-muted small d-block mb-2">
-                                    Commercial Information — Optional
-                                </span>
-                                <div className="row g-3">
-                                    <div className="col-md-4">
-                                        <label className="form-label small mb-1">Purchase Price (₹)</label>
-                                        <input
-                                            type="number"
-                                            step="0.0001"
-                                            className="form-control form-control-sm"
-                                            placeholder="₹ 0.00"
-                                            value={form.cost_price}
-                                            onChange={(e) => handleChange('cost_price', e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="col-md-4">
-                                        <label className="form-label small mb-1">Sale Price (₹)</label>
-                                        <input
-                                            type="number"
-                                            step="0.0001"
-                                            className="form-control form-control-sm"
-                                            placeholder="₹ 0.00"
-                                            value={form.sale_price}
-                                            onChange={(e) => handleChange('sale_price', e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="col-md-4">
-                                        <label className="form-label small mb-1">Tax Profile</label>
-                                        <select
-                                            className="form-select form-select-sm"
-                                            value={form.tax_profile_id}
-                                            onChange={(e) => handleChange('tax_profile_id', e.target.value)}
-                                            disabled={loading}
-                                        >
-                                            <option value="">Select Tax Profile</option>
-                                            {taxProfiles.map(tp => (
-                                                <option key={tp.id} value={tp.id}>{tp.name} ({tp.igst_rate}%)</option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                <div className="col-md-6">
+                                    <label className="form-label small fw-semibold">Tax Profile</label>
+                                    <select
+                                        className="form-select form-select-sm"
+                                        value={form.tax_profile_id}
+                                        onChange={(e) => handleChange('tax_profile_id', e.target.value)}
+                                        disabled={loading}
+                                    >
+                                        <option value="">Select Tax Profile</option>
+                                        {taxProfiles.map(tp => (
+                                            <option key={tp.id} value={tp.id}>{tp.name} ({tp.igst_rate}%)</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                         </div>

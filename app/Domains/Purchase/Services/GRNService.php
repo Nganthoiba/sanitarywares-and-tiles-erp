@@ -220,7 +220,7 @@ class GRNService
                         $totalArea += ((float) $slab->length * (float) $slab->width) / 144.0;
                     }
                     
-                    $price = $item->orderItem ? (float) $item->orderItem->unit_price : (float) $variant->cost_price;
+                    $price = $item->orderItem ? (float) $item->orderItem->unit_price : 0.00;
                     $totalValue += $totalArea * $price;
                     $receivedPricingQty = $totalArea;
                 } else {
@@ -229,7 +229,7 @@ class GRNService
                     }
 
                     // Bulk calculation: received quantity * price
-                    $price = $item->orderItem ? (float) $item->orderItem->unit_price : (float) $variant->cost_price;
+                    $price = $item->orderItem ? (float) $item->orderItem->unit_price : 0.00;
                     
                     if ($item->orderItem && $item->orderItem->pricing_unit_id && $item->orderItem->pricing_unit_id != $item->orderItem->unit_id) {
                         if ($item->orderItem->pricing_conversion_factor !== null) {

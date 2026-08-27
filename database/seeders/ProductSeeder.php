@@ -53,8 +53,6 @@ class ProductSeeder extends Seeder
                 'name' => 'Royal Gold Polish Vitrified Tile 600x600',
                 'inventory_behavior' => 'STANDARD',
                 'tax_profile_id' => $taxProfile->id,
-                'cost_price' => 120.00,
-                'sale_price' => 180.00,
                 'is_active' => true,
             ]
         );
@@ -96,8 +94,6 @@ class ProductSeeder extends Seeder
                 'name' => 'Black Galaxy Granite Slab Premium',
                 'inventory_behavior' => 'SLAB',
                 'tax_profile_id' => $taxProfile->id,
-                'cost_price' => 200.00,
-                'sale_price' => 350.00,
                 'is_active' => true,
             ]
         );

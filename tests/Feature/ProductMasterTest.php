@@ -108,8 +108,6 @@ class ProductMasterTest extends TestCase
             'name' => 'Kajaria White Glossy 600x600',
             'sku' => 'KAJ-WHT-GLO-600',
             'product_type' => 'STANDARD',
-            'cost_price' => 800.00,
-            'sale_price' => 1000.00,
         ];
 
         $response = $this->actingAs($this->user, 'sanctum')
@@ -145,8 +143,6 @@ class ProductMasterTest extends TestCase
             'product_type' => 'MEASURED_MATERIAL',
             'physical_object' => 'SLAB',
             'measurement_unit' => 'SQFT',
-            'cost_price' => 200.00,
-            'sale_price' => 350.00,
         ];
 
         $response = $this->actingAs($this->user, 'sanctum')
@@ -180,8 +176,6 @@ class ProductMasterTest extends TestCase
             'name' => 'Kajaria Gold Metallic 600x600',
             'sku' => 'KAJ-GLD-MET-600',
             'product_type' => 'STANDARD',
-            'cost_price' => 900.00,
-            'sale_price' => 1200.00,
         ];
 
         $response = $this->actingAs($this->user, 'sanctum')
@@ -211,8 +205,6 @@ class ProductMasterTest extends TestCase
             'name' => 'Wall Hung WC Closet',
             'sku' => 'WC-WALL-HUNG',
             'product_type' => 'STANDARD',
-            'cost_price' => 5000.00,
-            'sale_price' => 7500.00,
         ];
 
         $response = $this->actingAs($this->user, 'sanctum')
@@ -239,8 +231,6 @@ class ProductMasterTest extends TestCase
             'product_type' => 'MEASURED_MATERIAL',
             'physical_object' => 'SLAB',
             'measurement_unit' => 'SQFT',
-            'cost_price' => 250.00,
-            'sale_price' => 400.00,
         ];
 
         $response = $this->actingAs($this->user, 'sanctum')
@@ -268,8 +258,6 @@ class ProductMasterTest extends TestCase
             'product_type' => 'MEASURED_MATERIAL',
             'physical_object' => 'SLAB',
             'measurement_unit' => 'SQFT',
-            'cost_price' => 300.00,
-            'sale_price' => 600.00,
         ];
 
         $response = $this->actingAs($this->user, 'sanctum')
@@ -300,8 +288,6 @@ class ProductMasterTest extends TestCase
             'sales_unit_id' => $this->pcsUnit->id,
             'base_unit_id' => $this->pcsUnit->id,
             'tax_profile_id' => $this->taxProfile->id,
-            'cost_price' => 10.00,
-            'sale_price' => 15.00,
         ]);
 
         $payload = [
@@ -311,8 +297,6 @@ class ProductMasterTest extends TestCase
             'name' => 'Tile Variant 2',
             'sku' => 'DUPLICATE-SKU',
             'product_type' => 'STANDARD',
-            'cost_price' => 20.00,
-            'sale_price' => 30.00,
         ];
 
         $response = $this->actingAs($this->user, 'sanctum')
@@ -335,8 +319,6 @@ class ProductMasterTest extends TestCase
             'sku' => 'KAJ-WHT-GLO-600',
             'product_type' => 'STANDARD',
             'gtin' => str_repeat('A', 51), // Exceeds max:50 constraint
-            'cost_price' => 800.00,
-            'sale_price' => 1000.00,
         ];
 
         $response = $this->actingAs($this->user, 'sanctum')
@@ -358,8 +340,6 @@ class ProductMasterTest extends TestCase
             'sku' => 'KAJ-WHT-GLO-600',
             'product_type' => 'STANDARD',
             'tax_profile_id' => 999999, // Non-existent ID
-            'cost_price' => 800.00,
-            'sale_price' => 1000.00,
         ];
 
         $response = $this->actingAs($this->user, 'sanctum')
@@ -381,8 +361,6 @@ class ProductMasterTest extends TestCase
             'name' => 'Kajaria White Glossy 600x600',
             'sku' => 'KAJ-WHT-GLO-600',
             'product_type' => 'STANDARD',
-            'cost_price' => 800.00,
-            'sale_price' => 1000.00,
             'attributes' => [
                 [
                     'attribute_id' => $this->thicknessAttribute->id,
@@ -415,8 +393,6 @@ class ProductMasterTest extends TestCase
             'name' => 'Premium Black Granite',
             'sku' => 'GRN-BLK-PREM',
             'product_type' => 'MEASURED_MATERIAL',
-            'cost_price' => 200.00,
-            'sale_price' => 350.00,
         ];
 
         $response = $this->actingAs($this->user, 'sanctum')
@@ -435,8 +411,6 @@ class ProductMasterTest extends TestCase
             'product_type' => 'MEASURED_MATERIAL',
             'physical_object' => 'BOX', // Invalid physical object for slab
             'measurement_unit' => 'KG',  // Invalid measurement unit
-            'cost_price' => 200.00,
-            'sale_price' => 350.00,
         ];
 
         $response2 = $this->actingAs($this->user, 'sanctum')
@@ -467,8 +441,6 @@ class ProductMasterTest extends TestCase
             'name' => 'Kajaria White Glossy 600x600',
             'sku' => 'KAJ-WHT-GLO-600',
             'product_type' => 'STANDARD',
-            'cost_price' => 800.00,
-            'sale_price' => 1000.00,
         ];
 
         // User B tries to build variant using Org A's category
@@ -493,8 +465,6 @@ class ProductMasterTest extends TestCase
             'sales_unit_id' => $this->pcsUnit->id,
             'base_unit_id' => $this->pcsUnit->id,
             'tax_profile_id' => $this->taxProfile->id,
-            'cost_price' => 100.00,
-            'sale_price' => 150.00,
         ];
 
         $response = $this->actingAs($this->user, 'sanctum')
@@ -551,8 +521,6 @@ class ProductMasterTest extends TestCase
             'sku' => 'GRN-CONV-COMPAT',
             'inventory_behavior' => 'SLAB',
             'tax_profile_id' => $this->taxProfile->id,
-            'cost_price' => 100.00,
-            'sale_price' => 150.00,
         ]);
 
         // Create unit conversion (e.g. 1 Box = 10 Sqft)
