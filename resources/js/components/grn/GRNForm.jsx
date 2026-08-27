@@ -262,7 +262,7 @@ export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
                     <div className="col-md-3">
                         <div className="d-flex justify-content-between align-items-center mb-1">
                             <label className="form-label small fw-semibold mb-0">To Storage Location</label>
-                            {!isReadOnly && formData.warehouse_id && (
+                            {!isReadOnly && (
                                 <button
                                     type="button"
                                     className="btn btn-link p-0 text-primary small text-decoration-none fw-semibold"
@@ -456,6 +456,7 @@ export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
                     }));
                     setFormData(prev => ({
                         ...prev,
+                        warehouse_id: prev.warehouse_id || (newSL.warehouse_id ? newSL.warehouse_id.toString() : prev.warehouse_id),
                         storage_location_id: newSL.id
                     }));
                 }}
