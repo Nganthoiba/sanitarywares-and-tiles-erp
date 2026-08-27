@@ -202,6 +202,7 @@ export default function GRNList({ initialViewMode = 'list', onViewModeChange }) 
                             <thead>
                                 <tr className="text-secondary font-monospace" style={{ fontSize: '0.8rem' }}>
                                     <th>GRN Number</th>
+                                    <th>Batch #</th>
                                     <th>Received Date</th>
                                     <th>Supplier</th>
                                     <th>Warehouse</th>
@@ -213,6 +214,7 @@ export default function GRNList({ initialViewMode = 'list', onViewModeChange }) 
                                 {grns.map((grn) => (
                                     <tr key={grn.id}>
                                         <td className="fw-bold text-dark font-monospace">{grn.grn_number}</td>
+                                        <td className="fw-bold text-primary font-monospace">{grn.batch_number || '-'}</td>
                                         <td className="font-monospace text-secondary">{grn.received_date}</td>
                                         <td>{grn.supplier_name || 'Direct Receipt'}</td>
                                         <td>{grn.warehouse_name}</td>

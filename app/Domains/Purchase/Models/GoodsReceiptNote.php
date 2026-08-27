@@ -13,7 +13,7 @@ use App\Domains\Master\Models\Warehouse;
 class GoodsReceiptNote extends Model {
     use BelongsToOrganization;
     use SoftDeletes;
-    protected $fillable = ['organization_id', 'warehouse_id', 'storage_location_id', 'purchase_order_id', 'supplier_id', 'grn_number', 'received_date', 'status', 'remarks'];
+    protected $fillable = ['organization_id', 'warehouse_id', 'storage_location_id', 'purchase_order_id', 'supplier_id', 'grn_number', 'batch_number', 'received_date', 'status', 'remarks'];
     protected $casts = ['received_date' => 'date'];
 
     public function organization(): BelongsTo {

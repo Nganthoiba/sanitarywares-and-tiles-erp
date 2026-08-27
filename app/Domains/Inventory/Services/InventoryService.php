@@ -62,7 +62,7 @@ class InventoryService
                             'object_code' => $slabCode,
                             'quantity' => 1.0000,
                             'area' => $area,
-                            'batch_number' => $grn->grn_number,
+                            'batch_number' => $grn->batch_number ?? $grn->grn_number,
                             'status' => 'AVAILABLE',
                         ]);
 
@@ -126,7 +126,7 @@ class InventoryService
                         'object_code' => $objectCode,
                         'quantity' => $baseQty,
                         'area' => $area,
-                        'batch_number' => $grn->grn_number,
+                        'batch_number' => $grn->batch_number ?? $grn->grn_number,
                         'status' => 'AVAILABLE',
                     ]);
 

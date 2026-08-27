@@ -32,6 +32,7 @@ class PermissionSeeder extends Seeder
                 'products.delete'               => ['Delete Products', 'Remove products from catalog'],
                 'products.brands.manage'        => ['Manage Brands', 'Manage organization product brands'],
                 'products.manufacturers.manage' => ['Manage Manufacturers', 'Associate products with manufacturers'],
+                'products.batch_prices.update'  => ['Update Batch Pricing', 'Authorize setting and updating cost price and sale price for product variant batches'],
             ],
             'Purchasing' => [
                 'purchase.requisitions.manage'  => ['Manage Purchase Requisitions', 'Create and process requisitions'],

@@ -21,6 +21,7 @@ class GoodsReceiptNoteResource extends JsonResource
             'supplier_id' => $this->supplier_id,
             'supplier_name' => $this->supplier->name ?? ($this->order->supplier->name ?? null),
             'grn_number' => $this->grn_number,
+            'batch_number' => $this->batch_number,
             'received_date' => $this->received_date?->toDateString(),
             'status' => $this->status,
             'remarks' => $this->remarks,

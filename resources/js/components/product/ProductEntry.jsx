@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import ProductBatchPriceManagement from "./ProductBatchPriceManagement";
 
 export default function ProductEntry({ initialSubTab = "list" }) {
     // Navigation / View state
@@ -678,6 +679,12 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                     <p className="text-muted small mb-0">Manage products, physical specifications, commercial profiles and conversions</p>
                 </div>
                 <div className="d-flex gap-2">
+                    <button
+                        className={`btn btn-sm ${view === "batch-pricing" ? "btn-primary" : "btn-outline-primary"} d-flex align-items-center gap-1`}
+                        onClick={() => setView(view === "batch-pricing" ? "list" : "batch-pricing")}
+                    >
+                        <i className="fa-solid fa-tags"></i> Batch Pricing Registry
+                    </button>
                     <button className="btn btn-sm btn-secondary d-flex align-items-center gap-1" onClick={() => { loadFormData(); loadProducts(); }}>
                         <i className="fa-solid fa-rotate"></i> Sync
                     </button>
@@ -697,6 +704,13 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                         <i className="fa-solid fa-circle-check me-2"></i>
                         <div>{success}</div>
                     </div>
+                )}
+
+                {/* ---------------------------------------------------------
+                    SUB-VIEW: BATCH PRICING REGISTRY
+                    --------------------------------------------------------- */}
+                {view === "batch-pricing" && (
+                    <ProductBatchPriceManagement />
                 )}
 
                 {/* ---------------------------------------------------------

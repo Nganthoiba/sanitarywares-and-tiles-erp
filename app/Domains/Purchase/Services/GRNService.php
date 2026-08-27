@@ -13,6 +13,7 @@ use App\Domains\Accounting\Services\PostingService;
 use App\Domains\Accounting\Models\Account;
 use App\Domains\Accounting\Models\AccountGroup;
 use App\Domains\Product\Models\Product;
+use App\Domains\Product\Models\ProductBatchPrice;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
@@ -38,6 +39,7 @@ class GRNService
                 'purchase_order_id' => $data['purchase_order_id'] ?? null,
                 'supplier_id' => $data['supplier_id'] ?? null,
                 'grn_number' => $grnNumber,
+                'batch_number' => $data['batch_number'] ?? $grnNumber,
                 'received_date' => $data['received_date'] ?? now(),
                 'status' => GoodsReceiptStatus::DRAFT->value,
                 'remarks' => $data['remarks'] ?? null,
@@ -60,6 +62,17 @@ class GRNService
                         'quantity_received' => $itemData['quantity_received'],
                         'quantity_accepted' => $itemData['quantity_accepted'] ?? $itemData['quantity_received'],
                         'quantity_rejected' => $itemData['quantity_rejected'] ?? 0.0000,
+                    ]);
+
+                    // Auto-populate product batch price entry (cost_price and sale_price initially NULL)
+                    ProductBatchPrice::firstOrCreate([
+                        'organization_id' => $grn->organization_id,
+                        'product_variant_id' => $itemData['product_variant_id'],
+                        'batch_number' => $grn->batch_number,
+                    ], [
+                        'user_id' => auth()->id(),
+                        'cost_price' => null,
+                        'sale_price' => null,
                     ]);
 
                     // If item is granite slabs and has slabs data
@@ -99,6 +112,7 @@ class GRNService
                 'storage_location_id' => $data['storage_location_id'] ?? null,
                 'purchase_order_id' => $data['purchase_order_id'] ?? null,
                 'supplier_id' => $data['supplier_id'] ?? null,
+                'batch_number' => $data['batch_number'] ?? $grn->batch_number,
                 'received_date' => $data['received_date'] ?? $grn->received_date,
                 'remarks' => $data['remarks'] ?? $grn->remarks,
             ]);
@@ -126,6 +140,17 @@ class GRNService
                         'quantity_received' => $itemData['quantity_received'],
                         'quantity_accepted' => $itemData['quantity_accepted'] ?? $itemData['quantity_received'],
                         'quantity_rejected' => $itemData['quantity_rejected'] ?? 0.0000,
+                    ]);
+
+                    // Auto-populate product batch price entry (cost_price and sale_price initially NULL)
+                    ProductBatchPrice::firstOrCreate([
+                        'organization_id' => $grn->organization_id,
+                        'product_variant_id' => $itemData['product_variant_id'],
+                        'batch_number' => $grn->batch_number,
+                    ], [
+                        'user_id' => auth()->id(),
+                        'cost_price' => null,
+                        'sale_price' => null,
                     ]);
 
                     if ($hasSlabs) {

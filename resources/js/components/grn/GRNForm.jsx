@@ -34,6 +34,7 @@ export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
         purchase_order_id: '',
         supplier_id: '',
         received_date: new Date().toISOString().substring(0, 10),
+        batch_number: 'BATCH-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000),
         remarks: '',
         status: 'DRAFT',
         grn_number: '',
@@ -87,6 +88,7 @@ export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
                         purchase_order_id: grn.purchase_order_id || '',
                         supplier_id: grn.supplier_id || '',
                         received_date: grn.received_date || '',
+                        batch_number: grn.batch_number || '',
                         remarks: grn.remarks || '',
                         status: grn.status || 'DRAFT',
                         grn_number: grn.grn_number || '',
@@ -129,6 +131,12 @@ export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
         setSaving(true);
         setError(null);
         setSuccess(null);
+
+        if (!formData.batch_number || !formData.batch_number.trim()) {
+            setError('# Batch Number is a mandatory header field.');
+            setSaving(false);
+            return;
+        }
 
         if (formData.items.length === 0) {
             setError('Please add at least one item line to the Goods Receipt Note.');
@@ -342,7 +350,20 @@ export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
                         />
                     </div>
 
-                    <div className="col-md-9">
+                    <div className="col-md-3">
+                        <label className="form-label small fw-semibold"># Batch Number <span className="text-danger">*</span></label>
+                        <input
+                            type="text"
+                            className="form-control form-control-sm font-monospace fw-bold text-primary"
+                            placeholder="e.g. BATCH-2026-001"
+                            value={formData.batch_number}
+                            onChange={(e) => handleHeaderChange('batch_number', e.target.value)}
+                            disabled={isReadOnly}
+                            required
+                        />
+                    </div>
+
+                    <div className="col-md-6">
                         <label className="form-label small fw-semibold">Remarks</label>
                         <input
                             type="text"

@@ -170,6 +170,7 @@ class GRNFlowTest extends TestCase
             'warehouse_id' => $this->warehouse->id,
             'storage_location_id' => $this->location->id,
             'supplier_id' => $this->supplier->id,
+            'batch_number' => 'BATCH-2026-TEST',
             'received_date' => '2026-08-09',
             'remarks' => 'Draft testing GRN',
             'items' => [
@@ -246,6 +247,7 @@ class GRNFlowTest extends TestCase
             'warehouse_id' => $this->warehouse->id,
             'storage_location_id' => $this->location->id,
             'supplier_id' => $this->supplier->id,
+            'batch_number' => 'BATCH-2026-UPDATED',
             'received_date' => '2026-08-09',
             'remarks' => 'Updated draft GRN',
             'items' => [

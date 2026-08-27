@@ -18,6 +18,7 @@ class UpdateGRNRequest extends FormRequest
             'storage_location_id' => ['nullable', 'exists:storage_locations,id'],
             'purchase_order_id' => ['nullable', 'exists:purchase_orders,id'],
             'supplier_id' => ['nullable', 'exists:suppliers,id'],
+            'batch_number' => ['required', 'string', 'max:50'],
             'received_date' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
