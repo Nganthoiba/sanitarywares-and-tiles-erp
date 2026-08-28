@@ -781,7 +781,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                 </select>
                             </div>
                             <button className="btn btn-primary btn-sm px-3 d-flex align-items-center gap-1" onClick={navigateToCreate}>
-                                <i className="fa-solid fa-plus"></i> Add Product
+                                <i className="fa-solid fa-plus"></i> Add New Product Variant
                             </button>
                         </div>
 
