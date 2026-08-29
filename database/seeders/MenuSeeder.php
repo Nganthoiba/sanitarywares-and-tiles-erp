@@ -220,32 +220,6 @@ class MenuSeeder extends Seeder
             ]
         );
 
-        Menu::updateOrCreate(
-            ['route_uri' => '/products/brands'],
-            [
-                'menu_name'     => 'Brands',
-                'menu_type'     => 'PAGE',
-                'icon'          => 'fa-solid fa-tags',
-                'parent_id'     => $productsGroup->id,
-                'permission_id' => $perm('products.brands.manage'),
-                'order'         => 3,
-                'enabled'       => true,
-            ]
-        );
-
-        Menu::updateOrCreate(
-            ['route_uri' => '/products/manufacturers'],
-            [
-                'menu_name'     => 'Manufacturers',
-                'menu_type'     => 'PAGE',
-                'icon'          => 'fa-solid fa-industry',
-                'parent_id'     => $productsGroup->id,
-                'permission_id' => $perm('products.manufacturers.manage'),
-                'order'         => 4,
-                'enabled'       => true,
-            ]
-        );
-
         // 5. Finance (GROUP)
         $financeGroup = Menu::updateOrCreate(
             ['menu_name' => 'Finance', 'parent_id' => null],
@@ -298,7 +272,46 @@ class MenuSeeder extends Seeder
             ]
         );
 
-        // 7. System Administration (GROUP)
+        // 7. Manufacturer and Brand (GROUP)
+        $manufacturerAndBrandGroup = Menu::updateOrCreate(
+            ['menu_name' => 'Manufacturer and Brand', 'parent_id' => null],
+            [
+                'menu_type'     => 'GROUP',
+                'route_uri'     => null,
+                'icon'          => 'fa fa-hand-holding-heart',
+                'permission_id' => null,
+                'order'         => 5,
+                'enabled'       => true,
+            ]
+        );
+
+        Menu::updateOrCreate(
+            ['route_uri' => '/products/brands'],
+            [
+                'menu_name'     => 'Brands',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-tags',
+                'parent_id'     => $manufacturerAndBrandGroup->id,
+                'permission_id' => $perm('products.brands.manage'),
+                'order'         => 1,
+                'enabled'       => true,
+            ]
+        );
+
+        Menu::updateOrCreate(
+            ['route_uri' => '/products/manufacturers'],
+            [
+                'menu_name'     => 'Manufacturers',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-industry',
+                'parent_id'     => $manufacturerAndBrandGroup->id,
+                'permission_id' => $perm('products.manufacturers.manage'),
+                'order'         => 2,
+                'enabled'       => true,
+            ]
+        );
+
+        // 8. System Administration (GROUP)
         $systemGroup = Menu::updateOrCreate(
             ['menu_name' => 'System Administration', 'parent_id' => null],
             [
