@@ -1082,27 +1082,86 @@ textarea::placeholder {
         font-size: 0.825rem !important;
     }
 
-    /* Sidebar compact width for 1366px screens */
+    /* Sidebar & Side Navigation Bar refinements for 1366x768 */
     .sidebar-wrapper:not(.collapsed) {
-        width: 215px !important;
-        min-width: 215px !important;
+        width: 200px !important;
+        min-width: 200px !important;
     }
 
     .sidebar-brand {
-        height: 56px !important;
-        padding: 0 14px !important;
-        font-size: 0.92rem !important;
+        height: 50px !important;
+        padding: 0 12px !important;
+    }
+
+    .sidebar-brand .sidebar-title {
+        font-size: 0.78rem !important;
+    }
+
+    .sidebar-brand svg {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    .sidebar-menu {
+        padding: 8px 0 !important;
+        gap: 2px !important;
+    }
+
+    .sidebar-menu-item {
+        margin: 0 8px !important;
     }
 
     .sidebar-link {
-        padding: 7px 11px !important;
-        font-size: 0.85rem !important;
+        padding: 5px 9px !important;
+        font-size: 0.76rem !important;
         font-weight: 450 !important;
+        border-radius: 6px !important;
+        width: calc(100% - 16px) !important;
+        margin: 0 8px !important;
+    }
+
+    .sidebar-link i {
+        font-size: 0.82rem !important;
+        margin-right: 0.5rem !important;
+    }
+
+    .sidebar-link .fa-chevron-down,
+    .sidebar-link .fa-chevron-right {
+        font-size: 0.65rem !important;
+    }
+
+    .sidebar-submenu {
+        padding: 2px 0 2px 8px !important;
+        gap: 2px !important;
     }
 
     .sidebar-submenu-link {
-        padding: 5px 10px 5px 18px !important;
-        font-size: 0.78rem !important;
+        padding: 4px 8px 4px 18px !important;
+        font-size: 0.72rem !important;
+        border-radius: 5px !important;
+        width: calc(100% - 16px) !important;
+        margin: 0 8px !important;
+    }
+
+    .sidebar-submenu-link i {
+        font-size: 0.7rem !important;
+        margin-right: 0.4rem !important;
+    }
+
+    .sidebar-footer {
+        padding: 0.5rem 0.65rem !important;
+    }
+
+    .sidebar-footer-details .fw-bold {
+        font-size: 0.75rem !important;
+    }
+
+    .sidebar-footer-details .text-muted {
+        font-size: 0.68rem !important;
+    }
+
+    .sidebar-footer button i {
+        font-size: 0.75rem !important;
     }
 
     /* Cards & Container Padding */
