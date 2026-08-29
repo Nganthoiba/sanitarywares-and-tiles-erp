@@ -30,6 +30,18 @@ class OrganizationScope implements Scope
             return;
         }
 
+        $table = $model->getTable();
+        $applyTenantFilter = function (Builder $query, string $tableName, $orgId) use ($model) {
+            if ($model instanceof \App\Domains\Master\Models\Category || $model instanceof Role) {
+                $query->where(function ($q) use ($tableName, $orgId) {
+                    $q->where($tableName . '.organization_id', $orgId)
+                        ->orWhereNull($tableName . '.organization_id');
+                });
+            } else {
+                $query->where($tableName . '.organization_id', $orgId);
+            }
+        };
+
         // 2. Resolve organization ID from TenantContext if bound
         if (App::bound(TenantContext::class)) {
             $context = App::make(TenantContext::class);
@@ -42,7 +54,7 @@ class OrganizationScope implements Scope
 
             $orgId = $context->getOrganizationId();
             if ($orgId) {
-                $builder->where($model->getTable() . '.organization_id', $orgId);
+                $applyTenantFilter($builder, $table, $orgId);
                 return;
             }
         }
@@ -54,25 +66,14 @@ class OrganizationScope implements Scope
                 // Super Admin operating at platform level
                 return;
             }
-            $builder->where($model->getTable() . '.organization_id', $user->organization_id);
+            $applyTenantFilter($builder, $table, $user->organization_id);
             return;
         }
 
         // 4. Fall back to header if provided
         $orgId = request()->header('X-Organization-Id');
         if ($orgId) {
-            /*
-            $builder->where($model->getTable() . '.organization_id', $orgId);
-            return;
-            */
-            if ($model instanceof Role) {
-                $builder->where(function ($q) use ($model, $orgId) {
-                    $q->where($model->getTable() . '.organization_id', $orgId)
-                        ->orWhereNull($model->getTable() . '.organization_id');
-                });
-            } else {
-                $builder->where($model->getTable() . '.organization_id', $orgId);
-            }
+            $applyTenantFilter($builder, $table, $orgId);
             return;
         }
 

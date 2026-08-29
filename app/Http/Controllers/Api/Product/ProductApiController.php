@@ -29,7 +29,7 @@ class ProductApiController extends Controller
         $orgId = $request->user()->organization_id;
 
         return response()->json([
-            'categories' => Category::where('organization_id', $orgId)->where('is_active', true)->orderBy('name')->get(),
+            'categories' => Category::where('is_active', true)->orderBy('name')->get(),
             'brands' => Brand::where('organization_id', $orgId)->where('is_active', true)->orderBy('name')->get(),
             'units' => Unit::where('is_active', true)->orderBy('name')->get(),
             'tax_profiles' => TaxProfile::where('is_active', true)->orderBy('name')->get(),

@@ -9,7 +9,7 @@ return new class extends Migration {
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organization_id')->index()->constrained('organizations')->onDelete('cascade');
+            $table->foreignId('organization_id')->nullable()->index()->constrained('organizations')->onDelete('cascade');
             $table->foreignId('parent_id')->index()->nullable()->constrained('categories')->onDelete('cascade');
             $table->string('name');
             $table->string('slug');

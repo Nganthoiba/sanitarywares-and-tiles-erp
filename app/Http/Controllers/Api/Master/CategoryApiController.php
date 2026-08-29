@@ -32,7 +32,9 @@ class CategoryApiController extends Controller
             'parent_id' => [
                 'nullable',
                 Rule::exists('categories', 'id')->where(function ($query) use ($orgId) {
-                    return $query->where('organization_id', $orgId);
+                    return $query->where(function ($q) use ($orgId) {
+                        $q->where('organization_id', $orgId)->orWhereNull('organization_id');
+                    });
                 })
             ],
             'description' => 'nullable|string',
@@ -43,8 +45,10 @@ class CategoryApiController extends Controller
         $name = $validated['name'];
         $slug = empty($validated['slug']) ? Str::slug($name) : Str::slug($validated['slug']);
 
-        // Check unique slug scoped to organization
-        $existingSlugCount = Category::where('organization_id', $orgId)->where('slug', $slug)->count();
+        // Check unique slug scoped to organization or global
+        $existingSlugCount = Category::where(function ($q) use ($orgId) {
+            $q->where('organization_id', $orgId)->orWhereNull('organization_id');
+        })->where('slug', $slug)->count();
         if ($existingSlugCount > 0) {
             $slug = $slug . '-' . time();
         }
@@ -85,7 +89,9 @@ class CategoryApiController extends Controller
             'parent_id' => [
                 'nullable',
                 Rule::exists('categories', 'id')->where(function ($query) use ($orgId, $category) {
-                    return $query->where('organization_id', $orgId)->where('id', '!=', $category->id);
+                    return $query->where(function ($q) use ($orgId) {
+                        $q->where('organization_id', $orgId)->orWhereNull('organization_id');
+                    })->where('id', '!=', $category->id);
                 })
             ],
             'description' => 'nullable|string',
@@ -101,7 +107,9 @@ class CategoryApiController extends Controller
             $slug = empty($validated['slug']) ? Str::slug($name) : Str::slug($validated['slug']);
 
             // Check uniqueness of slug ignoring current id
-            $existingSlug = Category::where('organization_id', $orgId)
+            $existingSlug = Category::where(function ($q) use ($orgId) {
+                $q->where('organization_id', $orgId)->orWhereNull('organization_id');
+            })
                 ->where('slug', $slug)
                 ->where('id', '!=', $category->id)
                 ->first();

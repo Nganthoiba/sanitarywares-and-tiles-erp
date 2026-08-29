@@ -20,6 +20,11 @@ trait BelongsToOrganization
                 return;
             }
 
+            // Do not auto-assign if organization_id is explicitly set to null (e.g. global categories)
+            if (array_key_exists('organization_id', $model->getAttributes()) && $model->getAttributes()['organization_id'] === null) {
+                return;
+            }
+
             if (!$model->organization_id) {
                 if (\Illuminate\Support\Facades\App::bound(\App\Shared\Context\TenantContext::class)) {
                     $orgId = \Illuminate\Support\Facades\App::make(\App\Shared\Context\TenantContext::class)->getOrganizationId();
