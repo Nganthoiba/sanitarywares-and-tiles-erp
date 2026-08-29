@@ -332,9 +332,12 @@ export default function PurchaseOrderForm({ poId, onBack, onSaveSuccess }) {
             </div>
 
             {error && (
-                <div className="alert alert-danger d-flex align-items-center mb-4 border-0 shadow-sm" role="alert" style={{ borderRadius: '8px' }}>
-                    <i className="fa-solid fa-circle-exclamation me-2 fs-5"></i>
-                    <div>{error}</div>
+                <div className="alert alert-danger d-flex align-items-center justify-content-between mb-4 border-0 shadow-sm" role="alert" style={{ borderRadius: '8px' }}>
+                    <div className="d-flex align-items-center">
+                        <i className="fa-solid fa-circle-exclamation me-2 fs-5"></i>
+                        <div>{error}</div>
+                    </div>
+                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setError(null)} aria-label="Close"></button>
                 </div>
             )}
 

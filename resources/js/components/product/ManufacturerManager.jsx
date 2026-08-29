@@ -222,16 +222,22 @@ export default function ManufacturerManager() {
             </div>
 
             {error && (
-                <div className="alert alert-danger d-flex align-items-center mb-4 animate__animated animate__shakeX" role="alert">
-                    <i className="fa-solid fa-circle-exclamation me-2 fs-5"></i>
-                    <div>{error}</div>
+                <div className="alert alert-danger d-flex align-items-center justify-content-between mb-4 animate__animated animate__shakeX" role="alert">
+                    <div className="d-flex align-items-center">
+                        <i className="fa-solid fa-circle-exclamation me-2 fs-5"></i>
+                        <div>{error}</div>
+                    </div>
+                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setError(null)} aria-label="Close"></button>
                 </div>
             )}
 
             {success && (
-                <div className="alert alert-success d-flex align-items-center mb-4 animate__animated animate__fadeIn" role="alert">
-                    <i className="fa-solid fa-circle-check me-2 fs-5"></i>
-                    <div>{success}</div>
+                <div className="alert alert-success d-flex align-items-center justify-content-between mb-4 animate__animated animate__fadeIn" role="alert">
+                    <div className="d-flex align-items-center">
+                        <i className="fa-solid fa-circle-check me-2 fs-5"></i>
+                        <div>{success}</div>
+                    </div>
+                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setSuccess(null)} aria-label="Close"></button>
                 </div>
             )}
 
@@ -394,14 +400,17 @@ export default function ManufacturerManager() {
                                     {/* SEARCH FIRST STEP FOR CREATION */}
                                     {modalMode === 'create' && searchStep ? (
                                         <div>
-                                            <div className="alert alert-info border-0 shadow-sm d-flex align-items-start mb-4" style={{ borderRadius: '10px' }}>
-                                                <i className="fa-solid fa-circle-info fs-5 me-3 text-info mt-0.5"></i>
-                                                <div>
-                                                    <div className="fw-bold">Search Global Master First</div>
-                                                    <div className="small text-muted">
-                                                        Before adding a new manufacturer, check if it already exists in the global master by searching Legal Name or GSTIN.
+                                            <div className="alert alert-info border-0 shadow-sm d-flex align-items-start justify-content-between mb-4" style={{ borderRadius: '10px' }}>
+                                                <div className="d-flex align-items-start">
+                                                    <i className="fa-solid fa-circle-info fs-5 me-3 text-info mt-0.5"></i>
+                                                    <div>
+                                                        <div className="fw-bold">Search Global Master First</div>
+                                                        <div className="small text-muted">
+                                                            Before adding a new manufacturer, check if it already exists in the global master by searching Legal Name or GSTIN.
+                                                        </div>
                                                     </div>
                                                 </div>
+                                                <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={(e) => { e.currentTarget.closest('.alert').style.display = 'none'; }} aria-label="Close"></button>
                                             </div>
 
                                             <div className="row g-3 mb-4">

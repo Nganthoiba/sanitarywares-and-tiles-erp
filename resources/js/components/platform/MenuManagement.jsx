@@ -878,8 +878,11 @@ export default function MenuManagement() {
                             </div>
                             <div className="modal-body">
                                 <p className="mb-2">Are you sure you want to delete the menu item <strong>"{deletingMenu.menu_name}"</strong>?</p>
-                                <div className="alert alert-warning py-2 small mb-0">
-                                    <i className="fa-solid fa-circle-info me-1"></i> If this menu is a Group containing children, backend validation will prevent deletion until children are reassigned or removed.
+                                <div className="alert alert-warning py-2 small mb-0 d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <i className="fa-solid fa-circle-info me-1"></i> If this menu is a Group containing children, backend validation will prevent deletion until children are reassigned or removed.
+                                    </div>
+                                    <button type="button" className="btn-close ms-2 flex-shrink-0" style={{ fontSize: '0.65rem' }} onClick={(e) => { e.currentTarget.closest('.alert').style.display = 'none'; }} aria-label="Close"></button>
                                 </div>
                             </div>
                             <div className="modal-footer border-top-0">

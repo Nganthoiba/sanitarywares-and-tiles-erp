@@ -188,7 +188,7 @@ export default function GRNItemsTable({ items, onChange, products, units, purcha
                                                             </option>
                                                         ))}
                                                     </select>
-                                                    <button
+                                                    {/* <button
                                                         type="button"
                                                         className="btn btn-outline-primary"
                                                         onClick={() => {
@@ -198,7 +198,7 @@ export default function GRNItemsTable({ items, onChange, products, units, purcha
                                                         title="Quick add new product variant"
                                                     >
                                                         <i className="fa-solid fa-plus"></i>
-                                                    </button>
+                                                    </button> */}
                                                 </div>
                                                 {item.product_variant_id && (
                                                     <span className="badge bg-light text-secondary font-monospace mt-1 px-2">{behavior}</span>

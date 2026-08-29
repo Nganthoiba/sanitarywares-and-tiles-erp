@@ -79,8 +79,9 @@ export default function Login({ onLoginSuccess, onNavigateToRegister, onNavigate
                                 <p className="text-secondary mb-4">Please enter your details to sign in.</p>
 
                                 {error && (
-                                    <div className="alert alert-danger rounded-3 border-0 bg-danger-subtle text-danger py-2 mb-4">
-                                        {error}
+                                    <div className="alert alert-danger rounded-3 border-0 bg-danger-subtle text-danger py-2 mb-4 d-flex align-items-center justify-content-between">
+                                        <div>{error}</div>
+                                        <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setError('')} aria-label="Close"></button>
                                     </div>
                                 )}
 

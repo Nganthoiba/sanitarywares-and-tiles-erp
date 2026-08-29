@@ -196,13 +196,15 @@ export default function RoleManagement() {
 
             <div className="card-body p-4">
                 {error && (
-                    <div className="alert alert-danger border-0 shadow-sm py-2 px-3 small rounded-3" role="alert">
-                        <i className="fa-solid fa-circle-exclamation me-2"></i>{error}
+                    <div className="alert alert-danger border-0 shadow-sm py-2 px-3 small rounded-3 d-flex align-items-center justify-content-between" role="alert">
+                        <div><i className="fa-solid fa-circle-exclamation me-2"></i>{error}</div>
+                        <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setError('')} aria-label="Close"></button>
                     </div>
                 )}
                 {successMessage && (
-                    <div className="alert alert-success border-0 shadow-sm py-2 px-3 small rounded-3" role="alert">
-                        <i className="fa-solid fa-circle-check me-2"></i>{successMessage}
+                    <div className="alert alert-success border-0 shadow-sm py-2 px-3 small rounded-3 d-flex align-items-center justify-content-between" role="alert">
+                        <div><i className="fa-solid fa-circle-check me-2"></i>{successMessage}</div>
+                        <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setSuccessMessage('')} aria-label="Close"></button>
                     </div>
                 )}
 

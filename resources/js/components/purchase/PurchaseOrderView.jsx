@@ -119,9 +119,12 @@ export default function PurchaseOrderView({ poId, onBack, userPermissions = [], 
             </div>
 
             {error && (
-                <div className="alert alert-danger" role="alert">
-                    <i className="fa-solid fa-circle-exclamation me-2"></i>
-                    {error}
+                <div className="alert alert-danger d-flex align-items-center justify-content-between mb-4" role="alert">
+                    <div>
+                        <i className="fa-solid fa-circle-exclamation me-2"></i>
+                        {error}
+                    </div>
+                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setError(null)} aria-label="Close"></button>
                 </div>
             )}
 

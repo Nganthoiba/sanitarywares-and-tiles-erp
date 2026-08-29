@@ -330,16 +330,19 @@ export default function UserManagement() {
                 )}
 
                 {inviteLink && (
-                    <div className="alert alert-info py-3 mb-4">
-                        <h6 className="fw-bold mb-1">Generated Onboarding Link:</h6>
-                        <p className="small text-muted mb-2">Provide this URL to the staff member so they can set up their secure account password.</p>
-                        <div className="d-flex gap-2">
-                            <input type="text" readOnly className="form-control form-control-sm bg-white" value={inviteLink} />
-                            <button className="btn btn-outline-primary btn-sm" onClick={() => {
-                                navigator.clipboard.writeText(inviteLink);
-                                alert('Link copied to clipboard!');
-                            }}>Copy Link</button>
+                    <div className="alert alert-info py-3 mb-4 d-flex align-items-start justify-content-between">
+                        <div className="w-100 me-2">
+                            <h6 className="fw-bold mb-1">Generated Onboarding Link:</h6>
+                            <p className="small text-muted mb-2">Provide this URL to the staff member so they can set up their secure account password.</p>
+                            <div className="d-flex gap-2">
+                                <input type="text" readOnly className="form-control form-control-sm bg-white" value={inviteLink} />
+                                <button className="btn btn-outline-primary btn-sm" onClick={() => {
+                                    navigator.clipboard.writeText(inviteLink);
+                                    alert('Link copied to clipboard!');
+                                }}>Copy</button>
+                            </div>
                         </div>
+                        <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setInviteLink(null)} aria-label="Close"></button>
                     </div>
                 )}
 

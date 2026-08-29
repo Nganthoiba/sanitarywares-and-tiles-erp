@@ -655,15 +655,21 @@ function App() {
                             <form onSubmit={handleUpdateProfile}>
                                 <div className="modal-body p-4 bg-light-subtle">
                                     {settingsSuccess && (
-                                        <div className="alert alert-success d-flex align-items-center py-2.5 px-3 mb-4 shadow-sm border-0 rounded-3 animate__animated animate__fadeIn" role="alert">
-                                            <i className="fa-solid fa-circle-check fs-5 me-2 text-success"></i>
-                                            <div className="fw-medium">{settingsSuccess}</div>
+                                        <div className="alert alert-success d-flex align-items-center justify-content-between py-2.5 px-3 mb-4 shadow-sm border-0 rounded-3 animate__animated animate__fadeIn" role="alert">
+                                            <div className="d-flex align-items-center">
+                                                <i className="fa-solid fa-circle-check fs-5 me-2 text-success"></i>
+                                                <div className="fw-medium">{settingsSuccess}</div>
+                                            </div>
+                                            <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setSettingsSuccess(null)} aria-label="Close"></button>
                                         </div>
                                     )}
                                     {settingsError && (
-                                        <div className="alert alert-danger d-flex align-items-center py-2.5 px-3 mb-4 shadow-sm border-0 rounded-3 animate__animated animate__fadeIn" role="alert">
-                                            <i className="fa-solid fa-circle-exclamation fs-5 me-2 text-danger"></i>
-                                            <div className="fw-medium">{settingsError}</div>
+                                        <div className="alert alert-danger d-flex align-items-center justify-content-between py-2.5 px-3 mb-4 shadow-sm border-0 rounded-3 animate__animated animate__fadeIn" role="alert">
+                                            <div className="d-flex align-items-center">
+                                                <i className="fa-solid fa-circle-exclamation fs-5 me-2 text-danger"></i>
+                                                <div className="fw-medium">{settingsError}</div>
+                                            </div>
+                                            <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setSettingsError(null)} aria-label="Close"></button>
                                         </div>
                                     )}
 

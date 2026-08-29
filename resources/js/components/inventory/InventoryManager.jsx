@@ -636,11 +636,14 @@ export default function InventoryManager() {
                             </div>
 
                             {valuationResults && (
-                                <div className="alert alert-info border-0 shadow-sm p-4">
-                                    <h5 className="fw-bold mb-2">Analytical Valuation Results</h5>
-                                    <div>Method Code: <strong>{valuationResults.valuation_method}</strong></div>
-                                    <div>Estimated Unit Cost: <strong>${parseFloat(valuationResults.unit_cost).toFixed(2)} / SQFT</strong></div>
-                                    <div className="fs-4 mt-2 text-primary">Total Inventory Asset Value: <strong>${parseFloat(valuationResults.total_value).toFixed(2)}</strong></div>
+                                <div className="alert alert-info border-0 shadow-sm p-4 d-flex align-items-start justify-content-between">
+                                    <div>
+                                        <h5 className="fw-bold mb-2">Analytical Valuation Results</h5>
+                                        <div>Method Code: <strong>{valuationResults.valuation_method}</strong></div>
+                                        <div>Estimated Unit Cost: <strong>${parseFloat(valuationResults.unit_cost).toFixed(2)} / SQFT</strong></div>
+                                        <div className="fs-4 mt-2 text-primary">Total Inventory Asset Value: <strong>${parseFloat(valuationResults.total_value).toFixed(2)}</strong></div>
+                                    </div>
+                                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setValuationResults(null)} aria-label="Close"></button>
                                 </div>
                             )}
                         </div>

@@ -379,13 +379,15 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                         <div className="modal-body px-4 py-4" style={{ maxHeight: '75vh', overflowY: 'auto' }}>
                             {/* Alert Messages */}
                             {error && (
-                                <div className="alert alert-danger py-2 small mb-3 animate__animated animate__fadeIn">
-                                    <i className="fa-solid fa-circle-exclamation me-2"></i>{error}
+                                <div className="alert alert-danger py-2 small mb-3 animate__animated animate__fadeIn d-flex align-items-center justify-content-between">
+                                    <div><i className="fa-solid fa-circle-exclamation me-2"></i>{error}</div>
+                                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setError(null)} aria-label="Close"></button>
                                 </div>
                             )}
                             {success && (
-                                <div className="alert alert-success py-2 small mb-3 animate__animated animate__fadeIn">
-                                    <i className="fa-solid fa-circle-check me-2"></i>{success}
+                                <div className="alert alert-success py-2 small mb-3 animate__animated animate__fadeIn d-flex align-items-center justify-content-between">
+                                    <div><i className="fa-solid fa-circle-check me-2"></i>{success}</div>
+                                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setSuccess(null)} aria-label="Close"></button>
                                 </div>
                             )}
 
@@ -466,9 +468,12 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                                 </h6>
 
                                 {showFormVariantInfo && (
-                                    <div className="alert alert-info bg-info-subtle text-info border-0 p-2.5 mb-3 small animate__animated animate__fadeIn">
-                                        <strong>Product Variant definition:</strong> A variant is a sellable catalog product configuration under a family.
-                                        For example, standard products usually show the family prefix followed by specific attribute details (e.g. *Eternity 600×600 White Glossy*).
+                                    <div className="alert alert-info bg-info-subtle text-info border-0 p-2.5 mb-3 small animate__animated animate__fadeIn d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <strong>Product Variant definition:</strong> A variant is a sellable catalog product configuration under a family.
+                                            For example, standard products usually show the family prefix followed by specific attribute details (e.g. *Eternity 600×600 White Glossy*).
+                                        </div>
+                                        <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setShowFormVariantInfo(false)} aria-label="Close"></button>
                                     </div>
                                 )}
 

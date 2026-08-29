@@ -75,8 +75,9 @@ export default function AcceptInvitation({ onNavigateToLogin }) {
                     </div>
 
                     {error && (
-                        <div className="alert alert-danger text-center py-2 border mb-3" style={{ backgroundColor: '#fef2f2', color: '#991b1b', borderColor: '#fca5a5', borderRadius: '8px', fontSize: '0.85rem' }}>
-                            {error}
+                        <div className="alert alert-danger text-center py-2 border mb-3 d-flex align-items-center justify-content-between" style={{ backgroundColor: '#fef2f2', color: '#991b1b', borderColor: '#fca5a5', borderRadius: '8px', fontSize: '0.85rem' }}>
+                            <div>{error}</div>
+                            <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setError('')} aria-label="Close"></button>
                         </div>
                     )}
 
@@ -86,8 +87,9 @@ export default function AcceptInvitation({ onNavigateToLogin }) {
                                 <i className="fa-solid fa-circle-check" style={{ fontSize: '3rem' }}></i>
                             </div>
                             <h5 className="fw-bold text-dark mb-2">Account Activated Successfully!</h5>
-                            <div className="alert alert-success text-center py-2.5 border mb-4" style={{ backgroundColor: '#ecfdf5', color: '#065f46', borderColor: '#a7f3d0', borderRadius: '8px', fontSize: '0.88rem' }}>
-                                {serverMessage || 'Invitation accepted. You can now login to the ERP.'}
+                            <div className="alert alert-success text-center py-2.5 border mb-4 d-flex align-items-center justify-content-between" style={{ backgroundColor: '#ecfdf5', color: '#065f46', borderColor: '#a7f3d0', borderRadius: '8px', fontSize: '0.88rem' }}>
+                                <div>{serverMessage || 'Invitation accepted. You can now login to the ERP.'}</div>
+                                <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={(e) => { e.currentTarget.closest('.alert').style.display = 'none'; }} aria-label="Close"></button>
                             </div>
                             <button 
                                 onClick={onNavigateToLogin} 

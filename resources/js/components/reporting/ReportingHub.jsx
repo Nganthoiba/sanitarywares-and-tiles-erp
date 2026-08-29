@@ -519,8 +519,9 @@ export default function ReportingHub() {
 
                     </div>
                 ) : (
-                    <div className="alert alert-warning text-center py-4 mb-0">
-                        <h5>No transaction data captured within selected parameters.</h5>
+                    <div className="alert alert-warning text-center py-4 mb-0 position-relative">
+                        <button type="button" className="btn-close position-absolute top-0 end-0 m-3" onClick={(e) => { e.currentTarget.closest('.alert').style.display = 'none'; }} aria-label="Close"></button>
+                        <h5 className="mb-0">No transaction data captured within selected parameters.</h5>
                     </div>
                 )}
             </div>

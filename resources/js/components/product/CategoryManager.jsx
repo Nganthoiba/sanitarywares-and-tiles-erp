@@ -27,6 +27,8 @@ export default function CategoryManager() {
         is_active: true
     });
 
+    const [showInfo, setShowInfo] = useState(true);
+
     const fetchCategories = async () => {
         setLoading(true);
         setError(null);
@@ -210,21 +212,32 @@ export default function CategoryManager() {
                 </button>
             </div>
 
-            <div className="alert alert-primary text-dark border-0 p-3 mb-4 small animate__animated animate__fadeIn">
-                <strong>What is a Product Category?</strong> Product categories organize your inventory hierarchically (e.g., <i>Tiles &gt; Ceramic Tiles</i>). Categories define logical classification, tax configurations, and properties structure, helping group similar items together for catalog browsing, sales analysis, and stock reporting.
-            </div>
+            {showInfo && (
+                <div className="alert alert-primary text-dark border-0 p-3 mb-4 small animate__animated animate__fadeIn d-flex align-items-center justify-content-between">
+                    <div>
+                        <strong>What is a Product Category?</strong> Product categories organize your inventory hierarchically (e.g., <i>Tiles &gt; Ceramic Tiles</i>). Categories define logical classification, tax configurations, and properties structure, helping group similar items together for catalog browsing, sales analysis, and stock reporting.
+                    </div>
+                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setShowInfo(false)} aria-label="Close"></button>
+                </div>
+            )}
 
             {error && (
-                <div className="alert alert-danger d-flex align-items-center mb-4 animate__animated animate__shakeX" role="alert">
-                    <i className="fa-solid fa-circle-exclamation me-2"></i>
-                    <div>{error}</div>
+                <div className="alert alert-danger d-flex align-items-center justify-content-between mb-4 animate__animated animate__shakeX" role="alert">
+                    <div className="d-flex align-items-center">
+                        <i className="fa-solid fa-circle-exclamation me-2"></i>
+                        <div>{error}</div>
+                    </div>
+                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setError(null)} aria-label="Close"></button>
                 </div>
             )}
 
             {success && (
-                <div className="alert alert-success d-flex align-items-center mb-4 animate__animated animate__fadeIn" role="alert">
-                    <i className="fa-solid fa-circle-check me-2"></i>
-                    <div>{success}</div>
+                <div className="alert alert-success d-flex align-items-center justify-content-between mb-4 animate__animated animate__fadeIn" role="alert">
+                    <div className="d-flex align-items-center">
+                        <i className="fa-solid fa-circle-check me-2"></i>
+                        <div>{success}</div>
+                    </div>
+                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setSuccess(null)} aria-label="Close"></button>
                 </div>
             )}
 

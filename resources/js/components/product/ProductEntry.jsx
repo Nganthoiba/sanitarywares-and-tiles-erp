@@ -652,15 +652,21 @@ export default function ProductEntry({ initialSubTab = "list" }) {
             <div className="card-body pt-2">
                 {/* Global Message Alerts */}
                 {error && (
-                    <div className="alert alert-danger d-flex align-items-center py-2 animate__animated animate__fadeIn border-0" role="alert" style={{ borderRadius: "8px" }}>
-                        <i className="fa-solid fa-circle-exclamation me-2"></i>
-                        <div>{error}</div>
+                    <div className="alert alert-danger d-flex align-items-center justify-content-between py-2 animate__animated animate__fadeIn border-0" role="alert" style={{ borderRadius: "8px" }}>
+                        <div className="d-flex align-items-center">
+                            <i className="fa-solid fa-circle-exclamation me-2"></i>
+                            <div>{error}</div>
+                        </div>
+                        <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setError(null)} aria-label="Close"></button>
                     </div>
                 )}
                 {success && (
-                    <div className="alert alert-success d-flex align-items-center py-2 animate__animated animate__fadeIn border-0" role="alert" style={{ borderRadius: "8px" }}>
-                        <i className="fa-solid fa-circle-check me-2"></i>
-                        <div>{success}</div>
+                    <div className="alert alert-success d-flex align-items-center justify-content-between py-2 animate__animated animate__fadeIn border-0" role="alert" style={{ borderRadius: "8px" }}>
+                        <div className="d-flex align-items-center">
+                            <i className="fa-solid fa-circle-check me-2"></i>
+                            <div>{success}</div>
+                        </div>
+                        <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setSuccess(null)} aria-label="Close"></button>
                     </div>
                 )}
 
@@ -1076,10 +1082,13 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                             {/* Pricing Pane */}
                                             <div className="tab-pane fade" id="pane-pricing" role="tabpanel">
                                                 <h5 className="fw-bold mb-4 text-dark">Pricing & Valuation Profile</h5>
-                                                <div className="alert alert-info border-0 rounded-3 mb-4">
-                                                    <i className="fa-solid fa-circle-info me-2"></i>
-                                                    <strong>Batch-Based Dynamic Pricing:</strong> Purchase prices (cost price) and sale prices are tracked per inventory batch number upon goods receipt at the warehouse, rather than set statically at the product level.
-                                                </div>
+                                                <div className="alert alert-info border-0 rounded-3 mb-4 d-flex align-items-center justify-content-between">
+                                                     <div>
+                                                         <i className="fa-solid fa-circle-info me-2"></i>
+                                                         <strong>Batch-Based Dynamic Pricing:</strong> Purchase prices (cost price) and sale prices are tracked per inventory batch number upon goods receipt at the warehouse, rather than set statically at the product level.
+                                                     </div>
+                                                     <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={(e) => { e.currentTarget.closest('.alert').style.display = 'none'; }} aria-label="Close"></button>
+                                                 </div>
                                                 <div className="p-3 bg-light rounded-3">
                                                     <h6 className="fw-bold mb-3 small text-uppercase text-muted">Tax & Commercial Profile</h6>
                                                     <div className="row">

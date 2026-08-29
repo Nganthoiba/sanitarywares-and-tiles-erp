@@ -135,16 +135,22 @@ export default function ProductBatchPriceManagement() {
             </div>
 
             {error && (
-                <div className="alert alert-danger d-flex align-items-center animate__animated animate__shakeX" role="alert">
-                    <i className="fa-solid fa-circle-exclamation me-2"></i>
-                    <div>{error}</div>
+                <div className="alert alert-danger d-flex align-items-center justify-content-between animate__animated animate__shakeX mb-4" role="alert">
+                    <div className="d-flex align-items-center">
+                        <i className="fa-solid fa-circle-exclamation me-2"></i>
+                        <div>{error}</div>
+                    </div>
+                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setError(null)} aria-label="Close"></button>
                 </div>
             )}
 
             {success && (
-                <div className="alert alert-success d-flex align-items-center animate__animated animate__fadeIn" role="alert">
-                    <i className="fa-solid fa-circle-check me-2"></i>
-                    <div>{success}</div>
+                <div className="alert alert-success d-flex align-items-center justify-content-between animate__animated animate__fadeIn mb-4" role="alert">
+                    <div className="d-flex align-items-center">
+                        <i className="fa-solid fa-circle-check me-2"></i>
+                        <div>{success}</div>
+                    </div>
+                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setSuccess(null)} aria-label="Close"></button>
                 </div>
             )}
 

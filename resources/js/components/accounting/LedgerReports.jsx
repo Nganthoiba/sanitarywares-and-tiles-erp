@@ -91,8 +91,9 @@ export default function LedgerReports() {
             </div>
 
             {error && (
-                <div className="alert alert-danger shadow-sm mb-4" role="alert">
-                    {error}
+                <div className="alert alert-danger shadow-sm mb-4 d-flex align-items-center justify-content-between" role="alert">
+                    <div>{error}</div>
+                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setError(null)} aria-label="Close"></button>
                 </div>
             )}
 

@@ -68,8 +68,9 @@ export default function QuickStorageLocationModal({ show, onClose, onSave, wareh
                     <form onSubmit={handleSubmit}>
                         <div className="modal-body px-4 py-3">
                             {error && (
-                                <div className="alert alert-danger py-2 small" role="alert">
-                                    {error}
+                                <div className="alert alert-danger py-2 small d-flex align-items-center justify-content-between" role="alert">
+                                    <div>{error}</div>
+                                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setError(null)} aria-label="Close"></button>
                                 </div>
                             )}
 
