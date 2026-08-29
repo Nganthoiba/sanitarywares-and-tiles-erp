@@ -181,8 +181,8 @@ function NavigationLayout({ user, handleLogout, hasPermission, fontSize, setFont
                                 </div>
                             )}
                             <div className="sidebar-footer-details" style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                <div className="fw-bold" style={{ fontSize: '0.85rem' }}>{user?.name || 'Operator'}</div>
-                                <span className="text-muted font-monospace" style={{ fontSize: '0.75rem' }}>{user?.organizationName || 'Acme'}</span>
+                                <div className="fw-bold">{user?.name || 'Operator'}</div>
+                                <span className="text-muted font-monospace" style={{ fontSize: '0.72rem' }}>{user?.organizationName || 'Acme'}</span>
                             </div>
                         </div>
                         <div className="d-flex gap-1 sidebar-footer-details">

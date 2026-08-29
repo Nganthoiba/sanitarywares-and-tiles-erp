@@ -504,7 +504,7 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                                             >
                                                 <option value="">No Manufacturer</option>
                                                 {manufacturers.map(m => (
-                                                    <option key={m.id} value={m.id}>{m.name}</option>
+                                                    <option key={m.id} value={m.id}>{m.legal_name}</option>
                                                 ))}
                                             </select>
                                             <button

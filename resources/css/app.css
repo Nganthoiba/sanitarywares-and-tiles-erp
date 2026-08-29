@@ -1084,8 +1084,8 @@ textarea::placeholder {
 
     /* Sidebar & Side Navigation Bar refinements for 1366x768 */
     .sidebar-wrapper:not(.collapsed) {
-        width: 200px !important;
-        min-width: 200px !important;
+        width: 240px !important;
+        min-width: 230px !important;
     }
 
     .sidebar-brand {
@@ -1153,7 +1153,7 @@ textarea::placeholder {
     }
 
     .sidebar-footer-details .fw-bold {
-        font-size: 0.75rem !important;
+        font-size: 0.69rem !important;
     }
 
     .sidebar-footer-details .text-muted {
@@ -1301,7 +1301,7 @@ textarea::placeholder {
     }
 
     .sidebar-wrapper:not(.collapsed) {
-        width: 190px !important;
+        width: 200px !important;
         min-width: 190px !important;
     }
 }

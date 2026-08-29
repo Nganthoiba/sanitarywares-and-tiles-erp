@@ -7,6 +7,12 @@ export default function CategoryManager() {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
 
+    // Search, Filter & Pagination states
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all'); // all, active, inactive
+    const [currentPage, setCurrentPage] = useState(1);
+    const [perPage, setPerPage] = useState(10);
+
     // Modal state
     const [showModal, setShowModal] = useState(false);
     const [modalMode, setModalMode] = useState('create'); // create, edit
@@ -40,6 +46,32 @@ export default function CategoryManager() {
     useEffect(() => {
         fetchCategories();
     }, []);
+
+    // Filter & Search calculation
+    const filteredCategories = categories.filter(c => {
+        const matchesStatus = 
+            statusFilter === 'all' ? true :
+            statusFilter === 'active' ? (c.is_active === 1 || c.is_active === true) :
+            (c.is_active === 0 || c.is_active === false);
+
+        if (!matchesStatus) return false;
+
+        if (!searchTerm.trim()) return true;
+
+        const term = searchTerm.toLowerCase();
+        const nameMatch = (c.name || '').toLowerCase().includes(term);
+        const slugMatch = (c.slug || '').toLowerCase().includes(term);
+        const parentMatch = (c.parent?.name || '').toLowerCase().includes(term);
+        const descMatch = (c.description || '').toLowerCase().includes(term);
+
+        return nameMatch || slugMatch || parentMatch || descMatch;
+    });
+
+    const totalPages = Math.ceil(filteredCategories.length / perPage) || 1;
+    const safeCurrentPage = Math.min(currentPage, totalPages);
+    const indexOfFirstItem = (safeCurrentPage - 1) * perPage;
+    const indexOfLastItem = Math.min(safeCurrentPage * perPage, filteredCategories.length);
+    const paginatedCategories = filteredCategories.slice(indexOfFirstItem, indexOfLastItem);
 
     const handleOpenCreate = () => {
         setModalMode('create');
@@ -89,6 +121,32 @@ export default function CategoryManager() {
         }
     };
 
+    const handleToggleStatus = async (category) => {
+        const isActive = category.is_active === 1 || category.is_active === true;
+        const newStatus = !isActive;
+        const actionText = newStatus ? 'activate' : 'deactivate';
+
+        if (!confirm(`Are you sure you want to ${actionText} category "${category.name}"?`)) {
+            return;
+        }
+
+        setError(null);
+        setSuccess(null);
+
+        try {
+            const token = localStorage.getItem('auth_token');
+            await axios.put(`/api/categories-crud/${category.id}`, {
+                is_active: newStatus
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setSuccess(`Category "${category.name}" successfully ${newStatus ? 'activated' : 'deactivated'}.`);
+            fetchCategories();
+        } catch (err) {
+            setError(err.response?.data?.message || `Failed to ${actionText} category.`);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError(null);
@@ -121,7 +179,17 @@ export default function CategoryManager() {
     };
 
     const handleChange = (field, value) => {
-        setForm(prev => ({ ...prev, [field]: value }));
+        setForm(prev => {
+            const updated = { ...prev, [field]: value };
+            if (field === 'name' && modalMode === 'create') {
+                const autoSlug = value.toLowerCase().replace(/[^a-z0-9-_]/g, '-');
+                const oldAutoSlug = (prev.name || '').toLowerCase().replace(/[^a-z0-9-_]/g, '-');
+                if (!prev.slug || prev.slug === oldAutoSlug) {
+                    updated.slug = autoSlug;
+                }
+            }
+            return updated;
+        });
     };
 
     // Filter out the selected category itself to prevent self-reference
@@ -162,72 +230,229 @@ export default function CategoryManager() {
 
             {/* Category Table Card */}
             <div className="card border-0 shadow-sm p-4" style={{ borderRadius: '12px' }}>
+                {/* Search, Filter & Per-Page Controls */}
+                <div className="row g-3 align-items-center mb-4">
+                    <div className="col-md-5">
+                        <div className="input-group">
+                            <span className="input-group-text bg-white border-end-0 text-muted">
+                                <i className="fa-solid fa-magnifying-glass"></i>
+                            </span>
+                            <input
+                                type="text"
+                                className="form-control border-start-0 ps-0"
+                                placeholder="Search by category name, slug, parent..."
+                                value={searchTerm}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                            />
+                            {searchTerm && (
+                                <button 
+                                    className="btn btn-outline-secondary border-start-0 bg-white text-muted"
+                                    onClick={() => {
+                                        setSearchTerm('');
+                                        setCurrentPage(1);
+                                    }}
+                                    type="button"
+                                >
+                                    <i className="fa-solid fa-xmark"></i>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="col-md-3 col-6">
+                        <select 
+                            className="form-select"
+                            value={statusFilter}
+                            onChange={(e) => {
+                                setStatusFilter(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                        >
+                            <option value="all">All Statuses ({categories.length})</option>
+                            <option value="active">Active Only ({categories.filter(c => c.is_active === 1 || c.is_active === true).length})</option>
+                            <option value="inactive">Inactive Only ({categories.filter(c => c.is_active === 0 || c.is_active === false).length})</option>
+                        </select>
+                    </div>
+
+                    <div className="col-md-2 col-6">
+                        <select 
+                            className="form-select"
+                            value={perPage}
+                            onChange={(e) => {
+                                setPerPage(parseInt(e.target.value, 10));
+                                setCurrentPage(1);
+                            }}
+                        >
+                            <option value={10}>10 per page</option>
+                            <option value={25}>25 per page</option>
+                            <option value={50}>50 per page</option>
+                            <option value={100}>100 per page</option>
+                        </select>
+                    </div>
+                </div>
+
                 {loading ? (
                     <div className="text-center py-5">
                         <div className="spinner-border text-primary" role="status"></div>
                         <span className="ms-2 font-monospace">Fetching categories catalog...</span>
                     </div>
                 ) : (
-                    <div className="table-responsive">
-                        <table className="table table-hover align-middle">
-                            <thead>
-                                <tr className="text-secondary font-monospace" style={{ fontSize: '0.8rem' }}>
-                                    <th>Slug</th>
-                                    <th>Category Name</th>
-                                    <th>Parent Category</th>
-                                    <th>Sort Order</th>
-                                    <th>Status</th>
-                                    <th className="text-end">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {categories.map((c) => (
-                                    <tr key={c.id}>
-                                        <td className="font-monospace text-muted">{c.slug}</td>
-                                        <td className="fw-bold text-dark">{c.name}</td>
-                                        <td>{c.parent ? c.parent.name : <span className="text-muted small italic">Root</span>}</td>
-                                        <td className="font-monospace">{c.sort_order}</td>
-                                        <td>
-                                            {c.is_active === 1 || c.is_active === true ? (
-                                                <span className="badge bg-success-subtle text-success px-2 py-1">
-                                                    <i className="fa-solid fa-circle-check me-1"></i> ACTIVE
-                                                </span>
-                                            ) : (
-                                                <span className="badge bg-danger-subtle text-danger px-2 py-1">
-                                                    <i className="fa-solid fa-circle-xmark me-1"></i> INACTIVE
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="text-end">
-                                            <div className="d-flex justify-content-end gap-1">
-                                                <button
-                                                    className="btn btn-xs btn-outline-primary px-2"
-                                                    onClick={() => handleOpenEdit(c)}
-                                                    style={{ fontSize: '0.75rem' }}
-                                                >
-                                                    <i className="fa-solid fa-pen me-1"></i> Edit
-                                                </button>
-                                                <button
-                                                    className="btn btn-xs btn-outline-danger px-2"
-                                                    onClick={() => handleDelete(c)}
-                                                    style={{ fontSize: '0.75rem' }}
-                                                >
-                                                    <i className="fa-solid fa-trash me-1"></i> Delete
-                                                </button>
-                                            </div>
-                                        </td>
+                    <>
+                        <div className="table-responsive">
+                            <table className="table table-hover align-middle">
+                                <thead>
+                                    <tr className="text-secondary font-monospace" style={{ fontSize: '0.8rem' }}>
+                                        <th>Category Name</th>
+                                        <th>Parent Category</th>
+                                        <th>Sort Order</th>
+                                        <th>Status</th>
+                                        <th className="text-end">Actions</th>
                                     </tr>
-                                ))}
-                                {categories.length === 0 && (
-                                    <tr>
-                                        <td colSpan="6" className="text-center py-5 text-muted font-monospace">
-                                            No categories configured. Click 'Add Product Category' to add one.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody className="small">
+                                    {paginatedCategories.map((c) => (
+                                        <tr key={c.id}>
+                                            <td>
+                                                <div className="fw-bold text-dark small">{c.name}</div>
+                                                <div className="font-monospace text-muted small" style={{ fontSize: '0.75rem' }}>{c.slug}</div>
+                                            </td>
+                                            <td>{c.parent ? c.parent.name : <span className="text-muted small italic">Root</span>}</td>
+                                            <td className="font-monospace">{c.sort_order}</td>
+                                            <td>
+                                                {c.is_active === 1 || c.is_active === true ? (
+                                                    <span className="badge bg-success-subtle text-success px-2 py-1">
+                                                        <i className="fa-solid fa-circle-check me-1"></i> ACTIVE
+                                                    </span>
+                                                ) : (
+                                                    <span className="badge bg-danger-subtle text-danger px-2 py-1">
+                                                        <i className="fa-solid fa-circle-xmark me-1"></i> INACTIVE
+                                                    </span>
+                                                )}
+                                            </td>
+                                             <td className="text-end">
+                                                <div className="d-flex justify-content-end gap-1">
+                                                    <button
+                                                        className="btn btn-xs btn-outline-primary px-2"
+                                                        onClick={() => handleOpenEdit(c)}
+                                                        style={{ fontSize: '0.75rem' }}
+                                                    >
+                                                        <i className="fa-solid fa-pen me-1"></i> Edit
+                                                    </button>
+                                                    {c.is_active === 1 || c.is_active === true ? (
+                                                        <button
+                                                            className="btn btn-xs btn-outline-warning px-2"
+                                                            onClick={() => handleToggleStatus(c)}
+                                                            style={{ fontSize: '0.75rem' }}
+                                                            title="Deactivate category"
+                                                        >
+                                                            <i className="fa-solid fa-ban me-1"></i> Deactivate
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            className="btn btn-xs btn-outline-success px-2"
+                                                            onClick={() => handleToggleStatus(c)}
+                                                            style={{ fontSize: '0.75rem' }}
+                                                            title="Activate category"
+                                                        >
+                                                            <i className="fa-solid fa-circle-check me-1"></i> Activate
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        className="btn btn-xs btn-outline-danger px-2"
+                                                        onClick={() => handleDelete(c)}
+                                                        style={{ fontSize: '0.75rem' }}
+                                                    >
+                                                        <i className="fa-solid fa-trash me-1"></i> Delete
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {filteredCategories.length === 0 && (
+                                        <tr>
+                                            <td colSpan="5" className="text-center py-5">
+                                                <div className="text-muted mb-2">
+                                                    <i className="fa-solid fa-filter-circle-xmark fs-2 opacity-50"></i>
+                                                </div>
+                                                <div className="fw-semibold text-secondary mb-1">No matching categories found</div>
+                                                <p className="text-muted small mb-3">Try adjusting your search query or status filter.</p>
+                                                {(searchTerm || statusFilter !== 'all') && (
+                                                    <button 
+                                                        className="btn btn-outline-primary btn-sm px-3"
+                                                        onClick={() => {
+                                                            setSearchTerm('');
+                                                            setStatusFilter('all');
+                                                            setCurrentPage(1);
+                                                        }}
+                                                    >
+                                                        <i className="fa-solid fa-rotate-left me-1"></i> Clear Search Filters
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Pagination & Summary Footer */}
+                        {filteredCategories.length > 0 && (
+                            <div className="d-flex flex-column flex-md-row align-items-center justify-content-between pt-3 border-top gap-3">
+                                <div className="text-muted small">
+                                    Showing <span className="fw-bold text-dark">{indexOfFirstItem + 1}</span> to <span className="fw-bold text-dark">{indexOfLastItem}</span> of <span className="fw-bold text-dark">{filteredCategories.length}</span> categories
+                                    {categories.length !== filteredCategories.length && (
+                                        <span className="ms-1 text-secondary">(filtered from {categories.length} total)</span>
+                                    )}
+                                </div>
+
+                                <nav aria-label="Category pagination">
+                                    <ul className="pagination pagination-sm mb-0">
+                                        <li className={`page-item ${safeCurrentPage === 1 ? 'disabled' : ''}`}>
+                                            <button className="page-link" onClick={() => setCurrentPage(1)} disabled={safeCurrentPage === 1} title="First Page">
+                                                <i className="fa-solid fa-angles-left"></i>
+                                            </button>
+                                        </li>
+                                        <li className={`page-item ${safeCurrentPage === 1 ? 'disabled' : ''}`}>
+                                            <button className="page-link" onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={safeCurrentPage === 1}>
+                                                Previous
+                                            </button>
+                                        </li>
+
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                            .filter(page => page === 1 || page === totalPages || Math.abs(page - safeCurrentPage) <= 1)
+                                            .map((page, idx, arr) => {
+                                                const prevPage = arr[idx - 1];
+                                                const showEllipsis = prevPage && page - prevPage > 1;
+                                                return (
+                                                    <React.Fragment key={page}>
+                                                        {showEllipsis && <li className="page-item disabled"><span className="page-link">...</span></li>}
+                                                        <li className={`page-item ${safeCurrentPage === page ? 'active' : ''}`}>
+                                                            <button className="page-link" onClick={() => setCurrentPage(page)}>
+                                                                {page}
+                                                            </button>
+                                                        </li>
+                                                    </React.Fragment>
+                                                );
+                                            })}
+
+                                        <li className={`page-item ${safeCurrentPage === totalPages ? 'disabled' : ''}`}>
+                                            <button className="page-link" onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={safeCurrentPage === totalPages}>
+                                                Next
+                                            </button>
+                                        </li>
+                                        <li className={`page-item ${safeCurrentPage === totalPages ? 'disabled' : ''}`}>
+                                            <button className="page-link" onClick={() => setCurrentPage(totalPages)} disabled={safeCurrentPage === totalPages} title="Last Page">
+                                                <i className="fa-solid fa-angles-right"></i>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 
@@ -258,14 +483,22 @@ export default function CategoryManager() {
                                     </div>
 
                                     <div className="mb-3">
-                                        <label className="form-label small fw-semibold">Slug (Optional)</label>
+                                        <label className="form-label small fw-semibold">
+                                            Slug {modalMode === 'edit' ? '(Permanent)' : '(Optional)'}
+                                        </label>
                                         <input
                                             type="text"
                                             className="form-control form-control-sm font-monospace"
                                             value={form.slug}
                                             onChange={(e) => handleChange('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '-'))}
                                             placeholder="e.g. gvt-tiles (auto-generated if left blank)"
+                                            disabled={modalMode === 'edit'}
                                         />
+                                        {modalMode === 'edit' && (
+                                            <div className="form-text text-muted" style={{ fontSize: '0.72rem' }}>
+                                                <i className="fa-solid fa-lock me-1"></i> Slug is permanent once created and cannot be modified.
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="mb-3">

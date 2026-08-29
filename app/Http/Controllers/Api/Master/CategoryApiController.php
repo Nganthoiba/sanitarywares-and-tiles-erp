@@ -93,7 +93,10 @@ class CategoryApiController extends Controller
             'is_active' => 'nullable|boolean'
         ]);
 
-        if (!empty($validated['name'])) {
+        if (!empty($category->slug)) {
+            // Slug is immutable once created
+            unset($validated['slug']);
+        } else if (!empty($validated['name'])) {
             $name = $validated['name'];
             $slug = empty($validated['slug']) ? Str::slug($name) : Str::slug($validated['slug']);
 
