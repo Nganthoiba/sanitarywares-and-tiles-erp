@@ -66,10 +66,14 @@ class PermissionSeeder extends Seeder
                 'workflow.definition.manage' => ['Manage Workflows Definitions', 'Define and configure BPM workflow processes'],
             ],
             'Stackholder Administration' => [
-                'supplier.view'   => ['View Suppliers', 'View supplier details and information'],
-                'supplier.create' => ['Register New Supplier', 'Register new supplier and provide details'],
-                'supplier.update' => ['Update Supplier Details', 'Update existing supplier details'],
-                'supplier.delete' => ['Remove Supplier', 'Remove supplier'],
+                'supplier.view'         => ['View Suppliers', 'View supplier details and information'],
+                'supplier.create'       => ['Register New Supplier', 'Register new supplier and provide details'],
+                'supplier.update'       => ['Update Supplier Details', 'Update existing supplier details'],
+                'supplier.delete'       => ['Remove Supplier', 'Remove supplier'],
+                'manufacturer.view'     => ['View Manufacturers', 'View manufacturer details and information'],
+                'manufacturer.create'   => ['Register New Manufacturer', 'Register new manufacturer and provide details'],
+                'manufacturer.update'   => ['Update Manufacturer Details', 'Update existing manufacturer details'],
+                'manufacturer.delete'   => ['Remove Manufacturer', 'Remove manufacturer'],
             ]
         ];
 

@@ -38,6 +38,29 @@ class ManufacturerApiController extends Controller
     }
 
     /**
+     * Helper to check if authenticated user has specific permission.
+     */
+    protected function hasPermission($user, string $permission): bool
+    {
+        if (!$user) return false;
+
+        if ($user->organization_id === null || $this->isSuperAdmin($user) || $user->hasRole('administrator')) {
+            return true;
+        }
+
+        $userPermissions = request()->attributes->get('user_permissions', []);
+        if (in_array('*', $userPermissions) || in_array($permission, $userPermissions) || in_array('products.manufacturers.manage', $userPermissions)) {
+            return true;
+        }
+
+        return $user->roles()
+            ->whereHas('permissions', function ($q) use ($permission) {
+                $q->whereIn('slug', [$permission, 'products.manufacturers.manage', '*']);
+            })
+            ->exists();
+    }
+
+    /**
      * Display a listing of the manufacturers (Global Registry).
      */
     public function index(Request $request)
@@ -48,9 +71,9 @@ class ManufacturerApiController extends Controller
             $search = trim($request->input('query'));
             $query->where(function ($q) use ($search) {
                 $q->where('legal_name', 'like', "%{$search}%")
-                  ->orWhere('trade_name', 'like', "%{$search}%")
-                  ->orWhere('gstin', 'like', "%{$search}%")
-                  ->orWhere('registration_number', 'like', "%{$search}%");
+                    ->orWhere('trade_name', 'like', "%{$search}%")
+                    ->orWhere('gstin', 'like', "%{$search}%")
+                    ->orWhere('registration_number', 'like', "%{$search}%");
             });
         }
 
@@ -89,11 +112,11 @@ class ManufacturerApiController extends Controller
             $possibleMatches = Manufacturer::where(function ($q) use ($name, $tradeName) {
                 if (!empty($name)) {
                     $q->where('legal_name', 'like', "%{$name}%")
-                      ->orWhere('trade_name', 'like', "%{$name}%");
+                        ->orWhere('trade_name', 'like', "%{$name}%");
                 }
                 if (!empty($tradeName)) {
                     $q->orWhere('legal_name', 'like', "%{$tradeName}%")
-                      ->orWhere('trade_name', 'like', "%{$tradeName}%");
+                        ->orWhere('trade_name', 'like', "%{$tradeName}%");
                 }
             })->take(5)->get();
         }
@@ -114,9 +137,9 @@ class ManufacturerApiController extends Controller
     {
         $user = $request->user();
 
-        if (!$this->isSuperAdmin($user)) {
+        if (!$this->hasPermission($user, 'manufacturer.create')) {
             return response()->json([
-                'message' => 'Only Super Admin can manage canonical global manufacturer records.'
+                'message' => 'You do not have permission to create manufacturer records.'
             ], 403);
         }
 
@@ -151,9 +174,9 @@ class ManufacturerApiController extends Controller
                 }
             }
 
-            $existingName = Manufacturer::where(function($q) use ($legalName) {
+            $existingName = Manufacturer::where(function ($q) use ($legalName) {
                 $q->where('legal_name', 'like', $legalName)
-                  ->orWhere('trade_name', 'like', $legalName);
+                    ->orWhere('trade_name', 'like', $legalName);
             })->first();
 
             if ($existingName) {
@@ -203,9 +226,9 @@ class ManufacturerApiController extends Controller
     {
         $user = $request->user();
 
-        if (!$this->isSuperAdmin($user)) {
+        if (!$this->hasPermission($user, 'manufacturer.update')) {
             return response()->json([
-                'message' => 'Only Super Admin can update shared global manufacturer records.'
+                'message' => 'You do not have permission to update manufacturer records.'
             ], 403);
         }
 
@@ -247,9 +270,9 @@ class ManufacturerApiController extends Controller
     {
         $user = $request->user();
 
-        if (!$this->isSuperAdmin($user)) {
+        if (!$this->hasPermission($user, 'manufacturer.delete')) {
             return response()->json([
-                'message' => 'Only Super Admin can delete shared global manufacturer records.'
+                'message' => 'You do not have permission to delete manufacturer records.'
             ], 403);
         }
 

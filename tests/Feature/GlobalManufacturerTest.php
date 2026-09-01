@@ -159,7 +159,23 @@ class GlobalManufacturerTest extends TestCase
         $this->assertSoftDeleted('manufacturers', ['id' => $id]);
     }
 
-    public function test_org_admin_can_search_manufacturers_but_cannot_create_update_or_delete()
+    public function test_org_admin_with_permission_can_create_manufacturer()
+    {
+        $tokenA = $this->userA->createToken('test')->plainTextToken;
+
+        // Org Admin has manufacturer.create permission (via administrator role)
+        $createResponse = $this->withHeader('Authorization', "Bearer {$tokenA}")
+            ->postJson('/api/manufacturers-crud', [
+                'legal_name' => 'Somany Ceramics Limited',
+                'trade_name' => 'Somany',
+                'gstin' => '27AAACS9012H1Z9'
+            ]);
+
+        $createResponse->assertStatus(201)
+            ->assertJsonPath('manufacturer.legal_name', 'Somany Ceramics Limited');
+    }
+
+    public function test_staff_without_permission_cannot_create_update_or_delete()
     {
         $mfg = Manufacturer::create([
             'legal_name' => 'Jaquar & Company Pvt Ltd',
@@ -167,37 +183,45 @@ class GlobalManufacturerTest extends TestCase
             'gstin' => '06AAACJ9012H1Z9'
         ]);
 
-        $tokenA = $this->userA->createToken('test')->plainTextToken;
+        // Create regular staff user with staff role (no manufacturer permissions)
+        $staffRole = Role::create([
+            'organization_id' => $this->orgA->id,
+            'name' => 'Staff',
+            'slug' => 'staff',
+            'is_system' => false
+        ]);
+        $staffUser = User::create([
+            'organization_id' => $this->orgA->id,
+            'name' => 'Staff User',
+            'email' => 'staff@tiles.com',
+            'password' => bcrypt('password'),
+            'default_role_id' => $staffRole->id
+        ]);
+        $staffUser->roles()->attach($staffRole->id, ['organization_id' => $this->orgA->id]);
 
-        // 1. Search / View -> Allowed
-        $searchResponse = $this->withHeader('Authorization', "Bearer {$tokenA}")
-            ->getJson('/api/manufacturers-crud?query=Jaquar');
-        $searchResponse->assertStatus(200)
-            ->assertJsonCount(1);
+        $tokenStaff = $staffUser->createToken('test')->plainTextToken;
 
-        // 2. Create -> Forbidden for Org Admin (403)
-        $createResponse = $this->withHeader('Authorization', "Bearer {$tokenA}")
+        // 1. Create -> Forbidden for Staff without permission (403)
+        $createResponse = $this->withHeader('Authorization', "Bearer {$tokenStaff}")
             ->postJson('/api/manufacturers-crud', [
                 'legal_name' => 'Unauthorized New Manufacturer',
                 'gstin' => '27AAACJ9012H1Z9'
             ]);
         $createResponse->assertStatus(403);
 
-        // 3. Update -> Forbidden for Org Admin (403)
-        $updateResponse = $this->withHeader('Authorization', "Bearer {$tokenA}")
+        // 2. Update -> Forbidden for Staff without permission (403)
+        $updateResponse = $this->withHeader('Authorization', "Bearer {$tokenStaff}")
             ->putJson("/api/manufacturers-crud/{$mfg->id}", [
                 'legal_name' => 'Unauthorized Update Name'
             ]);
 
-        $updateResponse->assertStatus(403)
-            ->assertJsonPath('message', 'Only Super Admin can update shared global manufacturer records.');
+        $updateResponse->assertStatus(403);
 
-        // 4. Delete -> Forbidden for Org Admin (403)
-        $deleteResponse = $this->withHeader('Authorization', "Bearer {$tokenA}")
+        // 3. Delete -> Forbidden for Staff without permission (403)
+        $deleteResponse = $this->withHeader('Authorization', "Bearer {$tokenStaff}")
             ->deleteJson("/api/manufacturers-crud/{$mfg->id}");
 
-        $deleteResponse->assertStatus(403)
-            ->assertJsonPath('message', 'Only Super Admin can delete shared global manufacturer records.');
+        $deleteResponse->assertStatus(403);
     }
 
     public function test_duplicate_gstin_detection()

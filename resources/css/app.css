@@ -626,7 +626,7 @@ textarea::placeholder {
 }
 
 .main-window{
-    background-color: #dbecfd !important;
+    background-color: #edf2f7 !important;
 }
 
 [data-theme="dark"] .sidebar-link:hover,
