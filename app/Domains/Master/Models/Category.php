@@ -29,4 +29,23 @@ class Category extends Model {
             ->withTimestamps()
             ->orderBy('category_product_attributes.sort_order');
     }
+
+    public function isTileCategory(): bool
+    {
+        $name = strtolower($this->name ?? '');
+        $slug = strtolower($this->slug ?? '');
+        if ($slug === 'tiles' || $name === 'tiles') {
+            return true;
+        }
+        if ($this->parent) {
+            return $this->parent->isTileCategory();
+        }
+        if ($this->parent_id) {
+            $parentObj = static::find($this->parent_id);
+            if ($parentObj) {
+                return $parentObj->isTileCategory();
+            }
+        }
+        return false;
+    }
 }

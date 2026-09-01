@@ -30,11 +30,11 @@ class ProductApiController extends Controller
 
         return response()->json([
             'categories' => Category::where('is_active', true)->with('parent')->orderByRaw('COALESCE(parent_id, id), parent_id IS NOT NULL, sort_order, name')->get(),
-            'brands' => Brand::where('organization_id', $orgId)->where('is_active', true)->orderBy('name')->get(),
+            'brands' => Brand::where('is_active', true)->orderBy('name')->get(),
             'units' => Unit::where('is_active', true)->orderBy('name')->get(),
             'tax_profiles' => TaxProfile::where('is_active', true)->orderBy('name')->get(),
             'manufacturers' => Manufacturer::where('is_active', true)->orderBy('legal_name')->get(),
-            'attributes' => ProductAttribute::where('organization_id', $orgId)->with('unit')->orderBy('name')->get(),
+            'attributes' => ProductAttribute::with('unit')->orderBy('name')->get(),
             'inventory_behaviors' => ['STANDARD', 'CONVERTIBLE', 'SLAB', 'SERIAL', 'BATCH', 'BUNDLE', 'ROLL']
         ]);
     }
@@ -93,7 +93,7 @@ class ProductApiController extends Controller
                 Rule::exists('manufacturers', 'id')
             ],
             'is_active' => 'boolean',
-            'pieces_per_box' => 'nullable|numeric|min:0.0001',
+            'pieces_per_box' => 'nullable',
             'product_type' => 'nullable|string|in:STANDARD,MEASURED_MATERIAL',
             'physical_object' => 'required_if:product_type,MEASURED_MATERIAL|nullable|string|in:SLAB',
             'measurement_unit' => 'required_if:product_type,MEASURED_MATERIAL|nullable|string|in:SQFT,SQ.FT.',
@@ -113,9 +113,24 @@ class ProductApiController extends Controller
             }
         }
 
-        // Validate required category specifications
+        // Validate required category specifications & tile pieces_per_box
         $category = Category::find($validated['category_id']);
+        $piecesPerBox = null;
         if ($category) {
+            if ($category->isTileCategory()) {
+                $rawPpb = $request->input('pieces_per_box');
+                if ($rawPpb === null || $rawPpb === '' || !is_numeric($rawPpb) || (int)$rawPpb != $rawPpb || (int)$rawPpb <= 0) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Pieces per Box is required for Tiles and must be a positive whole number.',
+                        'errors' => [
+                            'pieces_per_box' => ['Pieces per Box must be a positive whole integer greater than zero.']
+                        ]
+                    ], 422);
+                }
+                $piecesPerBox = (int) $rawPpb;
+            }
+
             $specs = $category->productAttributes;
             if ($specs->isEmpty() && $category->parent) {
                 $specs = $category->parent->productAttributes;
@@ -150,11 +165,12 @@ class ProductApiController extends Controller
             }
         }
 
-        $variant = DB::transaction(function () use ($validated, $normalizedAttributes, $orgId) {
+        $variant = DB::transaction(function () use ($validated, $normalizedAttributes, $piecesPerBox, $orgId) {
             $variantData = collect($validated)->except(['attributes', 'pieces_per_box', 'product_type', 'physical_object', 'measurement_unit'])->toArray();
 
             $variant = Product::create(array_merge($variantData, [
                 'organization_id' => $orgId,
+                'pieces_per_box' => $piecesPerBox,
                 'is_active' => $validated['is_active'] ?? true
             ]));
 
@@ -169,11 +185,9 @@ class ProductApiController extends Controller
                 }
             }
 
-            if (!empty($validated['pieces_per_box'])) {
-                $boxUnit = Unit::whereIn('symbol', ['BOX', 'box', 'Box'])
-                    ->first();
-                $pcsUnit = Unit::whereIn('symbol', ['PCS', 'pcs', 'PC'])
-                    ->first();
+            if ($piecesPerBox && $piecesPerBox > 0) {
+                $boxUnit = Unit::whereIn('symbol', ['BOX', 'box', 'Box'])->first();
+                $pcsUnit = Unit::whereIn('symbol', ['PCS', 'pcs', 'PC'])->first();
 
                 if ($boxUnit && $pcsUnit) {
                     UnitConversion::create([
@@ -181,7 +195,7 @@ class ProductApiController extends Controller
                         'product_variant_id' => $variant->id,
                         'from_unit_id' => $boxUnit->id,
                         'to_unit_id' => $pcsUnit->id,
-                        'multiplier' => (float) $validated['pieces_per_box'],
+                        'multiplier' => (float) $piecesPerBox,
                     ]);
                 }
             }
@@ -334,7 +348,9 @@ class ProductApiController extends Controller
         $validated = $request->validate([
             'category_id' => [
                 'required',
-                Rule::exists('categories', 'id')->where('organization_id', $orgId)
+                Rule::exists('categories', 'id')->where(function ($query) use ($orgId) {
+                    return $query->where('organization_id', $orgId)->orWhereNull('organization_id');
+                })
             ],
             'brand_id' => [
                 'required',
@@ -352,6 +368,7 @@ class ProductApiController extends Controller
             'gtin' => 'nullable|string|max:50',
             'barcode' => 'nullable|string|max:50',
             'inventory_behavior' => 'required|string|in:STANDARD,CONVERTIBLE,SLAB,SERIAL,BATCH,BUNDLE,ROLL',
+            'pieces_per_box' => 'nullable',
             'primary_unit_id' => [
                 'sometimes',
                 'required',
@@ -383,8 +400,27 @@ class ProductApiController extends Controller
             'attributes.*.value' => 'required|string'
         ]);
 
-        DB::transaction(function () use ($variant, $validated, $orgId) {
-            $variantData = collect($validated)->except(['attributes'])->toArray();
+        $category = Category::find($validated['category_id']);
+        $piecesPerBox = null;
+        if ($category) {
+            if ($category->isTileCategory()) {
+                $rawPpb = $request->input('pieces_per_box');
+                if ($rawPpb === null || $rawPpb === '' || !is_numeric($rawPpb) || (int)$rawPpb != $rawPpb || (int)$rawPpb <= 0) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Pieces per Box is required for Tiles and must be a positive whole number.',
+                        'errors' => [
+                            'pieces_per_box' => ['Pieces per Box must be a positive whole integer greater than zero.']
+                        ]
+                    ], 422);
+                }
+                $piecesPerBox = (int) $rawPpb;
+            }
+        }
+
+        DB::transaction(function () use ($variant, $validated, $piecesPerBox, $orgId) {
+            $variantData = collect($validated)->except(['attributes', 'pieces_per_box'])->toArray();
+            $variantData['pieces_per_box'] = $piecesPerBox;
             $variant->update($variantData);
 
             if (isset($validated['attributes'])) {
@@ -402,6 +438,25 @@ class ProductApiController extends Controller
                         ],
                         [
                             'value' => $attr['value']
+                        ]
+                    );
+                }
+            }
+
+            if ($piecesPerBox && $piecesPerBox > 0) {
+                $boxUnit = Unit::whereIn('symbol', ['BOX', 'box', 'Box'])->first();
+                $pcsUnit = Unit::whereIn('symbol', ['PCS', 'pcs', 'PC'])->first();
+
+                if ($boxUnit && $pcsUnit) {
+                    UnitConversion::updateOrCreate(
+                        [
+                            'organization_id' => $orgId,
+                            'product_variant_id' => $variant->id,
+                            'from_unit_id' => $boxUnit->id,
+                            'to_unit_id' => $pcsUnit->id,
+                        ],
+                        [
+                            'multiplier' => (float) $piecesPerBox,
                         ]
                     );
                 }
@@ -547,7 +602,7 @@ class ProductApiController extends Controller
         $parentSlug = strtolower($category?->parent?->slug ?? '');
 
         $isSlabCategory = str_contains($slug, 'granite') || str_contains($slug, 'marble') || str_contains($slug, 'slab') ||
-                          str_contains($parentSlug, 'granite') || str_contains($parentSlug, 'marble') || str_contains($parentSlug, 'slab');
+            str_contains($parentSlug, 'granite') || str_contains($parentSlug, 'marble') || str_contains($parentSlug, 'slab');
 
         $inputProductType = $request->input('product_type');
         $inputInventoryBehavior = $request->input('inventory_behavior');

@@ -35,9 +35,30 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
         measurement_unit: 'SQFT',
         tax_profile_id: '',
         is_active: true,
+        pieces_per_box: '',
         attributes: {} // { attribute_id: value }
     });
 
+    const checkIsTileCategory = (catId) => {
+        if (!catId) return false;
+        const cat = categories.find(c => c.id.toString() === catId.toString());
+        if (!cat) return false;
+
+        const isTile = (item) => {
+            if (!item) return false;
+            const name = (item.name || '').toLowerCase();
+            const slug = (item.slug || '').toLowerCase();
+            if (name === 'tiles' || slug === 'tiles') return true;
+            if (item.parent) return isTile(item.parent);
+            if (item.parent_id) {
+                const parentObj = categories.find(c => c.id.toString() === item.parent_id.toString());
+                if (parentObj) return isTile(parentObj);
+            }
+            return false;
+        };
+
+        return isTile(cat);
+    };
 
     const [showBrandModal, setShowBrandModal] = useState(false);
     const [brandForm, setBrandForm] = useState({
@@ -115,6 +136,7 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                     measurement_unit: productToEdit.measurement_unit || 'SQFT',
                     tax_profile_id: productToEdit.tax_profile_id?.toString() || '',
                     is_active: !!productToEdit.is_active,
+                    pieces_per_box: (productToEdit.pieces_per_box !== null && productToEdit.pieces_per_box !== undefined) ? productToEdit.pieces_per_box.toString() : '',
                     attributes: mappedAttrs
                 });
             } else {
@@ -132,6 +154,7 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                     measurement_unit: 'SQFT',
                     tax_profile_id: '',
                     is_active: true,
+                    pieces_per_box: '',
                     attributes: {}
                 });
             }
@@ -154,8 +177,10 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                 value: String(val).trim()
             }));
 
+        const isTile = checkIsTileCategory(productForm.category_id);
         const submissionData = {
             ...productForm,
+            pieces_per_box: isTile && productForm.pieces_per_box ? parseInt(productForm.pieces_per_box, 10) : null,
             attributes: mappedAttributes
         };
 
@@ -312,7 +337,7 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
     return (
         <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.55)', zIndex: 1060 }}>
             <div className="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
-                <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '14px' }}>
+                <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '14px'}}>
                     <div className="modal-header border-bottom pb-3 pt-4 px-4 bg-light">
                         <h5 className="modal-title fw-bold text-dark d-flex align-items-center mb-0">
                             <i className="fa-solid fa-cube text-primary me-2 fs-4"></i>
@@ -322,7 +347,7 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                     </div>
 
                     <form onSubmit={handleProductSubmit}>
-                        <div className="modal-body px-4 py-4" style={{ maxHeight: '75vh', overflowY: 'auto' }}>
+                        <div className="modal-body px-4 py-4">
                             {/* Alert Messages */}
                             {error && (
                                 <div className="alert alert-danger py-2 small mb-3 animate__animated animate__fadeIn d-flex align-items-center justify-content-between">
@@ -350,9 +375,11 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                                             value={productForm.category_id}
                                             onChange={(e) => {
                                                 const newCatId = e.target.value;
+                                                const isTile = checkIsTileCategory(newCatId);
                                                 setProductForm(prev => ({
                                                     ...prev,
                                                     category_id: newCatId,
+                                                    pieces_per_box: isTile ? prev.pieces_per_box : '',
                                                     attributes: {} // Safely reset category-specific attributes when category changes
                                                 }));
                                             }}
@@ -462,6 +489,37 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                                         }));
                                     }}
                                 />
+
+                                {checkIsTileCategory(productForm.category_id) && (
+                                    <div className="mt-3 pt-3 border-top">
+                                        <label className="form-label small fw-semibold text-dark mb-1">
+                                            <i className="fa-solid fa-box-open me-1 text-primary"></i> Pieces per Box *
+                                        </label>
+                                        <div className="row align-items-center">
+                                            <div className="col-md-6">
+                                                <input
+                                                    type="number"
+                                                    className="form-control form-control-sm font-monospace"
+                                                    placeholder="e.g. 4"
+                                                    value={productForm.pieces_per_box}
+                                                    onChange={(e) => setProductForm({ ...productForm, pieces_per_box: e.target.value })}
+                                                    min="1"
+                                                    step="1"
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="col-md-6">
+                                                <small className="text-muted">
+                                                    <i className="fa-solid fa-circle-info me-1 text-info"></i>
+                                                    {productForm.pieces_per_box && parseInt(productForm.pieces_per_box, 10) > 0
+                                                        ? `1 box contains ${productForm.pieces_per_box} pieces.`
+                                                        : "Number of individual tiles contained in one box."
+                                                    }
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Section 3: Identification Information */}

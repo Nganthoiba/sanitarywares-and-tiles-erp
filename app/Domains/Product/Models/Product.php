@@ -22,11 +22,12 @@ class Product extends Model {
 
     protected $fillable = [
         'organization_id', 'category_id', 'purchase_unit_id', 'sales_unit_id', 'base_unit_id',
-        'name', 'sku', 'gtin', 'barcode', 'inventory_behavior', 'tax_profile_id', 'brand_id',
+        'name', 'sku', 'gtin', 'barcode', 'inventory_behavior', 'pieces_per_box', 'tax_profile_id', 'brand_id',
         'manufacturer_id', 'is_active'
     ];
     protected $casts = [
-        'is_active' => 'boolean'
+        'is_active' => 'boolean',
+        'pieces_per_box' => 'integer'
     ];
 
     public function organization(): BelongsTo {
@@ -55,5 +56,26 @@ class Product extends Model {
     }
     public function attributeValues(): HasMany {
         return $this->hasMany(ProductAttributeValue::class, 'product_variant_id');
+    }
+
+    public function calculatePiecesFromBoxes(float|int $boxes): ?int {
+        if (!$this->pieces_per_box || $this->pieces_per_box <= 0) {
+            return null;
+        }
+        return (int) round($boxes * $this->pieces_per_box);
+    }
+
+    public function calculateBoxesFromPieces(int $pieces): ?float {
+        if (!$this->pieces_per_box || $this->pieces_per_box <= 0) {
+            return null;
+        }
+        return (float) ($pieces / $this->pieces_per_box);
+    }
+
+    public function calculateAreaPerBox(float $areaPerPiece): ?float {
+        if (!$this->pieces_per_box || $this->pieces_per_box <= 0) {
+            return null;
+        }
+        return (float) ($areaPerPiece * $this->pieces_per_box);
     }
 }
