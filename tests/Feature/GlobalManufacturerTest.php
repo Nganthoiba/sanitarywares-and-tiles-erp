@@ -116,12 +116,13 @@ class GlobalManufacturerTest extends TestCase
         // 1. Create
         $response = $this->withHeader('Authorization', "Bearer {$token}")
             ->postJson('/api/manufacturers-crud', [
+                'name' => 'Kajaria Ceramics Limited',
                 'legal_name' => 'Kajaria Ceramics Limited',
                 'trade_name' => 'Kajaria',
-                'gstin' => '27AAACK1234F1Z5',
-                'registration_number' => 'REG-KAJ-9988',
+                'cin' => 'L26914UP1985PLC007321',
+                'registration_no' => 'REG-KAJ-9988',
                 'business_constitution' => 'Public Limited',
-                'address' => 'Andheri East, Mumbai',
+                'registered_address' => 'Andheri East, Mumbai',
                 'phone' => '022-12345678',
                 'email' => 'info@kajaria.com',
                 'website' => 'https://www.kajariaceramics.com'
@@ -129,7 +130,7 @@ class GlobalManufacturerTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonPath('manufacturer.legal_name', 'Kajaria Ceramics Limited')
-            ->assertJsonPath('manufacturer.gstin', '27AAACK1234F1Z5');
+            ->assertJsonPath('manufacturer.cin', 'L26914UP1985PLC007321');
 
         $id = $response->json('manufacturer.id');
 
@@ -137,7 +138,7 @@ class GlobalManufacturerTest extends TestCase
         $this->assertDatabaseHas('manufacturers', [
             'id' => $id,
             'legal_name' => 'Kajaria Ceramics Limited',
-            'gstin' => '27AAACK1234F1Z5'
+            'cin' => 'L26914UP1985PLC007321'
         ]);
 
         // 2. Update
@@ -166,9 +167,10 @@ class GlobalManufacturerTest extends TestCase
         // Org Admin has manufacturer.create permission (via administrator role)
         $createResponse = $this->withHeader('Authorization', "Bearer {$tokenA}")
             ->postJson('/api/manufacturers-crud', [
+                'name' => 'Somany Ceramics Limited',
                 'legal_name' => 'Somany Ceramics Limited',
                 'trade_name' => 'Somany',
-                'gstin' => '27AAACS9012H1Z9'
+                'cin' => 'L40200WB1968PLC027339'
             ]);
 
         $createResponse->assertStatus(201)
@@ -178,9 +180,10 @@ class GlobalManufacturerTest extends TestCase
     public function test_staff_without_permission_cannot_create_update_or_delete()
     {
         $mfg = Manufacturer::create([
+            'name' => 'Jaquar & Company Pvt Ltd',
             'legal_name' => 'Jaquar & Company Pvt Ltd',
             'trade_name' => 'Jaquar',
-            'gstin' => '06AAACJ9012H1Z9'
+            'cin' => 'U74899HR1986PTC049876'
         ]);
 
         // Create regular staff user with staff role (no manufacturer permissions)
@@ -205,7 +208,7 @@ class GlobalManufacturerTest extends TestCase
         $createResponse = $this->withHeader('Authorization', "Bearer {$tokenStaff}")
             ->postJson('/api/manufacturers-crud', [
                 'legal_name' => 'Unauthorized New Manufacturer',
-                'gstin' => '27AAACJ9012H1Z9'
+                'cin' => 'U74899HR1986PTC999999'
             ]);
         $createResponse->assertStatus(403);
 
@@ -224,24 +227,25 @@ class GlobalManufacturerTest extends TestCase
         $deleteResponse->assertStatus(403);
     }
 
-    public function test_duplicate_gstin_detection()
+    public function test_duplicate_company_name_detection()
     {
         Manufacturer::create([
+            'name' => 'Kajaria Ceramics Limited',
             'legal_name' => 'Kajaria Ceramics Limited',
-            'gstin' => '27AAACK1234F1Z5'
+            'cin' => 'L26914UP1985PLC007321'
         ]);
 
         $token = $this->superAdmin->createToken('test')->plainTextToken;
 
-        // Try to create another manufacturer with the same GSTIN
+        // Try to create another manufacturer with the same company name
         $response = $this->withHeader('Authorization', "Bearer {$token}")
             ->postJson('/api/manufacturers-crud', [
-                'legal_name' => 'Kajaria Duplicate Entry',
-                'gstin' => '27aaack1234f1z5'
+                'name' => 'Kajaria Ceramics Limited',
+                'legal_name' => 'Kajaria Ceramics Limited'
             ]);
 
-        $response->assertStatus(409)
-            ->assertJsonPath('duplicate_type', 'exact_gstin');
+        $response->assertStatus(422)
+            ->assertJsonPath('duplicate_type', 'possible_name');
     }
 
     public function test_organizations_can_create_products_referencing_same_global_manufacturer()

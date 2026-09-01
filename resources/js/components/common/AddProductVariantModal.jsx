@@ -73,7 +73,7 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
     const [manufacturerForm, setManufacturerForm] = useState({
         legal_name: '',
         trade_name: '',
-        gstin: '',
+        cin: '',
         phone: '',
         email: '',
         website: '',
@@ -249,7 +249,7 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
             const payload = {
                 legal_name: manufacturerForm.legal_name || manufacturerForm.name,
                 trade_name: manufacturerForm.trade_name || undefined,
-                gstin: manufacturerForm.gstin || undefined,
+                cin: manufacturerForm.cin || undefined,
                 phone: manufacturerForm.phone || undefined,
                 email: manufacturerForm.email || undefined,
                 website: manufacturerForm.website || undefined,
@@ -269,7 +269,7 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
 
             setTimeout(() => {
                 setShowManufacturerModal(false);
-                setManufacturerForm({ legal_name: '', trade_name: '', gstin: '', phone: '', email: '', website: '', address: '' });
+                setManufacturerForm({ legal_name: '', trade_name: '', cin: '', phone: '', email: '', website: '', address: '' });
                 setManufacturerModalSuccess(null);
             }, 1800);
         } catch (err) {

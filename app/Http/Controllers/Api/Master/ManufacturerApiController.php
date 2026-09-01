@@ -70,9 +70,10 @@ class ManufacturerApiController extends Controller
         if ($request->filled('query')) {
             $search = trim($request->input('query'));
             $query->where(function ($q) use ($search) {
-                $q->where('legal_name', 'like', "%{$search}%")
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('legal_name', 'like', "%{$search}%")
                     ->orWhere('trade_name', 'like', "%{$search}%")
-                    ->orWhere('gstin', 'like', "%{$search}%")
+                    ->orWhere('cin', 'like', "%{$search}%")
                     ->orWhere('registration_number', 'like', "%{$search}%");
             });
         }
@@ -85,7 +86,7 @@ class ManufacturerApiController extends Controller
             $query->where('verification_status', $request->input('verification_status'));
         }
 
-        $manufacturers = $query->orderBy('legal_name')->get();
+        $manufacturers = $query->orderBy('name')->orderBy('legal_name')->get();
 
         return response()->json($manufacturers);
     }
@@ -95,29 +96,26 @@ class ManufacturerApiController extends Controller
      */
     public function checkDuplicates(Request $request)
     {
-        $gstin = $request->input('gstin') ? strtoupper(trim(preg_replace('/\s+/', '', $request->input('gstin')))) : null;
-        $name = trim($request->input('legal_name') ?: ($request->input('name') ?: ''));
-        $tradeName = trim($request->input('trade_name') ?: '');
+        $name = trim($request->input('name') ?: ($request->input('legal_name') ?: ''));
+        $cin = trim($request->input('cin') ?: '');
+        $regNo = trim($request->input('registration_number') ?: '');
 
         $exactMatch = null;
         $possibleMatches = collect();
 
-        // 1. Strong identity check by GSTIN
-        if (!empty($gstin)) {
-            $exactMatch = Manufacturer::where('gstin', $gstin)->first();
+        // 1. Corporate Identity check by CIN / Corporate Reg No
+        if (!empty($cin)) {
+            $exactMatch = Manufacturer::where('cin', $cin)->first();
+        } elseif (!empty($regNo)) {
+            $exactMatch = Manufacturer::where('registration_number', $regNo)->first();
         }
 
-        // 2. Name check for possible duplicates if no exact GSTIN match
-        if (!$exactMatch && (!empty($name) || !empty($tradeName))) {
-            $possibleMatches = Manufacturer::where(function ($q) use ($name, $tradeName) {
-                if (!empty($name)) {
-                    $q->where('legal_name', 'like', "%{$name}%")
-                        ->orWhere('trade_name', 'like', "%{$name}%");
-                }
-                if (!empty($tradeName)) {
-                    $q->orWhere('legal_name', 'like', "%{$tradeName}%")
-                        ->orWhere('trade_name', 'like', "%{$tradeName}%");
-                }
+        // 2. Name check for possible duplicates
+        if (!$exactMatch && !empty($name)) {
+            $possibleMatches = Manufacturer::where(function ($q) use ($name) {
+                $q->where('name', 'like', "%{$name}%")
+                    ->orWhere('legal_name', 'like', "%{$name}%")
+                    ->orWhere('trade_name', 'like', "%{$name}%");
             })->take(5)->get();
         }
 
@@ -131,7 +129,6 @@ class ManufacturerApiController extends Controller
 
     /**
      * Store a newly created global manufacturer.
-     * RESTRICTED TO SUPER ADMIN ONLY.
      */
     public function store(Request $request)
     {
@@ -144,44 +141,36 @@ class ManufacturerApiController extends Controller
         }
 
         $validated = $request->validate([
-            'legal_name' => 'required|string|max:255',
+            'name' => 'nullable|string|max:255',
+            'legal_name' => 'required_without:name|nullable|string|max:255',
             'trade_name' => 'nullable|string|max:255',
-            'gstin' => 'nullable|string|max:20',
+            'cin' => 'nullable|string|max:50',
             'registration_number' => 'nullable|string|max:100',
             'business_constitution' => 'nullable|string|max:50',
+            'registered_address' => 'nullable|string',
             'address' => 'nullable|string',
-            'phone' => 'nullable|string|max:20',
+            'phone' => 'nullable|string|max:50',
             'email' => 'nullable|email|max:255',
             'website' => 'nullable|string|max:255',
             'is_active' => 'nullable|boolean',
             'force' => 'nullable|boolean'
         ]);
 
-        $gstin = $request->input('gstin') ? strtoupper(trim(preg_replace('/\s+/', '', $request->input('gstin')))) : null;
-        $legalName = trim($request->input('legal_name'));
+        $name = trim($request->input('name') ?: ($request->input('legal_name') ?: ''));
+        $legalName = trim($request->input('legal_name') ?: $name);
         $force = filter_var($request->input('force'), FILTER_VALIDATE_BOOLEAN);
 
         // Duplicate Check unless force = true
-        if (!$force) {
-            if (!empty($gstin)) {
-                $existingGstin = Manufacturer::where('gstin', $gstin)->first();
-                if ($existingGstin) {
-                    return response()->json([
-                        'message' => 'Existing Manufacturer Found with matching GSTIN.',
-                        'duplicate_type' => 'exact_gstin',
-                        'existing_manufacturer' => $existingGstin
-                    ], 409);
-                }
-            }
-
-            $existingName = Manufacturer::where(function ($q) use ($legalName) {
-                $q->where('legal_name', 'like', $legalName)
-                    ->orWhere('trade_name', 'like', $legalName);
+        if (!$force && !empty($name)) {
+            $existingName = Manufacturer::where(function ($q) use ($name) {
+                $q->where('name', 'like', $name)
+                    ->orWhere('legal_name', 'like', $name)
+                    ->orWhere('trade_name', 'like', $name);
             })->first();
 
             if ($existingName) {
                 return response()->json([
-                    'message' => 'Possible Existing Manufacturer found with similar name.',
+                    'message' => 'Possible Existing Manufacturer found with similar company name.',
                     'duplicate_type' => 'possible_name',
                     'existing_manufacturer' => $existingName
                 ], 422);
@@ -189,16 +178,19 @@ class ManufacturerApiController extends Controller
         }
 
         $manufacturer = Manufacturer::create([
+            'name' => $name,
             'legal_name' => $legalName,
             'trade_name' => $request->input('trade_name'),
-            'gstin' => $gstin,
+            'cin' => $request->input('cin'),
             'registration_number' => $request->input('registration_number'),
             'business_constitution' => $request->input('business_constitution'),
-            'address' => $request->input('address'),
+            'registered_address' => $request->input('registered_address') ?: $request->input('address'),
+            'address' => $request->input('registered_address') ?: $request->input('address'),
             'phone' => $request->input('phone'),
             'email' => $request->input('email'),
             'website' => $request->input('website'),
             'is_active' => $request->input('is_active', true),
+            'status' => $request->input('is_active', true) ? 'ACTIVE' : 'INACTIVE',
             'verification_status' => 'UNVERIFIED',
             'created_by' => $user?->id,
         ]);
@@ -220,7 +212,6 @@ class ManufacturerApiController extends Controller
 
     /**
      * Update the specified manufacturer.
-     * RESTRICTED TO SUPER ADMIN ONLY.
      */
     public function update(Request $request, $id)
     {
@@ -235,24 +226,35 @@ class ManufacturerApiController extends Controller
         $manufacturer = Manufacturer::findOrFail($id);
 
         $validated = $request->validate([
-            'legal_name' => 'sometimes|required|string|max:255',
+            'name' => 'nullable|string|max:255',
+            'legal_name' => 'nullable|string|max:255',
             'trade_name' => 'nullable|string|max:255',
-            'gstin' => 'nullable|string|max:20',
+            'cin' => 'nullable|string|max:50',
             'registration_number' => 'nullable|string|max:100',
             'business_constitution' => 'nullable|string|max:50',
+            'registered_address' => 'nullable|string',
             'address' => 'nullable|string',
-            'phone' => 'nullable|string|max:20',
+            'phone' => 'nullable|string|max:50',
             'email' => 'nullable|email|max:255',
             'website' => 'nullable|string|max:255',
             'is_active' => 'nullable|boolean',
             'verification_status' => 'nullable|string|in:UNVERIFIED,VERIFIED,REJECTED'
         ]);
 
+        if (empty($validated['name']) && !empty($validated['legal_name'])) {
+            $validated['name'] = $validated['legal_name'];
+        }
+        if (!empty($validated['registered_address'])) {
+            $validated['address'] = $validated['registered_address'];
+        }
+
         if ($request->has('verification_status') && $request->input('verification_status') === 'VERIFIED') {
             $validated['verified_at'] = now();
         }
 
         $validated['updated_by'] = $user->id;
+
+        $manufacturer->update($validated);
 
         $manufacturer->update($validated);
 

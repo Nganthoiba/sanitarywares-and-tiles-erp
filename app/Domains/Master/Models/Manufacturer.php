@@ -17,14 +17,16 @@ class Manufacturer extends Model
         'name',
         'legal_name',
         'trade_name',
-        'gstin',
+        'cin',
         'registration_number',
         'business_constitution',
+        'registered_address',
         'address',
         'phone',
         'email',
         'website',
         'is_active',
+        'status',
         'verification_status',
         'verified_at',
         'created_by',
@@ -39,7 +41,23 @@ class Manufacturer extends Model
     protected static function booted(): void
     {
         static::saving(function ($manufacturer) {
-            $manufacturer->name = $manufacturer->trade_name ?: ($manufacturer->legal_name ?: '');
+            $nameVal = $manufacturer->attributes['name'] ?? null;
+            $legalNameVal = $manufacturer->attributes['legal_name'] ?? null;
+            $tradeNameVal = $manufacturer->attributes['trade_name'] ?? null;
+
+            if (empty($nameVal)) {
+                $manufacturer->attributes['name'] = $legalNameVal ?: ($tradeNameVal ?: 'Manufacturer');
+            }
+            if (empty($manufacturer->attributes['legal_name'])) {
+                $manufacturer->attributes['legal_name'] = $manufacturer->attributes['name'];
+            }
+            if (empty($manufacturer->attributes['registered_address']) && !empty($manufacturer->attributes['address'])) {
+                $manufacturer->attributes['registered_address'] = $manufacturer->attributes['address'];
+            }
+            if (empty($manufacturer->attributes['status'])) {
+                $isAct = isset($manufacturer->attributes['is_active']) ? (bool)$manufacturer->attributes['is_active'] : true;
+                $manufacturer->attributes['status'] = $isAct ? 'ACTIVE' : 'INACTIVE';
+            }
         });
     }
 
@@ -48,18 +66,15 @@ class Manufacturer extends Model
      */
     public function getNameAttribute(?string $value): string
     {
-        return $value ?: ($this->trade_name ?: ($this->legal_name ?: ''));
+        return $value ?: ($this->trade_name ?: ($this->legal_name ?: 'Manufacturer Master'));
     }
 
     /**
-     * GSTIN Mutator - Normalize GSTIN (trimmed, uppercase, no internal spaces).
+     * Accessor for registered_address attribute.
      */
-    public function setGstinAttribute(?string $value): void
+    public function getRegisteredAddressAttribute(?string $value): ?string
     {
-        if ($value !== null) {
-            $value = strtoupper(trim(preg_replace('/\s+/', '', $value)));
-        }
-        $this->attributes['gstin'] = $value ?: null;
+        return $value ?: $this->attributes['address'] ?? null;
     }
 
     public function creator(): BelongsTo

@@ -38,10 +38,10 @@ export default function ManufacturerManager() {
     const [form, setForm] = useState({
         legal_name: '',
         trade_name: '',
-        gstin: '',
+        cin: '',
         registration_number: '',
         business_constitution: '',
-        address: '',
+        registered_address: '',
         phone: '',
         email: '',
         website: '',
@@ -79,10 +79,10 @@ export default function ManufacturerManager() {
         setForm({
             legal_name: '',
             trade_name: '',
-            gstin: '',
+            cin: '',
             registration_number: '',
             business_constitution: 'PRIVATE_LIMITED',
-            address: '',
+            registered_address: '',
             phone: '',
             email: '',
             website: '',
@@ -104,10 +104,10 @@ export default function ManufacturerManager() {
         setForm({
             legal_name: manufacturer.legal_name || manufacturer.name || '',
             trade_name: manufacturer.trade_name || '',
-            gstin: manufacturer.gstin || '',
+            cin: manufacturer.cin || '',
             registration_number: manufacturer.registration_number || '',
             business_constitution: manufacturer.business_constitution || 'PRIVATE_LIMITED',
-            address: manufacturer.address || '',
+            registered_address: manufacturer.registered_address || manufacturer.address || '',
             phone: manufacturer.phone || '',
             email: manufacturer.email || '',
             website: manufacturer.website || '',
@@ -140,8 +140,8 @@ export default function ManufacturerManager() {
     };
 
     const handleCheckDuplicate = async () => {
-        if (!form.legal_name && !form.gstin) {
-            setModalError('Please enter a Legal Name or GSTIN to search existing master.');
+        if (!form.legal_name && !form.cin) {
+            setModalError('Please enter a Legal Name or CIN to search existing master.');
             return;
         }
         setCheckingDuplicates(true);
@@ -154,7 +154,7 @@ export default function ManufacturerManager() {
             const res = await axios.post('/api/manufacturers-crud/check-duplicates', {
                 legal_name: form.legal_name,
                 trade_name: form.trade_name,
-                gstin: form.gstin
+                cin: form.cin
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -280,7 +280,7 @@ export default function ManufacturerManager() {
                             <input 
                                 type="text" 
                                 className="form-control border-start-0" 
-                                placeholder="Search by Legal Name, Trade Name, GSTIN, or Reg. Number..."
+                                placeholder="Search by Company Name, Trade Name, CIN, or Reg. Number..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
@@ -309,8 +309,9 @@ export default function ManufacturerManager() {
                         <table className="table table-hover align-middle">
                             <thead>
                                 <tr className="text-secondary font-monospace" style={{ fontSize: '0.8rem' }}>
-                                    <th>Legal / Trade Name</th>
-                                    <th>GSTIN / Reg No.</th>
+                                    <th>Legal / Company Name</th>
+                                    <th>CIN / Reg No.</th>
+                                    <th>Registered Address</th>
                                     <th>Contact Details</th>
                                     <th>Verification</th>
                                     <th>Status</th>
@@ -327,10 +328,13 @@ export default function ManufacturerManager() {
                                             )}
                                         </td>
                                         <td>
-                                            <div className="small font-monospace fw-semibold text-dark">{m.gstin || <span className="text-muted font-normal italic">-</span>}</div>
-                                            {m.registration_number && (
+                                            <div className="small font-monospace fw-semibold text-dark">{m.cin || m.registration_number || <span className="text-muted font-normal italic">-</span>}</div>
+                                            {m.registration_number && m.cin && (
                                                 <div className="text-secondary small font-monospace">Reg: {m.registration_number}</div>
                                             )}
+                                        </td>
+                                        <td>
+                                            <div className="small text-secondary">{m.registered_address || m.address || <span className="text-muted small italic">-</span>}</div>
                                         </td>
                                         <td>
                                             <div className="small">{m.phone || <span className="text-muted small italic">-</span>}</div>
@@ -463,7 +467,7 @@ export default function ManufacturerManager() {
                                                     <div>
                                                         <div className="fw-bold">Search Global Master First</div>
                                                         <div className="small text-muted">
-                                                            Before adding a new manufacturer, check if it already exists in the global master by searching Legal Name or GSTIN.
+                                                            Before adding a new manufacturer, check if it already exists in the global master by searching Company Name or CIN.
                                                         </div>
                                                     </div>
                                                 </div>
@@ -472,7 +476,7 @@ export default function ManufacturerManager() {
 
                                             <div className="row g-3 mb-4">
                                                 <div className="col-md-6">
-                                                    <label className="form-label small fw-semibold">Legal Name *</label>
+                                                    <label className="form-label small fw-semibold">Legal / Company Name *</label>
                                                     <input
                                                         type="text"
                                                         className="form-control"
@@ -482,13 +486,13 @@ export default function ManufacturerManager() {
                                                     />
                                                 </div>
                                                 <div className="col-md-6">
-                                                    <label className="form-label small fw-semibold">GSTIN (Tax Registration)</label>
+                                                    <label className="form-label small fw-semibold">CIN (Corporate Registration)</label>
                                                     <input
                                                         type="text"
                                                         className="form-control font-monospace"
-                                                        value={form.gstin}
-                                                        onChange={(e) => handleChange('gstin', e.target.value)}
-                                                        placeholder="e.g. 27AAACK1234F1Z5"
+                                                        value={form.cin}
+                                                        onChange={(e) => handleChange('cin', e.target.value)}
+                                                        placeholder="e.g. L26914UP1985PLC007321"
                                                     />
                                                 </div>
                                             </div>
@@ -525,17 +529,17 @@ export default function ManufacturerManager() {
                                                     <div className="d-flex align-items-center justify-content-between">
                                                         <div>
                                                             <div className="fw-bold text-dark mb-1">
-                                                                <i className="fa-solid fa-triangle-exclamation text-warning me-2 fs-5"></i> Existing Manufacturer Found (Exact GSTIN Match)
+                                                                <i className="fa-solid fa-triangle-exclamation text-warning me-2 fs-5"></i> Existing Manufacturer Found (Exact CIN Match)
                                                             </div>
-                                                            <div className="fw-semibold text-dark">{duplicateResult.exact_match.legal_name}</div>
-                                                            <div className="small font-monospace text-muted">GSTIN: {duplicateResult.exact_match.gstin}</div>
+                                                            <div className="fw-semibold text-dark">{duplicateResult.exact_match.legal_name || duplicateResult.exact_match.name}</div>
+                                                            <div className="small font-monospace text-muted">CIN: {duplicateResult.exact_match.cin}</div>
                                                         </div>
                                                         <button
                                                             type="button"
                                                             className="btn btn-warning btn-sm fw-bold px-3 shadow-sm"
                                                             onClick={() => {
                                                                 setShowModal(false);
-                                                                setSuccess(`Selected existing manufacturer: ${duplicateResult.exact_match.legal_name}`);
+                                                                setSuccess(`Selected existing manufacturer: ${duplicateResult.exact_match.legal_name || duplicateResult.exact_match.name}`);
                                                             }}
                                                         >
                                                             Use Existing Manufacturer
@@ -554,7 +558,7 @@ export default function ManufacturerManager() {
                                                             <div key={m.id} className="list-group-item d-flex justify-content-between align-items-center">
                                                                 <div>
                                                                     <div className="fw-bold">{m.legal_name || m.name}</div>
-                                                                    {m.gstin && <span className="small font-monospace text-muted">GSTIN: {m.gstin}</span>}
+                                                                    {m.cin && <span className="small font-monospace text-muted">CIN: {m.cin}</span>}
                                                                 </div>
                                                                 <button
                                                                     type="button"
@@ -589,7 +593,7 @@ export default function ManufacturerManager() {
                                         <div>
                                             <div className="row g-3 mb-3">
                                                 <div className="col-md-6">
-                                                    <label className="form-label small fw-semibold">Legal Name *</label>
+                                                    <label className="form-label small fw-semibold">Legal / Company Name *</label>
                                                     <input
                                                         type="text"
                                                         className="form-control"
@@ -613,13 +617,13 @@ export default function ManufacturerManager() {
 
                                             <div className="row g-3 mb-3">
                                                 <div className="col-md-4">
-                                                    <label className="form-label small fw-semibold">GSTIN</label>
+                                                    <label className="form-label small fw-semibold">CIN (Corporate ID)</label>
                                                     <input
                                                         type="text"
                                                         className="form-control font-monospace"
-                                                        value={form.gstin}
-                                                        onChange={(e) => handleChange('gstin', e.target.value)}
-                                                        placeholder="e.g. 27AAACK1234F1Z5"
+                                                        value={form.cin}
+                                                        onChange={(e) => handleChange('cin', e.target.value)}
+                                                        placeholder="e.g. L26914UP1985PLC007321"
                                                     />
                                                 </div>
                                                 <div className="col-md-4">
@@ -629,7 +633,7 @@ export default function ManufacturerManager() {
                                                         className="form-control font-monospace"
                                                         value={form.registration_number}
                                                         onChange={(e) => handleChange('registration_number', e.target.value)}
-                                                        placeholder="e.g. CIN / Corporate Reg No"
+                                                        placeholder="e.g. Corporate Reg No"
                                                     />
                                                 </div>
                                                 <div className="col-md-4">
