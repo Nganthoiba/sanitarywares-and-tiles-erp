@@ -25,6 +25,9 @@ export default function ManufacturerManager() {
     const [showModal, setShowModal] = useState(false);
     const [modalMode, setModalMode] = useState('create'); // 'create', 'edit'
     const [selectedManufacturer, setSelectedManufacturer] = useState(null);
+    const [modalError, setModalError] = useState(null);
+    const [modalSuccess, setModalSuccess] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
 
     // Duplicate search & verification states
     const [searchStep, setSearchStep] = useState(true); // Search first before form
@@ -87,6 +90,8 @@ export default function ManufacturerManager() {
             verification_status: 'UNVERIFIED'
         });
         setError(null);
+        setModalError(null);
+        setModalSuccess(null);
         setShowModal(true);
     };
 
@@ -110,6 +115,8 @@ export default function ManufacturerManager() {
             verification_status: manufacturer.verification_status || 'UNVERIFIED'
         });
         setError(null);
+        setModalError(null);
+        setModalSuccess(null);
         setShowModal(true);
     };
 
@@ -134,11 +141,13 @@ export default function ManufacturerManager() {
 
     const handleCheckDuplicate = async () => {
         if (!form.legal_name && !form.gstin) {
-            setError('Please enter a Legal Name or GSTIN to search existing master.');
+            setModalError('Please enter a Legal Name or GSTIN to search existing master.');
             return;
         }
         setCheckingDuplicates(true);
         setError(null);
+        setModalError(null);
+        setModalSuccess(null);
 
         try {
             const token = localStorage.getItem('auth_token');
@@ -156,7 +165,7 @@ export default function ManufacturerManager() {
                 setSearchStep(false);
             }
         } catch (err) {
-            setError('Failed to check duplicate manufacturer master records.');
+            setModalError('Failed to check duplicate manufacturer master records.');
         } finally {
             setCheckingDuplicates(false);
         }
@@ -166,9 +175,13 @@ export default function ManufacturerManager() {
         e.preventDefault();
         setError(null);
         setSuccess(null);
+        setModalError(null);
+        setModalSuccess(null);
+        setSubmitting(true);
 
         try {
             const token = localStorage.getItem('auth_token');
+            let successMessage = '';
             if (modalMode === 'create') {
                 const res = await axios.post('/api/manufacturers-crud', {
                     ...form,
@@ -176,15 +189,24 @@ export default function ManufacturerManager() {
                 }, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-                setSuccess(res.data.message || 'Manufacturer added to global master successfully.');
+                successMessage = res.data.message || 'Manufacturer added to global master successfully.';
             } else {
                 const res = await axios.put(`/api/manufacturers-crud/${selectedManufacturer.id}`, form, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-                setSuccess(res.data.message || 'Global manufacturer updated successfully.');
+                successMessage = res.data.message || 'Global manufacturer updated successfully.';
             }
-            setShowModal(false);
+            
+            // Display success message inside modal directly
+            setModalSuccess(successMessage);
+            setSuccess(successMessage);
             fetchManufacturers(searchQuery);
+
+            // Keep modal open briefly to show the success response before auto-closing
+            setTimeout(() => {
+                setShowModal(false);
+                setModalSuccess(null);
+            }, 1800);
         } catch (err) {
             if (err.response?.data?.duplicate_type) {
                 setDuplicateResult({
@@ -194,9 +216,17 @@ export default function ManufacturerManager() {
                     possible_matches: [err.response.data.existing_manufacturer]
                 });
                 setSearchStep(true);
+                setModalError(err.response?.data?.message || 'A matching manufacturer already exists in global master.');
             } else {
-                setError(err.response?.data?.message || 'Failed to save manufacturer.');
+                let errMessage = err.response?.data?.message || 'Failed to save manufacturer.';
+                if (err.response?.data?.errors) {
+                    const validationMsgs = Object.values(err.response.data.errors).flat().join(' ');
+                    if (validationMsgs) errMessage = validationMsgs;
+                }
+                setModalError(errMessage);
             }
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -397,6 +427,33 @@ export default function ManufacturerManager() {
 
                             <form onSubmit={handleSubmit}>
                                 <div className="modal-body p-4 bg-light-subtle">
+                                    {/* RESPONSE MESSAGES INSIDE MODAL */}
+                                    {modalError && (
+                                        <div className="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between mb-4 animate__animated animate__shakeX" style={{ borderRadius: '10px' }} role="alert">
+                                            <div className="d-flex align-items-center">
+                                                <i className="fa-solid fa-circle-exclamation fs-5 me-3 text-danger"></i>
+                                                <div>
+                                                    <div className="fw-bold">Action Failed</div>
+                                                    <div className="small">{modalError}</div>
+                                                </div>
+                                            </div>
+                                            <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setModalError(null)} aria-label="Close"></button>
+                                        </div>
+                                    )}
+
+                                    {modalSuccess && (
+                                        <div className="alert alert-success border-0 shadow-sm d-flex align-items-center justify-content-between mb-4 animate__animated animate__fadeIn" style={{ borderRadius: '10px' }} role="alert">
+                                            <div className="d-flex align-items-center">
+                                                <i className="fa-solid fa-circle-check fs-5 me-3 text-success"></i>
+                                                <div>
+                                                    <div className="fw-bold">Success</div>
+                                                    <div className="small">{modalSuccess}</div>
+                                                </div>
+                                            </div>
+                                            <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setModalSuccess(null)} aria-label="Close"></button>
+                                        </div>
+                                    )}
+
                                     {/* SEARCH FIRST STEP FOR CREATION */}
                                     {modalMode === 'create' && searchStep ? (
                                         <div>
@@ -674,8 +731,15 @@ export default function ManufacturerManager() {
                                         Cancel
                                     </button>
                                     {(!searchStep || modalMode === 'edit') && (
-                                        <button type="submit" className="btn btn-primary px-4 shadow-sm">
-                                            {modalMode === 'create' ? 'Save Manufacturer' : 'Update Manufacturer'}
+                                        <button type="submit" className="btn btn-primary px-4 shadow-sm" disabled={submitting}>
+                                            {submitting ? (
+                                                <>
+                                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                                    Saving...
+                                                </>
+                                            ) : (
+                                                modalMode === 'create' ? 'Save Manufacturer' : 'Update Manufacturer'
+                                            )}
                                         </button>
                                     )}
                                 </div>

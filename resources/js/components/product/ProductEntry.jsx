@@ -94,6 +94,8 @@ export default function ProductEntry({ initialSubTab = "list" }) {
     });
 
     const [showManufacturerModal, setShowManufacturerModal] = useState(false);
+    const [manufacturerModalError, setManufacturerModalError] = useState(null);
+    const [manufacturerModalSuccess, setManufacturerModalSuccess] = useState(null);
     const [manufacturerForm, setManufacturerForm] = useState({
         name: "",
         phone: "",
@@ -440,7 +442,8 @@ export default function ProductEntry({ initialSubTab = "list" }) {
 
     const handleQuickAddManufacturerSubmit = async (e) => {
         e.preventDefault();
-        setError(null);
+        setManufacturerModalError(null);
+        setManufacturerModalSuccess(null);
         setLoading(true);
         try {
             const token = localStorage.getItem("auth_token");
@@ -457,6 +460,9 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const newManufacturer = response.data.manufacturer;
+            const successMsg = response.data.message || "Manufacturer added to global master successfully.";
+            setManufacturerModalSuccess(successMsg);
+
             // Refresh lookup
             const res = await axios.get("/api/product/form-data", {
                 headers: { Authorization: `Bearer ${token}` }
@@ -466,19 +472,27 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                 ...prev,
                 manufacturer_id: newManufacturer.id.toString()
             }));
-            setShowManufacturerModal(false);
-            setManufacturerForm({
-                legal_name: "",
-                trade_name: "",
-                gstin: "",
-                phone: "",
-                email: "",
-                website: "",
-                address: ""
-            });
-            setSuccess("Manufacturer added to global master successfully!");
+
+            setTimeout(() => {
+                setShowManufacturerModal(false);
+                setManufacturerForm({
+                    legal_name: "",
+                    trade_name: "",
+                    gstin: "",
+                    phone: "",
+                    email: "",
+                    website: "",
+                    address: ""
+                });
+                setManufacturerModalSuccess(null);
+            }, 1800);
         } catch (err) {
-            setError(err.response?.data?.message || "Failed to create manufacturer.");
+            let errMsg = err.response?.data?.message || "Failed to create manufacturer.";
+            if (err.response?.data?.errors) {
+                const validationMsgs = Object.values(err.response.data.errors).flat().join(" ");
+                if (validationMsgs) errMsg = validationMsgs;
+            }
+            setManufacturerModalError(errMsg);
         } finally {
             setLoading(false);
         }
@@ -1354,6 +1368,26 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                             </div>
                             <form onSubmit={handleQuickAddManufacturerSubmit}>
                                 <div className="modal-body px-4">
+                                    {manufacturerModalError && (
+                                        <div className="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between mb-3" role="alert">
+                                            <div className="d-flex align-items-center">
+                                                <i className="fa-solid fa-circle-exclamation me-2 fs-5 text-danger"></i>
+                                                <div>{manufacturerModalError}</div>
+                                            </div>
+                                            <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setManufacturerModalError(null)} aria-label="Close"></button>
+                                        </div>
+                                    )}
+
+                                    {manufacturerModalSuccess && (
+                                        <div className="alert alert-success border-0 shadow-sm d-flex align-items-center justify-content-between mb-3" role="alert">
+                                            <div className="d-flex align-items-center">
+                                                <i className="fa-solid fa-circle-check me-2 fs-5 text-success"></i>
+                                                <div>{manufacturerModalSuccess}</div>
+                                            </div>
+                                            <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setManufacturerModalSuccess(null)} aria-label="Close"></button>
+                                        </div>
+                                    )}
+
                                     <div className="mb-3">
                                         <label className="form-label small fw-semibold">Legal Name *</label>
                                         <input 
