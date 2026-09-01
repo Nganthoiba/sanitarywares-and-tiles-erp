@@ -13,7 +13,6 @@ use App\Domains\Accounting\Services\PostingService;
 use App\Domains\Accounting\Models\Account;
 use App\Domains\Accounting\Models\AccountGroup;
 use App\Domains\Product\Models\Product;
-use App\Domains\Product\Models\ProductBatchPrice;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
@@ -64,16 +63,6 @@ class GRNService
                         'quantity_rejected' => $itemData['quantity_rejected'] ?? 0.0000,
                     ]);
 
-                    // Auto-populate product batch price entry (cost_price and sale_price initially NULL)
-                    ProductBatchPrice::firstOrCreate([
-                        'organization_id' => $grn->organization_id,
-                        'product_variant_id' => $itemData['product_variant_id'],
-                        'batch_number' => $grn->batch_number,
-                    ], [
-                        'user_id' => auth()->id(),
-                        'cost_price' => null,
-                        'sale_price' => null,
-                    ]);
 
                     // If item is granite slabs and has slabs data
                     if ($hasSlabs) {
@@ -142,16 +131,6 @@ class GRNService
                         'quantity_rejected' => $itemData['quantity_rejected'] ?? 0.0000,
                     ]);
 
-                    // Auto-populate product batch price entry (cost_price and sale_price initially NULL)
-                    ProductBatchPrice::firstOrCreate([
-                        'organization_id' => $grn->organization_id,
-                        'product_variant_id' => $itemData['product_variant_id'],
-                        'batch_number' => $grn->batch_number,
-                    ], [
-                        'user_id' => auth()->id(),
-                        'cost_price' => null,
-                        'sale_price' => null,
-                    ]);
 
                     if ($hasSlabs) {
                         foreach ($itemData['slabs'] as $slabData) {

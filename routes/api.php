@@ -12,7 +12,6 @@ use App\Http\Controllers\Api\Auth\UserInvitationController;
 use App\Http\Controllers\Api\Auth\UserManagementController;
 use App\Http\Controllers\Api\Auth\NavigationController;
 use App\Http\Controllers\Api\Product\ProductApiController;
-use App\Http\Controllers\Api\Product\ProductBatchPriceApiController;
 use App\Http\Controllers\Api\Product\ProductPricingPackagingApiController;
 use App\Http\Controllers\Api\Purchase\GRNApiController;
 use App\Http\Controllers\Api\Purchase\PurchaseOrderApiController;
@@ -151,11 +150,6 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::post('/product/variants/{id}/conversions', [ProductApiController::class, 'storeConversion']);
     Route::delete('/product/conversions/{id}', [ProductApiController::class, 'deleteConversion']);
     Route::get('/product/variants/{id}/inventory-summary', [ProductApiController::class, 'getInventorySummary']);
-
-    // Batch Pricing Routes
-    Route::get('/product-batch-prices', [ProductBatchPriceApiController::class, 'index']);
-    Route::put('/product-batch-prices/{id}', [ProductBatchPriceApiController::class, 'update'])->middleware('permission:products.batch_prices.update');
-    Route::post('/product-batch-prices/bulk-update', [ProductBatchPriceApiController::class, 'bulkUpdate'])->middleware('permission:products.batch_prices.update');
 
     // Product Pricing & Packaging Commercial Settings Routes
     Route::get('/product/pricing-packaging', [ProductPricingPackagingApiController::class, 'index'])->middleware('permission:products.pricing.manage');
