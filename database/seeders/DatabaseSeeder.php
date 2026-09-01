@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             OrganizationAndUserSeeder::class,   // Tenant Organizations, Org Admins, Branches, Warehouses
             TaxProfileSeeder::class,            // Tax profiles
             CategorySeeder::class,              // Product categories
+            CategorySpecificationSeeder::class, // Category specification mapping
             BrandSeeder::class,                 // Brands
             ManufacturerSeeder::class,          // Manufacturers
             ProductSeeder::class,               // Sample Products, Attributes, Stock

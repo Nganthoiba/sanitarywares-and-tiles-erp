@@ -10,14 +10,20 @@ return new class extends Migration {
         // 1. Modify goods_receipt_notes table
         Schema::table('goods_receipt_notes', function (Blueprint $table) {
             $table->foreignId('purchase_order_id')->nullable()->change();
-            $table->foreignId('supplier_id')->nullable()->after('purchase_order_id')->constrained('suppliers')->onDelete('set null');
-            $table->foreignId('storage_location_id')->nullable()->after('warehouse_id')->constrained('storage_locations')->onDelete('set null');
+            if (!Schema::hasColumn('goods_receipt_notes', 'supplier_id')) {
+                $table->foreignId('supplier_id')->nullable()->after('purchase_order_id')->constrained('suppliers')->onDelete('set null');
+            }
+            if (!Schema::hasColumn('goods_receipt_notes', 'storage_location_id')) {
+                $table->foreignId('storage_location_id')->nullable()->after('warehouse_id')->constrained('storage_locations')->onDelete('set null');
+            }
         });
 
         // 2. Modify goods_receipt_items table
         Schema::table('goods_receipt_items', function (Blueprint $table) {
             $table->foreignId('purchase_order_item_id')->nullable()->change();
-            $table->foreignId('unit_id')->nullable()->after('product_variant_id')->constrained('units')->onDelete('set null');
+            if (!Schema::hasColumn('goods_receipt_items', 'unit_id')) {
+                $table->foreignId('unit_id')->nullable()->after('product_variant_id')->constrained('units')->onDelete('set null');
+            }
         });
 
 

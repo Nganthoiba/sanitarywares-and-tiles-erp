@@ -7,7 +7,7 @@ return new class extends Migration {
     public function up(): void {
         Schema::create('product_attributes', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organization_id')->index()->constrained('organizations')->onDelete('cascade');
+            $table->foreignId('organization_id')->nullable()->index()->constrained('organizations')->onDelete('cascade');
             $table->string('name');
             $table->string('slug');
             $table->string('type')->default('string'); // text, number, list, etc.

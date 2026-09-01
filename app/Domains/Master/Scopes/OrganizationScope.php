@@ -32,7 +32,12 @@ class OrganizationScope implements Scope
 
         $table = $model->getTable();
         $applyTenantFilter = function (Builder $query, string $tableName, $orgId) use ($model) {
-            if ($model instanceof \App\Domains\Master\Models\Category || $model instanceof Role) {
+            if (
+                $model instanceof \App\Domains\Master\Models\Category ||
+                $model instanceof \App\Domains\Product\Models\ProductAttribute ||
+                $model instanceof \App\Domains\Product\Models\ProductAttributeValue ||
+                $model instanceof Role
+            ) {
                 $query->where(function ($q) use ($tableName, $orgId) {
                     $q->where($tableName . '.organization_id', $orgId)
                         ->orWhereNull($tableName . '.organization_id');

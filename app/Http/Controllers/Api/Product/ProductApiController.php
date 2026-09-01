@@ -29,7 +29,7 @@ class ProductApiController extends Controller
         $orgId = $request->user()->organization_id;
 
         return response()->json([
-            'categories' => Category::where('is_active', true)->orderBy('name')->get(),
+            'categories' => Category::where('is_active', true)->with('parent')->orderByRaw('COALESCE(parent_id, id), parent_id IS NOT NULL, sort_order, name')->get(),
             'brands' => Brand::where('organization_id', $orgId)->where('is_active', true)->orderBy('name')->get(),
             'units' => Unit::where('is_active', true)->orderBy('name')->get(),
             'tax_profiles' => TaxProfile::where('is_active', true)->orderBy('name')->get(),
@@ -46,57 +46,15 @@ class ProductApiController extends Controller
     {
         $orgId = $request->user()->organization_id;
 
-        // Auto-fill inventory_behavior and UOMs based on product_type if omitted
-        if ($request->has('product_type') || !$request->has('inventory_behavior')) {
-            $productType = $request->input('product_type', 'STANDARD');
-
-            if ($productType === 'MEASURED_MATERIAL') {
-                $request->merge([
-                    'inventory_behavior' => $request->input('inventory_behavior', 'SLAB'),
-                ]);
-
-                if (!$request->has('purchase_unit_id') || !$request->has('sales_unit_id') || !$request->has('base_unit_id')) {
-                    $sqftUnit = Unit::whereIn('symbol', ['SQFT', 'SQ.FT.', 'SQ_FT', 'sq.ft.', 'sq.m'])
-                        ->first() ?? Unit::first();
-                    if ($sqftUnit) {
-                        $request->merge([
-                            'purchase_unit_id' => $request->input('purchase_unit_id', $sqftUnit->id),
-                            'sales_unit_id' => $request->input('sales_unit_id', $sqftUnit->id),
-                            'base_unit_id' => $request->input('base_unit_id', $sqftUnit->id),
-                        ]);
-                    }
-                }
-            } else {
-                $request->merge([
-                    'inventory_behavior' => $request->input('inventory_behavior', 'STANDARD'),
-                ]);
-
-                if (!$request->has('purchase_unit_id') || !$request->has('sales_unit_id') || !$request->has('base_unit_id')) {
-                    $pcsUnit = Unit::whereIn('symbol', ['PCS', 'pcs', 'PC', 'box'])
-                        ->first() ?? Unit::first();
-                    if ($pcsUnit) {
-                        $request->merge([
-                            'purchase_unit_id' => $request->input('purchase_unit_id', $pcsUnit->id),
-                            'sales_unit_id' => $request->input('sales_unit_id', $pcsUnit->id),
-                            'base_unit_id' => $request->input('base_unit_id', $pcsUnit->id),
-                        ]);
-                    }
-                }
-            }
-        }
-
-        // Fallback for tax_profile_id if not present
-        if (!$request->has('tax_profile_id') || empty($request->input('tax_profile_id'))) {
-            $firstTaxProfile = TaxProfile::where('is_active', true)->first();
-            if ($firstTaxProfile) {
-                $request->merge(['tax_profile_id' => $firstTaxProfile->id]);
-            }
-        }
+        // Derive inventory_behavior and UOMs based on Product Category
+        $this->deriveCategoryBehavior($request);
 
         $validated = $request->validate([
             'category_id' => [
                 'required',
-                Rule::exists('categories', 'id')->where('organization_id', $orgId)
+                Rule::exists('categories', 'id')->where(function ($query) use ($orgId) {
+                    return $query->where('organization_id', $orgId)->orWhereNull('organization_id');
+                })
             ],
             'brand_id' => [
                 'required',
@@ -139,15 +97,60 @@ class ProductApiController extends Controller
             'product_type' => 'nullable|string|in:STANDARD,MEASURED_MATERIAL',
             'physical_object' => 'required_if:product_type,MEASURED_MATERIAL|nullable|string|in:SLAB',
             'measurement_unit' => 'required_if:product_type,MEASURED_MATERIAL|nullable|string|in:SQFT,SQ.FT.',
-            'attributes' => 'nullable|array',
-            'attributes.*.attribute_id' => [
-                'required',
-                Rule::exists('product_attributes', 'id')->where('organization_id', $orgId)
-            ],
-            'attributes.*.value' => 'required|string'
+            'attributes' => 'nullable'
         ]);
 
-        $variant = DB::transaction(function () use ($validated, $orgId) {
+        // Normalize attributes array/dictionary
+        $rawAttributes = $request->input('attributes', []);
+        $normalizedAttributes = [];
+        if (is_array($rawAttributes)) {
+            foreach ($rawAttributes as $key => $item) {
+                if (is_array($item) && isset($item['attribute_id'])) {
+                    $normalizedAttributes[$item['attribute_id']] = $item['value'] ?? null;
+                } else if (!is_array($item)) {
+                    $normalizedAttributes[$key] = $item;
+                }
+            }
+        }
+
+        // Validate required category specifications
+        $category = Category::find($validated['category_id']);
+        if ($category) {
+            $specs = $category->productAttributes;
+            if ($specs->isEmpty() && $category->parent) {
+                $specs = $category->parent->productAttributes;
+            }
+
+            foreach ($specs as $spec) {
+                $val = $normalizedAttributes[$spec->id] ?? null;
+                if ($spec->pivot->is_required) {
+                    if ($val === null || $val === '') {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "The field {$spec->name} is required for this product category.",
+                            'errors' => [
+                                "attributes.{$spec->id}" => ["The {$spec->name} field is required."]
+                            ]
+                        ], 422);
+                    }
+                }
+
+                // Numeric validation
+                if ($val !== null && $val !== '' && in_array($spec->type, ['number', 'decimal'])) {
+                    if (!is_numeric($val) || (float)$val <= 0) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "The field {$spec->name} must be a positive number.",
+                            'errors' => [
+                                "attributes.{$spec->id}" => ["The {$spec->name} field must be greater than zero."]
+                            ]
+                        ], 422);
+                    }
+                }
+            }
+        }
+
+        $variant = DB::transaction(function () use ($validated, $normalizedAttributes, $orgId) {
             $variantData = collect($validated)->except(['attributes', 'pieces_per_box', 'product_type', 'physical_object', 'measurement_unit'])->toArray();
 
             $variant = Product::create(array_merge($variantData, [
@@ -155,13 +158,13 @@ class ProductApiController extends Controller
                 'is_active' => $validated['is_active'] ?? true
             ]));
 
-            if (!empty($validated['attributes'])) {
-                foreach ($validated['attributes'] as $attr) {
+            foreach ($normalizedAttributes as $attrId => $val) {
+                if ($val !== null && $val !== '') {
                     ProductAttributeValue::create([
                         'organization_id' => $orgId,
                         'product_variant_id' => $variant->id,
-                        'product_attribute_id' => $attr['attribute_id'],
-                        'value' => $attr['value']
+                        'product_attribute_id' => $attrId,
+                        'value' => (string) $val
                     ]);
                 }
             }
@@ -325,52 +328,8 @@ class ProductApiController extends Controller
         $orgId = $request->user()->organization_id;
         $variant = Product::where('organization_id', $orgId)->findOrFail($id);
 
-        // Auto-fill inventory_behavior and UOMs based on product_type if omitted
-        if ($request->has('product_type') || !$request->has('inventory_behavior')) {
-            $productType = $request->input('product_type', 'STANDARD');
-
-            if ($productType === 'MEASURED_MATERIAL') {
-                $request->merge([
-                    'inventory_behavior' => $request->input('inventory_behavior', 'SLAB'),
-                ]);
-
-                if (!$request->has('purchase_unit_id') || !$request->has('sales_unit_id') || !$request->has('base_unit_id')) {
-                    $sqftUnit = Unit::whereIn('symbol', ['SQFT', 'SQ.FT.', 'SQ_FT', 'sqft', 'sq.ft.'])
-                        ->first() ?? Unit::first();
-                    if ($sqftUnit) {
-                        $request->merge([
-                            'purchase_unit_id' => $request->input('purchase_unit_id', $sqftUnit->id),
-                            'sales_unit_id' => $request->input('sales_unit_id', $sqftUnit->id),
-                            'base_unit_id' => $request->input('base_unit_id', $sqftUnit->id),
-                        ]);
-                    }
-                }
-            } else {
-                $request->merge([
-                    'inventory_behavior' => $request->input('inventory_behavior', 'STANDARD'),
-                ]);
-
-                if (!$request->has('purchase_unit_id') || !$request->has('sales_unit_id') || !$request->has('base_unit_id')) {
-                    $pcsUnit = Unit::whereIn('symbol', ['PCS', 'pcs', 'PC'])
-                        ->first() ?? Unit::first();
-                    if ($pcsUnit) {
-                        $request->merge([
-                            'purchase_unit_id' => $request->input('purchase_unit_id', $pcsUnit->id),
-                            'sales_unit_id' => $request->input('sales_unit_id', $pcsUnit->id),
-                            'base_unit_id' => $request->input('base_unit_id', $pcsUnit->id),
-                        ]);
-                    }
-                }
-            }
-        }
-
-        // Fallback for tax_profile_id if not present
-        if (!$request->has('tax_profile_id') || empty($request->input('tax_profile_id'))) {
-            $firstTaxProfile = TaxProfile::where('is_active', true)->first();
-            if ($firstTaxProfile) {
-                $request->merge(['tax_profile_id' => $firstTaxProfile->id]);
-            }
-        }
+        // Derive inventory_behavior and UOMs based on Product Category
+        $this->deriveCategoryBehavior($request);
 
         $validated = $request->validate([
             'category_id' => [
@@ -575,5 +534,82 @@ class ProductApiController extends Controller
                 'available_area' => (float)$availableArea
             ]
         ]);
+    }
+
+    /**
+     * Derive internal product_type, inventory_behavior and UOM defaults server-side from Category.
+     */
+    protected function deriveCategoryBehavior(Request $request): void
+    {
+        $categoryId = $request->input('category_id');
+        $category = $categoryId ? Category::with('parent')->find($categoryId) : null;
+        $slug = strtolower($category?->slug ?? '');
+        $parentSlug = strtolower($category?->parent?->slug ?? '');
+
+        $isSlabCategory = str_contains($slug, 'granite') || str_contains($slug, 'marble') || str_contains($slug, 'slab') ||
+                          str_contains($parentSlug, 'granite') || str_contains($parentSlug, 'marble') || str_contains($parentSlug, 'slab');
+
+        $inputProductType = $request->input('product_type');
+        $inputInventoryBehavior = $request->input('inventory_behavior');
+        $hasExplicitProductType = $request->has('product_type');
+
+        // Check if measured material is indicated by explicit input OR by category slug
+        if ($inputProductType === 'MEASURED_MATERIAL' || in_array($inputInventoryBehavior, ['SLAB']) || $isSlabCategory) {
+            $inventoryBehavior = $inputInventoryBehavior ?? 'SLAB';
+            $productType = $inputProductType ?? 'MEASURED_MATERIAL';
+
+            $request->merge([
+                'inventory_behavior' => $inventoryBehavior,
+                'product_type' => $productType,
+            ]);
+
+            // Auto-fill UOMs if omitted
+            if (!$request->has('purchase_unit_id') || !$request->has('sales_unit_id') || !$request->has('base_unit_id')) {
+                $sqftUnit = Unit::whereIn('symbol', ['SQFT', 'SQ.FT.', 'SQ_FT', 'sqft', 'sq.ft.', 'sq.m'])->first() ?? Unit::first();
+                if ($sqftUnit) {
+                    $request->merge([
+                        'purchase_unit_id' => $request->input('purchase_unit_id', $sqftUnit->id),
+                        'sales_unit_id' => $request->input('sales_unit_id', $sqftUnit->id),
+                        'base_unit_id' => $request->input('base_unit_id', $sqftUnit->id),
+                    ]);
+                }
+            }
+
+            // Auto-fill physical_object and measurement_unit defaults ONLY if product_type was NOT explicitly provided without them
+            if (!$hasExplicitProductType) {
+                if (!$request->has('physical_object')) {
+                    $request->merge(['physical_object' => 'SLAB']);
+                }
+                if (!$request->has('measurement_unit')) {
+                    $request->merge(['measurement_unit' => 'SQFT']);
+                }
+            }
+        } else {
+            $inventoryBehavior = $inputInventoryBehavior ?? 'STANDARD';
+            $productType = $inputProductType ?? 'STANDARD';
+
+            $request->merge([
+                'inventory_behavior' => $inventoryBehavior,
+                'product_type' => $productType,
+            ]);
+
+            if (!$request->has('purchase_unit_id') || !$request->has('sales_unit_id') || !$request->has('base_unit_id')) {
+                $pcsUnit = Unit::whereIn('symbol', ['PCS', 'pcs', 'PC', 'box', 'BOX'])->first() ?? Unit::first();
+                if ($pcsUnit) {
+                    $request->merge([
+                        'purchase_unit_id' => $request->input('purchase_unit_id', $pcsUnit->id),
+                        'sales_unit_id' => $request->input('sales_unit_id', $pcsUnit->id),
+                        'base_unit_id' => $request->input('base_unit_id', $pcsUnit->id),
+                    ]);
+                }
+            }
+        }
+
+        if (!$request->has('tax_profile_id') || empty($request->input('tax_profile_id'))) {
+            $firstTaxProfile = TaxProfile::where('is_active', true)->first();
+            if ($firstTaxProfile) {
+                $request->merge(['tax_profile_id' => $firstTaxProfile->id]);
+            }
+        }
     }
 }

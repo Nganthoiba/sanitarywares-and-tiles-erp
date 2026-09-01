@@ -22,4 +22,11 @@ class Category extends Model {
     public function children(): HasMany {
         return $this->hasMany(Category::class, 'parent_id');
     }
+
+    public function productAttributes(): \Illuminate\Database\Eloquent\Relations\BelongsToMany {
+        return $this->belongsToMany(\App\Domains\Product\Models\ProductAttribute::class, 'category_product_attributes')
+            ->withPivot(['is_required', 'sort_order', 'allowed_values'])
+            ->withTimestamps()
+            ->orderBy('category_product_attributes.sort_order');
+    }
 }

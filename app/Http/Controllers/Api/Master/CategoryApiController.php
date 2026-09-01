@@ -156,4 +156,51 @@ class CategoryApiController extends Controller
             'message' => 'Category successfully deleted.'
         ]);
     }
+
+    /**
+     * Get specifications configured for a category (or inherited from its parent).
+     */
+    public function getSpecifications($id)
+    {
+        $category = Category::with(['productAttributes.unit', 'parent.productAttributes.unit'])->find($id);
+        if (!$category) {
+            return response()->json([
+                'category_id' => null,
+                'specifications' => []
+            ], 200);
+        }
+
+        $attributes = $category->productAttributes;
+
+        // If subcategory has no direct attributes, inherit from parent category
+        if ($attributes->isEmpty() && $category->parent) {
+            $attributes = $category->parent->productAttributes;
+        }
+
+        $formatted = $attributes->map(function ($attr) {
+            $allowed = $attr->pivot->allowed_values;
+            if (is_string($allowed)) {
+                $allowed = json_decode($allowed, true);
+            }
+            return [
+                'attribute_id' => $attr->id,
+                'name' => $attr->name,
+                'slug' => $attr->slug,
+                'type' => $attr->type,
+                'unit_id' => $attr->unit_id,
+                'unit_symbol' => $attr->unit?->symbol,
+                'unit_name' => $attr->unit?->name,
+                'is_required' => (bool) $attr->pivot->is_required,
+                'sort_order' => (int) $attr->pivot->sort_order,
+                'allowed_values' => $allowed ?: null,
+            ];
+        })->values();
+
+        return response()->json([
+            'category_id' => $category->id,
+            'category_name' => $category->name,
+            'category_slug' => $category->slug,
+            'specifications' => $formatted
+        ]);
+    }
 }

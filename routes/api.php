@@ -181,6 +181,8 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::apiResource('warehouses-crud', WarehouseApiController::class);
     Route::apiResource('suppliers-crud', SupplierApiController::class);
     Route::apiResource('storage-locations-crud', StorageLocationApiController::class);
+    Route::get('categories/{id}/specifications', [CategoryApiController::class, 'getSpecifications']);
+    Route::get('product-categories/{id}/specifications', [CategoryApiController::class, 'getSpecifications']);
     Route::apiResource('categories-crud', CategoryApiController::class);
     Route::apiResource('brands-crud', BrandApiController::class);
     Route::post('manufacturers-crud/check-duplicates', [ManufacturerApiController::class, 'checkDuplicates']);

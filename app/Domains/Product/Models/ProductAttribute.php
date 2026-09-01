@@ -24,4 +24,10 @@ class ProductAttribute extends Model {
     public function attributeValues() {
         return $this->hasMany(ProductAttributeValue::class, 'product_attribute_id');
     }
+
+    public function categories(): \Illuminate\Database\Eloquent\Relations\BelongsToMany {
+        return $this->belongsToMany(\App\Domains\Master\Models\Category::class, 'category_product_attributes')
+            ->withPivot(['is_required', 'sort_order', 'allowed_values'])
+            ->withTimestamps();
+    }
 }

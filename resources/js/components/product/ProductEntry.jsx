@@ -85,14 +85,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
         unit_id: ""
     });
 
-    const [showCategoryModal, setShowCategoryModal] = useState(false);
-    const [categoryForm, setCategoryForm] = useState({
-        name: "",
-        slug: "",
-        parent_id: "",
-        description: "",
-        sort_order: "0"
-    });
+
 
     const [showBrandModal, setShowBrandModal] = useState(false);
     const [brandForm, setBrandForm] = useState({
@@ -411,44 +404,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
     // -------------------------------------------------------------
     // Inline Category, Brand, Manufacturer Quick Add Handlers
     // -------------------------------------------------------------
-    const handleQuickAddCategorySubmit = async (e) => {
-        e.preventDefault();
-        setError(null);
-        setLoading(true);
-        try {
-            const token = localStorage.getItem("auth_token");
-            const response = await axios.post("/api/categories-crud", {
-                ...categoryForm,
-                sort_order: parseInt(categoryForm.sort_order, 10) || 0,
-                parent_id: categoryForm.parent_id ? parseInt(categoryForm.parent_id, 10) : null
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const newCat = response.data.category;
-            // Refresh lookup
-            const res = await axios.get("/api/product/form-data", {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setCategories(res.data.categories || []);
-            setProductForm(prev => ({
-                ...prev,
-                category_id: newCat.id.toString()
-            }));
-            setShowCategoryModal(false);
-            setCategoryForm({
-                name: "",
-                slug: "",
-                parent_id: "",
-                description: "",
-                sort_order: "0"
-            });
-            setSuccess("Category created successfully!");
-        } catch (err) {
-            setError(err.response?.data?.message || "Failed to create category.");
-        } finally {
-            setLoading(false);
-        }
-    };
+
 
     const handleQuickAddBrandSubmit = async (e) => {
         e.preventDefault();
@@ -712,7 +668,11 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                     onChange={(e) => setFilters({ ...filters, category: e.target.value })}
                                 >
                                     <option value="">All Categories</option>
-                                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    {categories.map(c => (
+                                        <option key={c.id} value={c.id}>
+                                            {c.parent_id || c.parent ? `\u00A0\u00A0── ${c.name}` : c.name}
+                                        </option>
+                                    ))}
                                 </select>
                                 <select 
                                     className="form-select form-select-sm" 
@@ -1351,60 +1311,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                 </div>
             )}
 
-            {/* Category Quick Add Modal */}
-            {showCategoryModal && (
-                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1100 }}>
-                    <div className="modal-dialog modal-dialog-centered">
-                        <div className="modal-content shadow-lg border-0" style={{ borderRadius: "12px" }}>
-                            <div className="modal-header border-bottom-0 pt-4 px-4">
-                                <h5 className="modal-title fw-bold fs-5">Quick Add Category</h5>
-                                <button type="button" className="btn-close" onClick={() => setShowCategoryModal(false)}></button>
-                            </div>
-                            <form onSubmit={handleQuickAddCategorySubmit}>
-                                <div className="modal-body px-4">
-                                    <div className="mb-3">
-                                        <label className="form-label small fw-semibold">Category Name *</label>
-                                        <input 
-                                            type="text" 
-                                            className="form-control" 
-                                            value={categoryForm.name} 
-                                            onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} 
-                                            required 
-                                        />
-                                    </div>
-                                    <div className="mb-3">
-                                        <label className="form-label small fw-semibold">Parent Category</label>
-                                        <select 
-                                            className="form-select" 
-                                            value={categoryForm.parent_id} 
-                                            onChange={(e) => setCategoryForm({ ...categoryForm, parent_id: e.target.value })}
-                                        >
-                                            <option value="">None (Top-Level)</option>
-                                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="mb-3">
-                                        <label className="form-label small fw-semibold">Description</label>
-                                        <textarea 
-                                            className="form-control" 
-                                            rows="3"
-                                            value={categoryForm.description}
-                                            onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
-                                        ></textarea>
-                                    </div>
-                                </div>
-                                <div className="modal-footer border-top-0 pb-4 px-4">
-                                    <button type="button" className="btn btn-secondary px-3" onClick={() => setShowCategoryModal(false)}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary px-4" disabled={loading}>
-                                        {loading ? <span className="spinner-border spinner-border-sm me-2"></span> : null}
-                                        Save Category
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            )}
+
 
             {/* Brand Quick Add Modal */}
             {showBrandModal && (
