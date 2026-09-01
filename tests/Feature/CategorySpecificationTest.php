@@ -92,6 +92,30 @@ class CategorySpecificationTest extends TestCase
     }
 
     /** @test */
+    public function grand_subcategory_inherits_grandparent_category_specifications_recursively_when_parent_has_no_attributes()
+    {
+        $parentCat = Category::where('slug', 'ceramic-tiles')->first();
+        $this->assertNotNull($parentCat);
+
+        $grandchildCat = Category::create([
+            'organization_id' => $this->org->id,
+            'parent_id' => $parentCat->id,
+            'name' => 'Polished Ceramic Tiles',
+            'slug' => 'polished-ceramic-tiles',
+            'is_active' => true
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson("/api/categories/{$grandchildCat->id}/specifications");
+
+        $response->assertStatus(200);
+        $this->assertEquals($grandchildCat->id, $response->json('category_id'));
+        $slugs = collect($response->json('specifications'))->pluck('slug')->toArray();
+        $this->assertContains('tile-size', $slugs);
+        $this->assertContains('length', $slugs);
+        $this->assertContains('width', $slugs);
+    }
+
+    /** @test */
     public function product_variant_can_be_created_with_category_specifications_without_manual_attribute_builder()
     {
         $tilesCategory = Category::where('slug', 'tiles')->first();

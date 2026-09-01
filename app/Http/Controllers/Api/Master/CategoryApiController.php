@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Api\Master;
 
 use App\Http\Controllers\Controller;
@@ -162,7 +163,7 @@ class CategoryApiController extends Controller
      */
     public function getSpecifications($id)
     {
-        $category = Category::with(['productAttributes.unit', 'parent.productAttributes.unit'])->find($id);
+        $category = Category::find($id);
         if (!$category) {
             return response()->json([
                 'category_id' => null,
@@ -170,12 +171,7 @@ class CategoryApiController extends Controller
             ], 200);
         }
 
-        $attributes = $category->productAttributes;
-
-        // If subcategory has no direct attributes, inherit from parent category
-        if ($attributes->isEmpty() && $category->parent) {
-            $attributes = $category->parent->productAttributes;
-        }
+        $attributes = $this->getCategoryAttributes($category);
 
         $formatted = $attributes->map(function ($attr) {
             $allowed = $attr->pivot->allowed_values;
@@ -202,5 +198,23 @@ class CategoryApiController extends Controller
             'category_slug' => $category->slug,
             'specifications' => $formatted
         ]);
+    }
+
+    /**
+     * Recursively fetch product attributes from category or parent hierarchy.
+     */
+    private function getCategoryAttributes(?Category $category)
+    {
+        if (!$category) {
+            return collect();
+        }
+
+        $attributes = $category->productAttributes()->with('unit')->get();
+
+        if ($attributes->isNotEmpty()) {
+            return $attributes;
+        }
+
+        return $this->getCategoryAttributes($category->parent);
     }
 }
