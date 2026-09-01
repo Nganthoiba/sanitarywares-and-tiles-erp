@@ -26,6 +26,7 @@ class Organization extends Model
         'subscription_start',
         'subscription_expiry',
         'is_active',
+        'suspension_reason',
         'address',
         'settings',
         'preferences'

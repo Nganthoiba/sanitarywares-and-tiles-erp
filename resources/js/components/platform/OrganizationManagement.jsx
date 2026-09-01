@@ -12,6 +12,12 @@ export default function OrganizationManagement() {
     const [selectedOrg, setSelectedOrg] = useState(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
 
+    // Suspension Modal state
+    const [suspendingOrg, setSuspendingOrg] = useState(null);
+    const [suspensionReason, setSuspensionReason] = useState('');
+    const [suspending, setSuspending] = useState(false);
+    const [suspensionError, setSuspensionError] = useState('');
+
     const token = localStorage.getItem('auth_token');
 
     const fetchOrganizations = async () => {
@@ -40,13 +46,62 @@ export default function OrganizationManagement() {
         fetchOrganizations();
     }, []);
 
-    const handleToggleStatus = async (org) => {
-        const action = org.is_active ? 'suspend' : 'activate';
+    const handleOpenSuspendModal = (org) => {
+        setError('');
+        setSuccessMessage('');
+        setSuspensionError('');
+        setSuspensionReason('');
+        setSuspendingOrg(org);
+    };
+
+    const handleConfirmSuspend = async (e) => {
+        e.preventDefault();
+        if (!suspensionReason.trim()) {
+            setSuspensionError('Please enter a reason for suspending this organization.');
+            return;
+        }
+
+        setSuspending(true);
+        setSuspensionError('');
+        setError('');
+
+        try {
+            const res = await fetch(`/api/platform/organizations/${suspendingOrg.id}/suspend`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ reason: suspensionReason }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                if (data.errors) {
+                    const firstErr = Object.values(data.errors).flat()[0];
+                    throw new Error(firstErr || data.message || 'Failed to suspend organization.');
+                }
+                throw new Error(data.message || 'Failed to suspend organization.');
+            }
+
+            setSuccessMessage(data.message || `Organization '${suspendingOrg.name}' suspended successfully.`);
+            setSuspendingOrg(null);
+            setSuspensionReason('');
+            await fetchOrganizations();
+        } catch (err) {
+            setSuspensionError(err.message);
+        } finally {
+            setSuspending(false);
+        }
+    };
+
+    const handleActivateOrg = async (org) => {
         setError('');
         setSuccessMessage('');
 
         try {
-            const res = await fetch(`/api/platform/organizations/${org.id}/${action}`, {
+            const res = await fetch(`/api/platform/organizations/${org.id}/activate`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -55,9 +110,9 @@ export default function OrganizationManagement() {
             });
 
             const data = await res.json();
-            if (!res.ok) throw new Error(data.message || `Failed to ${action} organization.`);
+            if (!res.ok) throw new Error(data.message || 'Failed to activate organization.');
 
-            setSuccessMessage(data.message || `Organization status updated.`);
+            setSuccessMessage(data.message || `Organization '${org.name}' activated successfully.`);
             await fetchOrganizations();
         } catch (err) {
             setError(err.message);
@@ -297,9 +352,17 @@ export default function OrganizationManagement() {
                                                         <i className="fa-solid fa-circle-check me-1"></i> Active
                                                     </span>
                                                 ) : (
-                                                    <span className="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">
-                                                        <i className="fa-solid fa-ban me-1"></i> Suspended
-                                                    </span>
+                                                    <div>
+                                                        <span className="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">
+                                                            <i className="fa-solid fa-ban me-1"></i> Suspended
+                                                        </span>
+                                                        {org.suspension_reason && (
+                                                            <div className="text-muted small mt-1 font-monospace" style={{ fontSize: '0.74rem' }}>
+                                                                <i className="fa-solid fa-circle-info me-1 text-danger"></i>
+                                                                Reason: {org.suspension_reason}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </td>
 
@@ -318,7 +381,7 @@ export default function OrganizationManagement() {
                                                     {org.is_active ? (
                                                         <button 
                                                             className="btn btn-xs btn-outline-danger py-1 px-2"
-                                                            onClick={() => handleToggleStatus(org)}
+                                                            onClick={() => handleOpenSuspendModal(org)}
                                                             title="Suspend Organization Access"
                                                         >
                                                             <i className="fa-solid fa-ban me-1"></i> Suspend
@@ -326,7 +389,7 @@ export default function OrganizationManagement() {
                                                     ) : (
                                                         <button 
                                                             className="btn btn-xs btn-outline-success py-1 px-2"
-                                                            onClick={() => handleToggleStatus(org)}
+                                                            onClick={() => handleActivateOrg(org)}
                                                             title="Re-activate Organization Access"
                                                         >
                                                             <i className="fa-solid fa-check me-1"></i> Activate
@@ -380,6 +443,17 @@ export default function OrganizationManagement() {
                                                 )}
                                             </div>
                                         </div>
+
+                                        {!selectedOrg.is_active && selectedOrg.suspension_reason && (
+                                            <div className="alert alert-danger border-0 rounded-3 shadow-xs mb-4 p-3">
+                                                <div className="fw-bold mb-1 text-danger">
+                                                    <i className="fa-solid fa-circle-exclamation me-1.5"></i> Organization Suspended
+                                                </div>
+                                                <div className="small text-dark">
+                                                    <strong>Reason for Suspension:</strong> {selectedOrg.suspension_reason}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <h6 className="fw-bold text-secondary mb-3 small text-uppercase font-monospace">Registered Staff & Admins ({selectedOrg.users?.length || 0})</h6>
                                         {selectedOrg.users && selectedOrg.users.length > 0 ? (
@@ -441,6 +515,66 @@ export default function OrganizationManagement() {
                             <div className="modal-footer border-top bg-light">
                                 <button type="button" className="btn btn-secondary" onClick={() => setSelectedOrg(null)}>Close</button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Suspend Organization Reason Modal */}
+            {suspendingOrg && (
+                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content shadow-lg border-0">
+                            <div className="modal-header border-bottom bg-danger text-white">
+                                <h5 className="modal-title fw-bold">
+                                    <i className="fa-solid fa-triangle-exclamation me-2"></i>
+                                    Suspend Organization Access
+                                </h5>
+                                <button type="button" className="btn-close btn-close-white" onClick={() => setSuspendingOrg(null)}></button>
+                            </div>
+                            <form onSubmit={handleConfirmSuspend}>
+                                <div className="modal-body p-4">
+                                    {suspensionError && (
+                                        <div className="alert alert-danger alert-dismissible fade show shadow-sm rounded-3 mb-3" role="alert">
+                                            <i className="fa-solid fa-circle-exclamation me-2"></i>
+                                            {suspensionError}
+                                            <button type="button" className="btn-close" onClick={() => setSuspensionError('')}></button>
+                                        </div>
+                                    )}
+                                    <p className="text-dark mb-3">
+                                        You are about to suspend tenant access for <strong>{suspendingOrg.name}</strong>. All users belonging to this organization will be blocked from signing in.
+                                    </p>
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-dark">Reason for Suspension *</label>
+                                        <textarea 
+                                            className="form-control" 
+                                            rows="3"
+                                            placeholder="Enter official reason for suspension (e.g. Account payment overdue, terms violation, compliance audit)..." 
+                                            value={suspensionReason}
+                                            onChange={(e) => setSuspensionReason(e.target.value)}
+                                            required 
+                                        />
+                                        <div className="form-text small text-muted mt-1">
+                                            This reason will be displayed to users of this organization when they attempt to log in.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="modal-footer border-top bg-light">
+                                    <button type="button" className="btn btn-secondary" onClick={() => setSuspendingOrg(null)}>Cancel</button>
+                                    <button type="submit" className="btn btn-danger px-4 shadow-sm fw-semibold" disabled={suspending}>
+                                        {suspending ? (
+                                            <>
+                                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                                Suspending...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <i className="fa-solid fa-ban me-1.5"></i> Suspend Organization
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>

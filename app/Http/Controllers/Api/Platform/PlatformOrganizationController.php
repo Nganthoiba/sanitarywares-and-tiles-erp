@@ -85,10 +85,17 @@ class PlatformOrganizationController extends Controller
     /**
      * Suspend an organization.
      */
-    public function suspend($id)
+    public function suspend(Request $request, $id)
     {
+        $request->validate([
+            'reason' => 'required|string|max:1000',
+        ], [
+            'reason.required' => 'A reason for suspension is required.'
+        ]);
+
         $org = Organization::findOrFail($id);
         $org->is_active = false;
+        $org->suspension_reason = trim($request->input('reason'));
         $org->save();
 
         return response()->json([
@@ -104,6 +111,7 @@ class PlatformOrganizationController extends Controller
     {
         $org = Organization::findOrFail($id);
         $org->is_active = true;
+        $org->suspension_reason = null;
         $org->save();
 
         return response()->json([

@@ -45,8 +45,14 @@ class AuthController extends Controller
 
         // Check if organization is active (only for tenant users)
         if ($user->organization_id !== null && (!$user->organization || !$user->organization->is_active)) {
+            $reason = $user->organization?->suspension_reason;
+            $message = $reason 
+                ? 'Your organization has been suspended. Reason: ' . $reason 
+                : 'Your organization is currently inactive.';
+
             return response()->json([
-                'message' => 'Your organization is currently inactive.'
+                'message' => $message,
+                'suspension_reason' => $reason,
             ], 403);
         }
 
