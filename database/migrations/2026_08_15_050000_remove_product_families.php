@@ -51,11 +51,13 @@ return new class extends Migration {
             $table->foreign('brand_id')->references('id')->on('brands')->onDelete('cascade');
         });
 
-        // 7. Drop product_family_id column (Laravel automatically drops associated indexes)
-        if (Schema::hasColumn('product_variants', 'product_family_id')) {
-            Schema::table('product_variants', function (Blueprint $table) {
-                $table->dropColumn('product_family_id');
-            });
+        // 7. Drop product_family_id column safely
+        if (DB::getDriverName() !== 'sqlite' && Schema::hasColumn('product_variants', 'product_family_id')) {
+            try {
+                Schema::table('product_variants', function (Blueprint $table) {
+                    $table->dropColumn('product_family_id');
+                });
+            } catch (\Throwable $e) {}
         }
 
         // 8. Drop product_families table

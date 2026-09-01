@@ -29,7 +29,12 @@ class CategorySpecificationTest extends TestCase
     {
         parent::setUp();
 
-        $this->org = Organization::first();
+        $this->org = Organization::first() ?? Organization::create([
+            'name' => 'Test Org',
+            'code' => 'ORG1',
+            'email' => 'org@test.com',
+            'status' => 'ACTIVE',
+        ]);
         $this->user = User::where('organization_id', $this->org->id)->first() ?? User::factory()->create(['organization_id' => $this->org->id]);
 
         $this->brand = Brand::where('organization_id', $this->org->id)->first() ?? Brand::create([
@@ -38,9 +43,13 @@ class CategorySpecificationTest extends TestCase
             'slug' => 'kajaria'
         ]);
 
-        $this->boxUnit = Unit::whereIn('symbol', ['BOX', 'box'])->first() ?? Unit::first();
-        $this->sqftUnit = Unit::whereIn('symbol', ['SQFT', 'sq.ft.', 'ft'])->first() ?? Unit::first();
-        $this->taxProfile = TaxProfile::first();
+        $this->seed(\Database\Seeders\UnitSeeder::class);
+        $this->seed(\Database\Seeders\CategorySeeder::class);
+        $this->seed(\Database\Seeders\CategorySpecificationSeeder::class);
+
+        $this->boxUnit = Unit::whereIn('symbol', ['BOX', 'box'])->first() ?? Unit::create(['name' => 'Box', 'symbol' => 'BOX', 'type' => 'QUANTITY', 'is_active' => true]);
+        $this->sqftUnit = Unit::whereIn('symbol', ['SQFT', 'sq.ft.', 'ft'])->first() ?? Unit::create(['name' => 'Sq.Ft.', 'symbol' => 'SQFT', 'type' => 'AREA', 'is_active' => true]);
+        $this->taxProfile = TaxProfile::first() ?? TaxProfile::create(['organization_id' => $this->org->id, 'name' => 'GST 18', 'code' => 'GST18', 'tax_rate' => 18.00, 'is_active' => true]);
     }
 
     /** @test */

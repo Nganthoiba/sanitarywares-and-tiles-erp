@@ -33,6 +33,7 @@ class PermissionSeeder extends Seeder
                 'products.brands.manage'        => ['Manage Brands', 'Manage organization product brands'],
                 'products.manufacturers.manage' => ['Manage Manufacturers', 'Associate products with manufacturers'],
                 'products.batch_prices.update'  => ['Update Batch Pricing', 'Authorize setting and updating cost price and sale price for product variant batches'],
+                'products.pricing.manage'       => ['Manage Product Pricing & Packaging', 'Maintain organization cost price, selling price, and commercial packaging per variant'],
                 'products.categories.update'     => ['Update Product Categories', 'Update product categories'],
                 'products.categories.delete'     => ['Delete Product Categories', 'Delete product categories'],
                 'products.categories.view'       => ['View Product Categories', 'View product categories'],

@@ -489,37 +489,6 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                                         }));
                                     }}
                                 />
-
-                                {checkIsTileCategory(productForm.category_id) && (
-                                    <div className="mt-3 pt-3 border-top">
-                                        <label className="form-label small fw-semibold text-dark mb-1">
-                                            <i className="fa-solid fa-box-open me-1 text-primary"></i> Pieces per Box *
-                                        </label>
-                                        <div className="row align-items-center">
-                                            <div className="col-md-6">
-                                                <input
-                                                    type="number"
-                                                    className="form-control form-control-sm font-monospace"
-                                                    placeholder="e.g. 4"
-                                                    value={productForm.pieces_per_box}
-                                                    onChange={(e) => setProductForm({ ...productForm, pieces_per_box: e.target.value })}
-                                                    min="1"
-                                                    step="1"
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="col-md-6">
-                                                <small className="text-muted">
-                                                    <i className="fa-solid fa-circle-info me-1 text-info"></i>
-                                                    {productForm.pieces_per_box && parseInt(productForm.pieces_per_box, 10) > 0
-                                                        ? `1 box contains ${productForm.pieces_per_box} pieces.`
-                                                        : "Number of individual tiles contained in one box."
-                                                    }
-                                                </small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
 
                             {/* Section 3: Identification Information */}

@@ -116,21 +116,21 @@ class ProductApiController extends Controller
         // Validate required category specifications & tile pieces_per_box
         $category = Category::find($validated['category_id']);
         $piecesPerBox = null;
-        if ($category) {
-            if ($category->isTileCategory()) {
-                $rawPpb = $request->input('pieces_per_box');
-                if ($rawPpb === null || $rawPpb === '' || !is_numeric($rawPpb) || (int)$rawPpb != $rawPpb || (int)$rawPpb <= 0) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Pieces per Box is required for Tiles and must be a positive whole number.',
-                        'errors' => [
-                            'pieces_per_box' => ['Pieces per Box must be a positive whole integer greater than zero.']
-                        ]
-                    ], 422);
-                }
-                $piecesPerBox = (int) $rawPpb;
+        if ($category && $category->isTileCategory() && $request->filled('pieces_per_box')) {
+            $rawPpb = $request->input('pieces_per_box');
+            if (!is_numeric($rawPpb) || (int)$rawPpb != $rawPpb || (int)$rawPpb <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pieces per Box must be a positive whole number.',
+                    'errors' => [
+                        'pieces_per_box' => ['Pieces per Box must be a positive whole integer greater than zero.']
+                    ]
+                ], 422);
             }
+            $piecesPerBox = (int) $rawPpb;
+        }
 
+        if ($category) {
             $specs = $category->productAttributes;
             if ($specs->isEmpty() && $category->parent) {
                 $specs = $category->parent->productAttributes;
@@ -402,19 +402,21 @@ class ProductApiController extends Controller
 
         $category = Category::find($validated['category_id']);
         $piecesPerBox = null;
-        if ($category) {
-            if ($category->isTileCategory()) {
+        if ($category && $category->isTileCategory()) {
+            if ($request->filled('pieces_per_box')) {
                 $rawPpb = $request->input('pieces_per_box');
-                if ($rawPpb === null || $rawPpb === '' || !is_numeric($rawPpb) || (int)$rawPpb != $rawPpb || (int)$rawPpb <= 0) {
+                if (!is_numeric($rawPpb) || (int)$rawPpb != $rawPpb || (int)$rawPpb <= 0) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Pieces per Box is required for Tiles and must be a positive whole number.',
+                        'message' => 'Pieces per Box must be a positive whole number.',
                         'errors' => [
                             'pieces_per_box' => ['Pieces per Box must be a positive whole integer greater than zero.']
                         ]
                     ], 422);
                 }
                 $piecesPerBox = (int) $rawPpb;
+            } else {
+                $piecesPerBox = $variant->pieces_per_box;
             }
         }
 

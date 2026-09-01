@@ -13,6 +13,7 @@ import AcceptInvitation from './components/auth/AcceptInvitation';
 import UserManagement from './components/auth/UserManagement';
 import RoleManagement from './components/auth/RoleManagement';
 import ProductEntry from './components/product/ProductEntry';
+import ProductPricingPackagingManager from './components/product/ProductPricingPackagingManager';
 import GRNList from './components/grn/GRNList';
 import CategoryManager from './components/product/CategoryManager';
 import BrandManager from './components/product/BrandManager';
@@ -470,6 +471,7 @@ function App() {
 
                         <Route path="/products/catalog" element={<ProductEntry key="products" initialSubTab="list" />} />
                         <Route path="/products/categories" element={<CategoryManager />} />
+                        <Route path="/products/pricing-packaging" element={<ProductPricingPackagingManager />} />
                         <Route path="/products/brands" element={<BrandManager />} />
                         <Route path="/products/manufacturers" element={<ManufacturerManager />} />
 

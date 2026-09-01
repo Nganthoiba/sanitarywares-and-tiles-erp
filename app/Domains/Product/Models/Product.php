@@ -58,6 +58,15 @@ class Product extends Model {
         return $this->hasMany(ProductAttributeValue::class, 'product_variant_id');
     }
 
+    public function commercialPricings(): HasMany {
+        return $this->hasMany(OrganizationProductPricing::class, 'product_variant_id');
+    }
+
+    public function currentCommercialPricing(): \Illuminate\Database\Eloquent\Relations\HasOne {
+        return $this->hasOne(OrganizationProductPricing::class, 'product_variant_id')
+            ->where('is_current', true);
+    }
+
     public function calculatePiecesFromBoxes(float|int $boxes): ?int {
         if (!$this->pieces_per_box || $this->pieces_per_box <= 0) {
             return null;

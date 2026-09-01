@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\Auth\UserManagementController;
 use App\Http\Controllers\Api\Auth\NavigationController;
 use App\Http\Controllers\Api\Product\ProductApiController;
 use App\Http\Controllers\Api\Product\ProductBatchPriceApiController;
+use App\Http\Controllers\Api\Product\ProductPricingPackagingApiController;
 use App\Http\Controllers\Api\Purchase\GRNApiController;
 use App\Http\Controllers\Api\Purchase\PurchaseOrderApiController;
 use App\Http\Controllers\Api\Master\WarehouseApiController;
@@ -155,6 +156,11 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::get('/product-batch-prices', [ProductBatchPriceApiController::class, 'index']);
     Route::put('/product-batch-prices/{id}', [ProductBatchPriceApiController::class, 'update'])->middleware('permission:products.batch_prices.update');
     Route::post('/product-batch-prices/bulk-update', [ProductBatchPriceApiController::class, 'bulkUpdate'])->middleware('permission:products.batch_prices.update');
+
+    // Product Pricing & Packaging Commercial Settings Routes
+    Route::get('/product/pricing-packaging', [ProductPricingPackagingApiController::class, 'index'])->middleware('permission:products.pricing.manage');
+    Route::get('/product/pricing-packaging/{id}', [ProductPricingPackagingApiController::class, 'show'])->middleware('permission:products.pricing.manage');
+    Route::post('/product/pricing-packaging/{id}', [ProductPricingPackagingApiController::class, 'update'])->middleware('permission:products.pricing.manage');
 
     // Core GRN Routes
     Route::get('/grn/form-data', [GRNApiController::class, 'getFormData']);

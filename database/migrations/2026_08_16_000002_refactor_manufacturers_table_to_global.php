@@ -87,10 +87,18 @@ return new class extends Migration
 
         // 3. Drop organization_id column if present
         if (Schema::hasColumn('manufacturers', 'organization_id')) {
-            Schema::table('manufacturers', function (Blueprint $table) {
-                $table->dropForeign(['organization_id']);
-                $table->dropColumn('organization_id');
-            });
+            try {
+                Schema::table('manufacturers', function (Blueprint $table) {
+                    try {
+                        $table->dropForeign(['organization_id']);
+                    } catch (\Throwable $e) {}
+                    if (DB::getDriverName() === 'sqlite') {
+                        $table->unsignedBigInteger('organization_id')->nullable()->change();
+                    } else {
+                        $table->dropColumn('organization_id');
+                    }
+                });
+            } catch (\Throwable $e) {}
         }
 
         // 4. Add Indexes for fast search

@@ -220,6 +220,19 @@ class MenuSeeder extends Seeder
             ]
         );
 
+        Menu::updateOrCreate(
+            ['route_uri' => '/products/pricing-packaging'],
+            [
+                'menu_name'     => 'Pricing & Packaging',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-tags',
+                'parent_id'     => $productsGroup->id,
+                'permission_id' => $perm('products.pricing.manage'),
+                'order'         => 3,
+                'enabled'       => true,
+            ]
+        );
+
         // 5. Finance (GROUP)
         $financeGroup = Menu::updateOrCreate(
             ['menu_name' => 'Finance', 'parent_id' => null],

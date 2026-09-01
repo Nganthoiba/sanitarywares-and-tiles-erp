@@ -13,13 +13,14 @@ return new class extends Migration
     {
         if (Schema::hasColumn('tax_profiles', 'organization_id')) {
             Schema::table('tax_profiles', function (Blueprint $table) {
-                // Drop foreign key if it exists
                 try {
                     $table->dropForeign(['organization_id']);
-                } catch (\Throwable $e) {
-                    // Ignore if foreign key constraint does not exist
+                } catch (\Throwable $e) {}
+                if (\Illuminate\Support\Facades\DB::getDriverName() === 'sqlite') {
+                    $table->unsignedBigInteger('organization_id')->nullable()->change();
+                } else {
+                    $table->dropColumn('organization_id');
                 }
-                $table->dropColumn('organization_id');
             });
         }
     }
