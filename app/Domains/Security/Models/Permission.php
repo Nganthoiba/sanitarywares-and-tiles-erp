@@ -26,6 +26,19 @@ class Permission extends Model
         'enabled' => 'boolean',
     ];
 
+    protected static function booted(): void
+    {
+        static::deleting(function (Permission $permission) {
+            if (method_exists($permission, 'isForceDeleting') && $permission->isForceDeleting()) {
+                RolePermission::where('permission_id', $permission->id)->forceDelete();
+            } else {
+                RolePermission::where('permission_id', $permission->id)->delete();
+            }
+
+            Menu::where('permission_id', $permission->id)->update(['permission_id' => null]);
+        });
+    }
+
     public function group(): BelongsTo
     {
         return $this->belongsTo(PermissionGroup::class, 'permission_group_id');

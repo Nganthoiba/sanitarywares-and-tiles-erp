@@ -5,6 +5,7 @@ export default function PermissionManagement() {
     const [permissions, setPermissions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [modalError, setModalError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
 
     // Filters
@@ -65,6 +66,7 @@ export default function PermissionManagement() {
     // --- Permission Group Handlers ---
     const handleOpenGroupModal = (group = null) => {
         setError('');
+        setModalError('');
         setEditingGroup(group);
         setGroupForm({ name: group ? group.name : '' });
         setShowGroupModal(true);
@@ -101,11 +103,13 @@ export default function PermissionManagement() {
 
             setSuccessMessage(data.message || 'Permission group saved successfully.');
             setShowGroupModal(false);
+            setModalError('');
             await fetchData();
             window.dispatchEvent(new CustomEvent('role-permissions-updated'));
             window.dispatchEvent(new CustomEvent('navigation-refresh'));
         } catch (err) {
             setError(err.message);
+            setModalError(err.message);
         } finally {
             setSavingGroup(false);
         }
@@ -114,6 +118,7 @@ export default function PermissionManagement() {
     // --- Permission Handlers ---
     const handleOpenPermissionModal = (perm = null, defaultGroupId = null) => {
         setError('');
+        setModalError('');
         setEditingPermission(perm);
         setPermissionForm({
             permission_group_id: perm ? perm.permission_group_id : (defaultGroupId || groups[0]?.id || ''),
@@ -155,11 +160,13 @@ export default function PermissionManagement() {
 
             setSuccessMessage(data.message || 'Permission saved successfully.');
             setShowPermissionModal(false);
+            setModalError('');
             await fetchData();
             window.dispatchEvent(new CustomEvent('role-permissions-updated'));
             window.dispatchEvent(new CustomEvent('navigation-refresh'));
         } catch (err) {
             setError(err.message);
+            setModalError(err.message);
         } finally {
             setSavingPermission(false);
         }
@@ -211,11 +218,13 @@ export default function PermissionManagement() {
 
             setSuccessMessage(data.message);
             setDeletingItem(null);
+            setModalError('');
             await fetchData();
             window.dispatchEvent(new CustomEvent('role-permissions-updated'));
             window.dispatchEvent(new CustomEvent('navigation-refresh'));
         } catch (err) {
             setError(err.message);
+            setModalError(err.message);
         } finally {
             setDeleting(false);
         }
@@ -582,7 +591,7 @@ export default function PermissionManagement() {
 
                                                                 <button 
                                                                     className="btn btn-xs btn-light text-danger border-0 rounded-2 px-2.5 py-1 shadow-xs fw-semibold"
-                                                                    onClick={() => setDeletingItem({ type: 'PERMISSION', id: perm.id, name: perm.slug })}
+                                                                    onClick={() => { setModalError(''); setDeletingItem({ type: 'PERMISSION', id: perm.id, name: perm.slug }); }}
                                                                     title="Delete Permission"
                                                                 >
                                                                     <i className="fa-solid fa-trash-can me-1"></i> Delete
@@ -615,6 +624,13 @@ export default function PermissionManagement() {
                             </div>
                             <form onSubmit={handleSaveGroup}>
                                 <div className="modal-body p-4">
+                                    {modalError && (
+                                        <div className="alert alert-danger alert-dismissible fade show shadow-sm rounded-3 mb-3" role="alert">
+                                            <i className="fa-solid fa-triangle-exclamation me-2"></i>
+                                            <strong>Error:</strong> {modalError}
+                                            <button type="button" className="btn-close" onClick={() => setModalError('')}></button>
+                                        </div>
+                                    )}
                                     <div className="mb-3">
                                         <label className="form-label small fw-semibold text-dark">Group Name *</label>
                                         <input 
@@ -659,6 +675,13 @@ export default function PermissionManagement() {
                             </div>
                             <form onSubmit={handleSavePermission}>
                                 <div className="modal-body p-4">
+                                    {modalError && (
+                                        <div className="alert alert-danger alert-dismissible fade show shadow-sm rounded-3 mb-3" role="alert">
+                                            <i className="fa-solid fa-triangle-exclamation me-2"></i>
+                                            <strong>Error:</strong> {modalError}
+                                            <button type="button" className="btn-close" onClick={() => setModalError('')}></button>
+                                        </div>
+                                    )}
                                     <div className="row g-3">
                                         <div className="col-md-6">
                                             <label className="form-label small fw-semibold text-dark">Permission Group *</label>
@@ -742,6 +765,13 @@ export default function PermissionManagement() {
                                 <button type="button" className="btn-close btn-close-white" onClick={() => setDeletingItem(null)}></button>
                             </div>
                             <div className="modal-body p-4">
+                                {modalError && (
+                                    <div className="alert alert-danger alert-dismissible fade show shadow-sm rounded-3 mb-3" role="alert">
+                                        <i className="fa-solid fa-triangle-exclamation me-2"></i>
+                                        <strong>Error:</strong> {modalError}
+                                        <button type="button" className="btn-close" onClick={() => setModalError('')}></button>
+                                    </div>
+                                )}
                                 <p className="mb-2">
                                     Are you sure you want to delete the {deletingItem.type === 'GROUP' ? 'Permission Group' : 'Permission'}:
                                 </p>

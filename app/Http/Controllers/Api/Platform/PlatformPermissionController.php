@@ -97,21 +97,36 @@ class PlatformPermissionController extends Controller
      */
     public function updatePermission(Request $request, $id)
     {
-        $permission = Permission::findOrFail($id);
+        try {
+            $permission = Permission::findOrFail($id);
 
-        $request->validate([
-            'permission_group_id' => 'sometimes|required|exists:permission_groups,id',
-            'display_name' => 'sometimes|required|string|max:255',
-            'description' => 'nullable|string',
-            'enabled' => 'sometimes|boolean',
-        ]);
+            $request->validate([
+                'permission_group_id' => 'sometimes|required|exists:permission_groups,id',
+                'display_name' => 'sometimes|required|string|max:255',
+                'description' => 'nullable|string',
+                'enabled' => 'sometimes|boolean',
+            ]);
 
-        $permission->update($request->only(['permission_group_id', 'display_name', 'description', 'enabled']));
+            $permission->update($request->only(['permission_group_id', 'display_name', 'description', 'enabled']));
 
-        return response()->json([
-            'message' => 'Permission updated successfully.',
-            'permission' => $permission->load('group'),
-        ]);
+            return response()->json([
+                'message' => 'Permission updated successfully.',
+                'permission' => $permission->load('group'),
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Permission not found.'
+            ], 404);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Failed to update permission: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -119,14 +134,24 @@ class PlatformPermissionController extends Controller
      */
     public function togglePermission($id)
     {
-        $permission = Permission::findOrFail($id);
-        $permission->enabled = !$permission->enabled;
-        $permission->save();
+        try {
+            $permission = Permission::findOrFail($id);
+            $permission->enabled = !$permission->enabled;
+            $permission->save();
 
-        return response()->json([
-            'message' => "Permission '{$permission->slug}' " . ($permission->enabled ? 'enabled' : 'disabled') . '.',
-            'permission' => $permission,
-        ]);
+            return response()->json([
+                'message' => "Permission '{$permission->slug}' " . ($permission->enabled ? 'enabled' : 'disabled') . '.',
+                'permission' => $permission,
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Permission not found.'
+            ], 404);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Failed to toggle permission state: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -134,44 +159,52 @@ class PlatformPermissionController extends Controller
      */
     public function destroyGroup($id)
     {
-        $group = PermissionGroup::withCount('permissions')->findOrFail($id);
+        try {
+            $group = PermissionGroup::withCount('permissions')->findOrFail($id);
 
-        if ($group->permissions_count > 0) {
+            if ($group->permissions_count > 0) {
+                return response()->json([
+                    'message' => "Cannot delete group '{$group->name}' because it contains {$group->permissions_count} permission(s). Please reassign or delete the permissions first."
+                ], 422);
+            }
+
+            $group->delete();
+
             return response()->json([
-                'message' => "Cannot delete group '{$group->name}' because it contains {$group->permissions_count} permission(s). Please reassign or delete the permissions first."
-            ], 422);
+                'message' => "Permission group '{$group->name}' deleted successfully."
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Permission group not found.'
+            ], 404);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Failed to delete permission group: ' . $e->getMessage()
+            ], 500);
         }
-
-        $group->delete();
-
-        return response()->json([
-            'message' => "Permission group '{$group->name}' deleted successfully."
-        ]);
     }
 
     /**
-     * Delete a permission if not linked to roles or menus.
+     * Delete a permission, cascading deletion of M:N role mappings and setting M:1 menu associations to NULL.
      */
     public function destroyPermission($id)
     {
-        $permission = Permission::withCount(['roles', 'menus'])->findOrFail($id);
+        try {
+            $permission = Permission::findOrFail($id);
 
-        if ($permission->roles_count > 0) {
+            $permission->delete();
+
             return response()->json([
-                'message' => "Cannot delete permission '{$permission->slug}' because it is assigned to {$permission->roles_count} role(s)."
-            ], 422);
-        }
-
-        if ($permission->menus_count > 0) {
+                'message' => "Permission '{$permission->slug}' deleted successfully."
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
-                'message' => "Cannot delete permission '{$permission->slug}' because it is linked to {$permission->menus_count} navigation menu(s)."
-            ], 422);
+                'message' => 'Permission not found.'
+            ], 404);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Failed to delete permission: ' . $e->getMessage()
+            ], 500);
         }
-
-        $permission->delete();
-
-        return response()->json([
-            'message' => "Permission '{$permission->slug}' deleted successfully."
-        ]);
     }
 }

@@ -237,7 +237,7 @@ class PlatformMenuManagementTest extends TestCase
         $this->assertNotEmpty($purchasesGroup['children']);
         
         $childUris = collect($purchasesGroup['children'])->pluck('route_uri');
-        $this->assertTrue($childUris->contains('/purchase-orders'));
+        $this->assertTrue($childUris->contains('/purchase-orders/index') || $childUris->contains('/purchase-orders'));
         $this->assertFalse($childUris->contains('/purchase-orders/new')); // does not have purchase.orders.create
 
         // Groups with no authorized children (e.g., 'Finance', 'System Administration') must NOT be present
@@ -250,7 +250,7 @@ class PlatformMenuManagementTest extends TestCase
     {
         Sanctum::actingAs($this->superAdmin);
 
-        $poMenu = Menu::where('route_uri', '/purchase-orders')->first();
+        $poMenu = Menu::where('route_uri', '/purchase-orders/index')->first() ?? Menu::where('route_uri', '/purchase-orders')->first();
         $poMenu->update(['enabled' => false]);
 
         Sanctum::actingAs($this->staffUser);

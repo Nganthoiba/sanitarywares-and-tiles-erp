@@ -214,7 +214,7 @@ class MenuSeeder extends Seeder
                 'menu_type'     => 'PAGE',
                 'icon'          => 'fa-solid fa-sitemap',
                 'parent_id'     => $productsGroup->id,
-                'permission_id' => $perm('products.view'),
+                'permission_id' => $perm('products.categories.view'),
                 'order'         => 2,
                 'enabled'       => true,
             ]
