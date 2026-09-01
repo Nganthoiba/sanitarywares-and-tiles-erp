@@ -29,6 +29,115 @@ export default function CategoryManager() {
 
     const [showInfo, setShowInfo] = useState(true);
 
+    // Category Specifications Modal state
+    const [showAttrModal, setShowAttrModal] = useState(false);
+    const [selectedCategoryForAttrs, setSelectedCategoryForAttrs] = useState(null);
+    const [attrLoading, setAttrLoading] = useState(false);
+    const [attrSaving, setAttrSaving] = useState(false);
+    const [attrError, setAttrError] = useState(null);
+    const [attrSuccess, setAttrSuccess] = useState(null);
+
+    const [directAttrs, setDirectAttrs] = useState([]);
+    const [inheritedFrom, setInheritedFrom] = useState(null);
+    const [inheritedAttrs, setInheritedAttrs] = useState([]);
+    const [availableSystemAttrs, setAvailableSystemAttrs] = useState([]);
+    const [selectedNewAttrId, setSelectedNewAttrId] = useState('');
+
+    const handleOpenAttributesModal = async (category) => {
+        setSelectedCategoryForAttrs(category);
+        setAttrError(null);
+        setAttrSuccess(null);
+        setAttrLoading(true);
+        setSelectedNewAttrId('');
+        setShowAttrModal(true);
+
+        try {
+            const token = localStorage.getItem('auth_token');
+            const res = await axios.get(`/api/categories/${category.id}/category-attributes`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = res.data || {};
+            setDirectAttrs(data.direct_attributes || []);
+            setInheritedFrom(data.inherited_from || null);
+            setInheritedAttrs(data.inherited_attributes || []);
+            setAvailableSystemAttrs(data.available_attributes || []);
+        } catch (err) {
+            setAttrError('Failed to load category specification attributes.');
+        } finally {
+            setAttrLoading(false);
+        }
+    };
+
+    const handleAddAttributeToCategory = () => {
+        if (!selectedNewAttrId) return;
+        const attrObj = availableSystemAttrs.find(a => a.id.toString() === selectedNewAttrId.toString());
+        if (!attrObj) return;
+
+        if (directAttrs.some(a => a.attribute_id === attrObj.id)) {
+            setAttrError(`Attribute "${attrObj.name}" is already assigned to this category.`);
+            return;
+        }
+
+        const newDirectAttr = {
+            attribute_id: attrObj.id,
+            name: attrObj.name,
+            slug: attrObj.slug,
+            type: attrObj.type,
+            unit_symbol: attrObj.unit_symbol,
+            is_required: false,
+            sort_order: directAttrs.length + 1,
+            allowed_values: []
+        };
+
+        setDirectAttrs(prev => [...prev, newDirectAttr]);
+        setSelectedNewAttrId('');
+        setAttrError(null);
+    };
+
+    const handleRemoveAttributeFromCategory = (index) => {
+        setDirectAttrs(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleUpdateDirectAttrField = (index, field, value) => {
+        setDirectAttrs(prev => {
+            const updated = [...prev];
+            updated[index] = { ...updated[index], [field]: value };
+            return updated;
+        });
+    };
+
+    const handleSaveCategoryAttributes = async () => {
+        if (!selectedCategoryForAttrs) return;
+        setAttrError(null);
+        setAttrSuccess(null);
+        setAttrSaving(true);
+
+        try {
+            const token = localStorage.getItem('auth_token');
+            const payload = {
+                attributes: directAttrs.map(a => ({
+                    attribute_id: a.attribute_id,
+                    is_required: a.is_required,
+                    sort_order: parseInt(a.sort_order, 10) || 0,
+                    allowed_values: Array.isArray(a.allowed_values) 
+                        ? a.allowed_values 
+                        : (typeof a.allowed_values === 'string' ? a.allowed_values.split(',').map(s => s.trim()).filter(Boolean) : null)
+                }))
+            };
+
+            await axios.post(`/api/categories/${selectedCategoryForAttrs.id}/category-attributes`, payload, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            setAttrSuccess(`Specification attributes for "${selectedCategoryForAttrs.name}" saved successfully.`);
+            fetchCategories();
+        } catch (err) {
+            setAttrError(err.response?.data?.message || 'Failed to save category attributes.');
+        } finally {
+            setAttrSaving(false);
+        }
+    };
+
     const fetchCategories = async () => {
         setLoading(true);
         setError(null);
@@ -348,6 +457,14 @@ export default function CategoryManager() {
                                              <td className="text-end">
                                                 <div className="d-flex justify-content-end gap-1">
                                                     <button
+                                                        className="btn btn-xs btn-outline-info px-2"
+                                                        onClick={() => handleOpenAttributesModal(c)}
+                                                        style={{ fontSize: '0.75rem' }}
+                                                        title="Configure category product specification attributes"
+                                                    >
+                                                        <i className="fa-solid fa-sliders me-1"></i> Specs
+                                                    </button>
+                                                    <button
                                                         className="btn btn-xs btn-outline-primary px-2"
                                                         onClick={() => handleOpenEdit(c)}
                                                         style={{ fontSize: '0.75rem' }}
@@ -573,6 +690,197 @@ export default function CategoryManager() {
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* CATEGORY ATTRIBUTES MANAGEMENT MODAL */}
+            {showAttrModal && (
+                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.65)', zIndex: 1080 }}>
+                    <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                        <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '16px' }}>
+                            <div className="modal-header border-bottom pb-3 pt-4 px-4 bg-light">
+                                <div>
+                                    <h5 className="modal-title fw-bold text-dark mb-0 d-flex align-items-center">
+                                        <i className="fa-solid fa-sliders text-info me-2 fs-5"></i>
+                                        Configure Specifications for "{selectedCategoryForAttrs?.name}"
+                                    </h5>
+                                    <small className="text-muted">
+                                        Define required & optional product attributes for items created under this category.
+                                    </small>
+                                </div>
+                                <button type="button" className="btn-close" onClick={() => setShowAttrModal(false)} aria-label="Close"></button>
+                            </div>
+
+                            <div className="modal-body px-4 py-4" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                                {attrError && (
+                                    <div className="alert alert-danger py-2 small mb-3 d-flex align-items-center justify-content-between">
+                                        <div><i className="fa-solid fa-circle-exclamation me-2"></i>{attrError}</div>
+                                        <button type="button" className="btn-close ms-2" onClick={() => setAttrError(null)}></button>
+                                    </div>
+                                )}
+                                {attrSuccess && (
+                                    <div className="alert alert-success py-2 small mb-3 d-flex align-items-center justify-content-between">
+                                        <div><i className="fa-solid fa-circle-check me-2"></i>{attrSuccess}</div>
+                                        <button type="button" className="btn-close ms-2" onClick={() => setAttrSuccess(null)}></button>
+                                    </div>
+                                )}
+
+                                {attrLoading ? (
+                                    <div className="text-center py-5">
+                                        <div className="spinner-border text-info spinner-border-sm me-2"></div>
+                                        <span className="small text-muted font-monospace">Loading category specifications...</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Status Header */}
+                                        {directAttrs.length === 0 && inheritedFrom ? (
+                                            <div className="alert alert-warning border-0 p-3 mb-4 small rounded-3">
+                                                <i className="fa-solid fa-code-branch me-2 text-warning"></i>
+                                                Currently inheriting specification attributes from parent category <strong>"{inheritedFrom.name}"</strong>:
+                                                <ul className="mb-0 mt-2 ps-3 text-dark">
+                                                    {inheritedAttrs.map(a => (
+                                                        <li key={a.attribute_id}>
+                                                            <strong>{a.name}</strong> {a.unit_symbol ? `(${a.unit_symbol})` : ''} {a.is_required ? <span className="badge bg-danger ms-1">Required</span> : ''}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                                <div className="mt-2 text-muted extra-small">
+                                                    Adding direct attributes below will override parent inheritance for this category.
+                                                </div>
+                                            </div>
+                                        ) : directAttrs.length === 0 ? (
+                                            <div className="alert alert-light border p-3 mb-4 small text-muted text-center rounded-3">
+                                                <i className="fa-solid fa-info-circle me-1 text-info"></i>
+                                                No direct attributes configured for this category yet. Add attributes below.
+                                            </div>
+                                        ) : (
+                                            <div className="alert alert-info border-0 p-2 px-3 mb-4 small rounded-3">
+                                                <i className="fa-solid fa-sliders me-2 text-info"></i>
+                                                Configured with <strong>{directAttrs.length}</strong> direct specification attribute(s).
+                                            </div>
+                                        )}
+
+                                        {/* Add New Attribute Control */}
+                                        <div className="card bg-light border-0 p-3 mb-4 rounded-3">
+                                            <label className="form-label small fw-bold text-dark mb-2">
+                                                Add Product Specification Attribute
+                                            </label>
+                                            <div className="input-group input-group-sm">
+                                                <select
+                                                    className="form-select"
+                                                    value={selectedNewAttrId}
+                                                    onChange={(e) => setSelectedNewAttrId(e.target.value)}
+                                                >
+                                                    <option value="">-- Choose Attribute Definition --</option>
+                                                    {availableSystemAttrs
+                                                        .filter(sys => !directAttrs.some(d => d.attribute_id === sys.id))
+                                                        .map(sys => (
+                                                            <option key={sys.id} value={sys.id}>
+                                                                {sys.name} {sys.unit_symbol ? `(${sys.unit_symbol})` : ''} [{sys.type}]
+                                                            </option>
+                                                        ))
+                                                    }
+                                                </select>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-primary"
+                                                    onClick={handleAddAttributeToCategory}
+                                                    disabled={!selectedNewAttrId}
+                                                >
+                                                    <i className="fa-solid fa-plus me-1"></i> Attach Attribute
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Table of Direct Attributes */}
+                                        <h6 className="fw-bold text-dark mb-3">Direct Category Attributes Configuration</h6>
+                                        {directAttrs.length === 0 ? (
+                                            <div className="text-center py-4 border rounded-3 bg-white text-muted small">
+                                                No attributes assigned directly. Select an attribute above and click "Attach Attribute".
+                                            </div>
+                                        ) : (
+                                            <div className="table-responsive bg-white border rounded-3">
+                                                <table className="table table-hover align-middle mb-0 small">
+                                                    <thead className="bg-light">
+                                                        <tr className="text-muted font-monospace" style={{ fontSize: '0.75rem' }}>
+                                                            <th style={{ width: '25%' }}>Attribute Name</th>
+                                                            <th style={{ width: '15%' }}>Sort Order</th>
+                                                            <th style={{ width: '15%' }}>Mandatory</th>
+                                                            <th style={{ width: '35%' }}>Allowed Values (Optional)</th>
+                                                            <th style={{ width: '10%' }} className="text-end">Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {directAttrs.map((attr, idx) => (
+                                                            <tr key={attr.attribute_id}>
+                                                                <td>
+                                                                    <div className="fw-bold text-dark">{attr.name}</div>
+                                                                    <small className="text-muted font-monospace">{attr.unit_symbol ? `Unit: ${attr.unit_symbol}` : `Type: ${attr.type}`}</small>
+                                                                </td>
+                                                                <td>
+                                                                    <input
+                                                                        type="number"
+                                                                        className="form-control form-control-sm font-monospace"
+                                                                        style={{ maxWidth: '80px' }}
+                                                                        value={attr.sort_order}
+                                                                        onChange={(e) => handleUpdateDirectAttrField(idx, 'sort_order', e.target.value)}
+                                                                        min="0"
+                                                                    />
+                                                                </td>
+                                                                <td>
+                                                                    <div className="form-check form-switch">
+                                                                        <input
+                                                                            className="form-check-input"
+                                                                            type="checkbox"
+                                                                            checked={!!attr.is_required}
+                                                                            onChange={(e) => handleUpdateDirectAttrField(idx, 'is_required', e.target.checked)}
+                                                                            id={`req-check-${attr.attribute_id}`}
+                                                                        />
+                                                                        <label className="form-check-label extra-small text-muted" htmlFor={`req-check-${attr.attribute_id}`}>
+                                                                            {attr.is_required ? <span className="text-danger fw-bold">Required</span> : 'Optional'}
+                                                                        </label>
+                                                                    </div>
+                                                                </td>
+                                                                <td>
+                                                                    <input
+                                                                        type="text"
+                                                                        className="form-control form-control-sm"
+                                                                        placeholder="e.g. Red, Blue, Green (comma-separated)"
+                                                                        value={Array.isArray(attr.allowed_values) ? attr.allowed_values.join(', ') : (attr.allowed_values || '')}
+                                                                        onChange={(e) => handleUpdateDirectAttrField(idx, 'allowed_values', e.target.value)}
+                                                                    />
+                                                                </td>
+                                                                <td className="text-end">
+                                                                    <button
+                                                                        type="button"
+                                                                        className="btn btn-xs btn-outline-danger"
+                                                                        onClick={() => handleRemoveAttributeFromCategory(idx)}
+                                                                        title="Remove attribute from category"
+                                                                    >
+                                                                        <i className="fa-solid fa-trash"></i>
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+
+                            <div className="modal-footer border-top pt-3 pb-4 px-4 bg-light">
+                                <button type="button" className="btn btn-secondary px-3 btn-sm" onClick={() => setShowAttrModal(false)} disabled={attrSaving}>
+                                    Cancel
+                                </button>
+                                <button type="button" className="btn btn-primary px-4 btn-sm" onClick={handleSaveCategoryAttributes} disabled={attrSaving || attrLoading}>
+                                    {attrSaving ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="fa-solid fa-floppy-disk me-1"></i>}
+                                    Save Category Attributes
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

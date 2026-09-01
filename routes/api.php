@@ -183,6 +183,8 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::apiResource('storage-locations-crud', StorageLocationApiController::class);
     Route::get('categories/{id}/specifications', [CategoryApiController::class, 'getSpecifications']);
     Route::get('product-categories/{id}/specifications', [CategoryApiController::class, 'getSpecifications']);
+    Route::get('categories/{id}/category-attributes', [CategoryApiController::class, 'getCategoryAttributesManagement']);
+    Route::post('categories/{id}/category-attributes', [CategoryApiController::class, 'updateCategoryAttributes']);
     Route::apiResource('categories-crud', CategoryApiController::class);
     Route::apiResource('brands-crud', BrandApiController::class);
     Route::post('manufacturers-crud/check-duplicates', [ManufacturerApiController::class, 'checkDuplicates']);

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Domains\Master\Models\Category;
 use App\Domains\Product\Models\Product;
+use App\Domains\Product\Models\ProductAttribute;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 
@@ -216,5 +217,144 @@ class CategoryApiController extends Controller
         }
 
         return $this->getCategoryAttributes($category->parent);
+    }
+
+    /**
+     * Get direct attributes, parent inherited info, and all available system attributes for category management.
+     */
+    public function getCategoryAttributesManagement($id)
+    {
+        $category = Category::find($id);
+        if (!$category) {
+            return response()->json(['message' => 'Category not found.'], 404);
+        }
+
+        // Direct attributes assigned specifically to this category
+        $directAttributes = $category->productAttributes()->with('unit')->get()->map(function ($attr) {
+            $allowed = $attr->pivot->allowed_values;
+            if (is_string($allowed)) {
+                $allowed = json_decode($allowed, true);
+            }
+            return [
+                'attribute_id' => $attr->id,
+                'name' => $attr->name,
+                'slug' => $attr->slug,
+                'type' => $attr->type,
+                'unit_id' => $attr->unit_id,
+                'unit_symbol' => $attr->unit?->symbol,
+                'unit_name' => $attr->unit?->name,
+                'is_required' => (bool) $attr->pivot->is_required,
+                'sort_order' => (int) $attr->pivot->sort_order,
+                'allowed_values' => $allowed ?: [],
+            ];
+        })->values();
+
+        // Check inherited attributes if direct attributes are empty
+        $inheritedFromCategory = null;
+        $inheritedAttributes = [];
+        if ($directAttributes->isEmpty() && $category->parent) {
+            $parent = $category->parent;
+            while ($parent) {
+                $parentAttrs = $parent->productAttributes()->with('unit')->get();
+                if ($parentAttrs->isNotEmpty()) {
+                    $inheritedFromCategory = [
+                        'id' => $parent->id,
+                        'name' => $parent->name
+                    ];
+                    $inheritedAttributes = $parentAttrs->map(function ($attr) {
+                        $allowed = $attr->pivot->allowed_values;
+                        if (is_string($allowed)) {
+                            $allowed = json_decode($allowed, true);
+                        }
+                        return [
+                            'attribute_id' => $attr->id,
+                            'name' => $attr->name,
+                            'slug' => $attr->slug,
+                            'type' => $attr->type,
+                            'unit_id' => $attr->unit_id,
+                            'unit_symbol' => $attr->unit?->symbol,
+                            'unit_name' => $attr->unit?->name,
+                            'is_required' => (bool) $attr->pivot->is_required,
+                            'sort_order' => (int) $attr->pivot->sort_order,
+                            'allowed_values' => $allowed ?: [],
+                        ];
+                    })->values();
+                    break;
+                }
+                $parent = $parent->parent;
+            }
+        }
+
+        // Available product attributes in system
+        $allSystemAttributes = ProductAttribute::with('unit')->orderBy('name')->get()->map(function ($attr) {
+            return [
+                'id' => $attr->id,
+                'name' => $attr->name,
+                'slug' => $attr->slug,
+                'type' => $attr->type,
+                'unit_id' => $attr->unit_id,
+                'unit_symbol' => $attr->unit?->symbol,
+                'unit_name' => $attr->unit?->name,
+            ];
+        });
+
+        return response()->json([
+            'category' => [
+                'id' => $category->id,
+                'name' => $category->name,
+                'slug' => $category->slug,
+            ],
+            'direct_attributes' => $directAttributes,
+            'inherited_from' => $inheritedFromCategory,
+            'inherited_attributes' => $inheritedAttributes,
+            'available_attributes' => $allSystemAttributes
+        ]);
+    }
+
+    /**
+     * Update/sync category product specification attributes.
+     */
+    public function updateCategoryAttributes($id, Request $request)
+    {
+        $category = Category::find($id);
+        if (!$category) {
+            return response()->json(['message' => 'Category not found.'], 404);
+        }
+
+        $validated = $request->validate([
+            'attributes' => 'nullable|array',
+            'attributes.*.attribute_id' => 'required|integer|exists:product_attributes,id',
+            'attributes.*.is_required' => 'nullable|boolean',
+            'attributes.*.sort_order' => 'nullable|integer',
+            'attributes.*.allowed_values' => 'nullable'
+        ]);
+
+        $syncData = [];
+        if (!empty($validated['attributes'])) {
+            foreach ($validated['attributes'] as $item) {
+                $allowed = $item['allowed_values'] ?? null;
+                if (is_array($allowed)) {
+                    $allowed = json_encode(array_values(array_filter($allowed)));
+                } elseif (is_string($allowed) && trim($allowed) !== '') {
+                    $parts = array_map('trim', explode(',', $allowed));
+                    $allowed = json_encode(array_values(array_filter($parts)));
+                } else {
+                    $allowed = null;
+                }
+
+                $syncData[$item['attribute_id']] = [
+                    'is_required' => !empty($item['is_required']),
+                    'sort_order' => isset($item['sort_order']) ? (int) $item['sort_order'] : 0,
+                    'allowed_values' => $allowed
+                ];
+            }
+        }
+
+        $category->productAttributes()->sync($syncData);
+
+        return response()->json([
+            'message' => 'Category product specification attributes updated successfully.',
+            'category_id' => $category->id
+        ]);
     }
 }
