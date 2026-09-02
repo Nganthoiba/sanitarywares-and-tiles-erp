@@ -68,13 +68,17 @@ class ManufacturerApiController extends Controller
         $query = Manufacturer::query();
 
         if ($request->filled('query')) {
-            $search = trim($request->input('query'));
+            $search = mb_strtolower(trim($request->input('query')));
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('legal_name', 'like', "%{$search}%")
-                    ->orWhere('trade_name', 'like', "%{$search}%")
-                    ->orWhere('cin', 'like', "%{$search}%")
-                    ->orWhere('registration_number', 'like', "%{$search}%");
+                $q->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(legal_name) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(trade_name) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(cin) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(registration_number) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(address) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(registered_address) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(email) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(phone) LIKE ?', ["%{$search}%"]);
             });
         }
 
@@ -96,26 +100,26 @@ class ManufacturerApiController extends Controller
      */
     public function checkDuplicates(Request $request)
     {
-        $name = trim($request->input('name') ?: ($request->input('legal_name') ?: ''));
-        $cin = trim($request->input('cin') ?: '');
-        $regNo = trim($request->input('registration_number') ?: '');
+        $name = mb_strtolower(trim($request->input('name') ?: ($request->input('legal_name') ?: '')));
+        $cin = mb_strtolower(trim($request->input('cin') ?: ''));
+        $regNo = mb_strtolower(trim($request->input('registration_number') ?: ''));
 
         $exactMatch = null;
         $possibleMatches = collect();
 
         // 1. Corporate Identity check by CIN / Corporate Reg No
         if (!empty($cin)) {
-            $exactMatch = Manufacturer::where('cin', $cin)->first();
+            $exactMatch = Manufacturer::whereRaw('LOWER(cin) = ?', [$cin])->first();
         } elseif (!empty($regNo)) {
-            $exactMatch = Manufacturer::where('registration_number', $regNo)->first();
+            $exactMatch = Manufacturer::whereRaw('LOWER(registration_number) = ?', [$regNo])->first();
         }
 
         // 2. Name check for possible duplicates
         if (!$exactMatch && !empty($name)) {
             $possibleMatches = Manufacturer::where(function ($q) use ($name) {
-                $q->where('name', 'like', "%{$name}%")
-                    ->orWhere('legal_name', 'like', "%{$name}%")
-                    ->orWhere('trade_name', 'like', "%{$name}%");
+                $q->whereRaw('LOWER(name) LIKE ?', ["%{$name}%"])
+                    ->orWhereRaw('LOWER(legal_name) LIKE ?', ["%{$name}%"])
+                    ->orWhereRaw('LOWER(trade_name) LIKE ?', ["%{$name}%"]);
             })->take(5)->get();
         }
 

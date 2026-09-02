@@ -234,6 +234,22 @@ export default function ManufacturerManager() {
         setForm(prev => ({ ...prev, [field]: value }));
     };
 
+    const filteredManufacturers = manufacturers.filter(m => {
+        if (!searchQuery || !searchQuery.trim()) return true;
+        const q = searchQuery.trim().toLowerCase();
+        return (
+            (m.legal_name && m.legal_name.toLowerCase().includes(q)) ||
+            (m.name && m.name.toLowerCase().includes(q)) ||
+            (m.trade_name && m.trade_name.toLowerCase().includes(q)) ||
+            (m.cin && m.cin.toLowerCase().includes(q)) ||
+            (m.registration_number && m.registration_number.toLowerCase().includes(q)) ||
+            (m.registered_address && m.registered_address.toLowerCase().includes(q)) ||
+            (m.address && m.address.toLowerCase().includes(q)) ||
+            (m.email && m.email.toLowerCase().includes(q)) ||
+            (m.phone && m.phone.toLowerCase().includes(q))
+        );
+    });
+
     return (
         <div className="animate__animated animate__fadeIn">
             {/* Header Banner */}
@@ -319,7 +335,7 @@ export default function ManufacturerManager() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {manufacturers.map((m) => (
+                                {filteredManufacturers.map((m) => (
                                     <tr key={m.id}>
                                         <td>
                                             <div className="fw-bold text-dark">{m.legal_name || m.name}</div>
@@ -394,10 +410,10 @@ export default function ManufacturerManager() {
                                         </td>
                                     </tr>
                                 ))}
-                                {manufacturers.length === 0 && (
+                                {filteredManufacturers.length === 0 && (
                                     <tr>
-                                        <td colSpan="6" className="text-center py-5 text-muted font-monospace">
-                                            No manufacturers found in global master. Click 'Add Manufacturer to Master' to add one.
+                                        <td colSpan="7" className="text-center py-5 text-muted font-monospace">
+                                            No manufacturers found in global master matching search query. Click 'Add Manufacturer to Master' to add one.
                                         </td>
                                     </tr>
                                 )}
