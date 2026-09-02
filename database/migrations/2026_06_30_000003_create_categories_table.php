@@ -14,6 +14,9 @@ return new class extends Migration {
             $table->string('name');
             $table->string('slug');
             $table->text('description')->nullable();
+            $table->foreignId('default_base_unit_id')->nullable()->constrained('units')->onDelete('set null');
+            $table->foreignId('default_purchase_unit_id')->nullable()->constrained('units')->onDelete('set null');
+            $table->foreignId('default_sales_unit_id')->nullable()->constrained('units')->onDelete('set null');
             $table->integer('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamps();

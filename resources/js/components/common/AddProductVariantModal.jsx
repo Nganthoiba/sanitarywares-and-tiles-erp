@@ -20,6 +20,8 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
     const [showFormVariantInfo, setShowFormVariantInfo] = useState(false);
     const [showTypeGuide, setShowTypeGuide] = useState(false);
 
+    const [showCustomUnits, setShowCustomUnits] = useState(false);
+
     // Form state
     const [productForm, setProductForm] = useState({
         id: null,
@@ -36,6 +38,9 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
         tax_profile_id: '',
         is_active: true,
         pieces_per_box: '',
+        base_unit_id: '',
+        purchase_unit_id: '',
+        sales_unit_id: '',
         attributes: {} // { attribute_id: value }
     });
 
@@ -139,6 +144,9 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                     tax_profile_id: productToEdit.tax_profile_id?.toString() || '',
                     is_active: !!productToEdit.is_active,
                     pieces_per_box: (productToEdit.pieces_per_box !== null && productToEdit.pieces_per_box !== undefined) ? productToEdit.pieces_per_box.toString() : '',
+                    base_unit_id: productToEdit.base_unit_id?.toString() || '',
+                    purchase_unit_id: productToEdit.purchase_unit_id?.toString() || '',
+                    sales_unit_id: productToEdit.sales_unit_id?.toString() || '',
                     attributes: mappedAttrs
                 });
             } else {
@@ -157,6 +165,9 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                     tax_profile_id: '',
                     is_active: true,
                     pieces_per_box: '',
+                    base_unit_id: '',
+                    purchase_unit_id: '',
+                    sales_unit_id: '',
                     attributes: {}
                 });
             }
@@ -386,14 +397,22 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                                         <select
                                             className="form-select form-select-sm"
                                             value={productForm.category_id}
-                                            onChange={(e) => {
+                                             onChange={(e) => {
                                                 const newCatId = e.target.value;
                                                 const isTile = checkIsTileCategory(newCatId);
+                                                const catObj = categories.find(c => c.id.toString() === newCatId.toString());
+                                                const defaultBase = catObj?.default_base_unit_id || catObj?.parent?.default_base_unit_id || '';
+                                                const defaultPurchase = catObj?.default_purchase_unit_id || catObj?.parent?.default_purchase_unit_id || '';
+                                                const defaultSales = catObj?.default_sales_unit_id || catObj?.parent?.default_sales_unit_id || '';
+
                                                 setProductForm(prev => ({
                                                     ...prev,
                                                     category_id: newCatId,
                                                     pieces_per_box: isTile ? prev.pieces_per_box : '',
-                                                    attributes: {} // Safely reset category-specific attributes when category changes
+                                                    base_unit_id: defaultBase ? defaultBase.toString() : prev.base_unit_id,
+                                                    purchase_unit_id: defaultPurchase ? defaultPurchase.toString() : prev.purchase_unit_id,
+                                                    sales_unit_id: defaultSales ? defaultSales.toString() : prev.sales_unit_id,
+                                                    attributes: {}
                                                 }));
                                             }}
                                             required
@@ -479,6 +498,93 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                                             </button>
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* Units of Measure (UOM Defaults & Override Card) */}
+                                <div className="card border-0 bg-light p-3 mt-3 rounded-3">
+                                    <div className="d-flex align-items-center justify-content-between mb-2">
+                                        <div className="fw-bold text-dark small d-flex align-items-center">
+                                            <i className="fa-solid fa-ruler-combined text-primary me-2"></i>
+                                            Units of Measure Configuration
+                                        </div>
+                                        <div className="form-check form-switch mb-0">
+                                            <input
+                                                className="form-check-input"
+                                                type="checkbox"
+                                                id="showCustomUnitsToggle"
+                                                checked={showCustomUnits}
+                                                onChange={(e) => setShowCustomUnits(e.target.checked)}
+                                            />
+                                            <label className="form-check-label extra-small text-muted" htmlFor="showCustomUnitsToggle">
+                                                Customize Units
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    {!showCustomUnits ? (
+                                        <div className="d-flex flex-wrap gap-2 align-items-center">
+                                            <div className="bg-white border rounded px-3 py-2 flex-grow-1">
+                                                <span className="text-muted extra-small d-block">Base Unit (Stock Tracking)</span>
+                                                <strong className="text-dark small">
+                                                    {units.find(u => u.id.toString() === productForm.base_unit_id?.toString())?.name || 'Standard / Category Default'}
+                                                </strong>
+                                            </div>
+                                            <div className="bg-white border rounded px-3 py-2 flex-grow-1">
+                                                <span className="text-muted extra-small d-block">Default Purchase Unit</span>
+                                                <strong className="text-dark small">
+                                                    {units.find(u => u.id.toString() === productForm.purchase_unit_id?.toString())?.name || 'Standard / Category Default'}
+                                                </strong>
+                                            </div>
+                                            <div className="bg-white border rounded px-3 py-2 flex-grow-1">
+                                                <span className="text-muted extra-small d-block">Default Sales Unit</span>
+                                                <strong className="text-dark small">
+                                                    {units.find(u => u.id.toString() === productForm.sales_unit_id?.toString())?.name || 'Standard / Category Default'}
+                                                </strong>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="row g-2 mt-1">
+                                            <div className="col-md-4">
+                                                <label className="form-label extra-small fw-semibold text-secondary mb-1">Base Unit (Stock) *</label>
+                                                <select
+                                                    className="form-select form-select-sm"
+                                                    value={productForm.base_unit_id}
+                                                    onChange={(e) => setProductForm({ ...productForm, base_unit_id: e.target.value })}
+                                                >
+                                                    <option value="">-- Select Base Unit --</option>
+                                                    {units.map(u => (
+                                                        <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="col-md-4">
+                                                <label className="form-label extra-small fw-semibold text-secondary mb-1">Purchase Unit *</label>
+                                                <select
+                                                    className="form-select form-select-sm"
+                                                    value={productForm.purchase_unit_id}
+                                                    onChange={(e) => setProductForm({ ...productForm, purchase_unit_id: e.target.value })}
+                                                >
+                                                    <option value="">-- Select Purchase Unit --</option>
+                                                    {units.map(u => (
+                                                        <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="col-md-4">
+                                                <label className="form-label extra-small fw-semibold text-secondary mb-1">Sales Unit *</label>
+                                                <select
+                                                    className="form-select form-select-sm"
+                                                    value={productForm.sales_unit_id}
+                                                    onChange={(e) => setProductForm({ ...productForm, sales_unit_id: e.target.value })}
+                                                >
+                                                    <option value="">-- Select Sales Unit --</option>
+                                                    {units.map(u => (
+                                                        <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

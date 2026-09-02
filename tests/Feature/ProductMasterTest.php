@@ -11,7 +11,6 @@ use App\Domains\Master\Models\TaxProfile;
 use App\Domains\Master\Models\Unit;
 use App\Domains\Product\Models\Product;
 use App\Domains\Product\Models\ProductAttribute;
-use App\Domains\Product\Models\ProductAttributeValue;
 use App\Domains\Product\Models\UnitConversion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -546,5 +545,63 @@ class ProductMasterTest extends TestCase
             'to_unit_id' => $this->sqftUnit->id,
             'multiplier' => 10.000000,
         ]);
+    }
+
+    /**
+     * 16. Test Category unit defaults configuration and automatic unit inheritance on Product Variant creation.
+     */
+    public function test_category_unit_defaults_and_product_variant_unit_inheritance()
+    {
+        $boxUnit = Unit::create([
+            'name' => 'Box',
+            'symbol' => 'BOX',
+            'type' => 'QUANTITY',
+            'decimal_places' => 0,
+        ]);
+
+        // Configure Unit Defaults on Category
+        $rootCategory = Category::create([
+            'organization_id' => $this->org->id,
+            'name' => 'Sanitaryware',
+            'slug' => 'sanitaryware',
+            'default_base_unit_id' => $this->pcsUnit->id,
+            'default_purchase_unit_id' => $boxUnit->id,
+            'default_sales_unit_id' => $this->pcsUnit->id,
+        ]);
+
+        // Subcategory inheriting from Root Category
+        $subCategory = Category::create([
+            'organization_id' => $this->org->id,
+            'parent_id' => $rootCategory->id,
+            'name' => 'Wash Basins',
+            'slug' => 'wash-basins',
+        ]);
+
+        // Test Category API returns resolved unit defaults
+        $response = $this->actingAs($this->user)->getJson('/api/categories-crud/' . $subCategory->id);
+        $response->assertStatus(200);
+
+        $resolvedUnits = $subCategory->getResolvedDefaultUnits();
+        $this->assertEquals($this->pcsUnit->id, $resolvedUnits['base_unit_id']);
+        $this->assertEquals($boxUnit->id, $resolvedUnits['purchase_unit_id']);
+        $this->assertEquals($this->pcsUnit->id, $resolvedUnits['sales_unit_id']);
+
+        // Create Product Variant without explicit unit payload -> must auto-inherit from Category
+        $productPayload = [
+            'category_id' => $subCategory->id,
+            'brand_id' => $this->brand->id,
+            'name' => 'Designer Table Top Wash Basin',
+            'sku' => 'WB-DSGN-001',
+            'inventory_behavior' => 'STANDARD',
+            'is_active' => true,
+        ];
+
+        $postResponse = $this->actingAs($this->user)->postJson('/api/product/variants', $productPayload);
+        $postResponse->assertStatus(201);
+
+        $variantData = $postResponse->json('data');
+        $this->assertEquals($this->pcsUnit->id, $variantData['base_unit_id']);
+        $this->assertEquals($boxUnit->id, $variantData['purchase_unit_id']);
+        $this->assertEquals($this->pcsUnit->id, $variantData['sales_unit_id']);
     }
 }

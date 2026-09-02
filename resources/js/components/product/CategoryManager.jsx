@@ -18,16 +18,75 @@ export default function CategoryManager() {
     const [modalMode, setModalMode] = useState('create'); // create, edit
     const [selectedCategory, setSelectedCategory] = useState(null);
 
+    const [units, setUnits] = useState([]);
+
     const [form, setForm] = useState({
         name: '',
         slug: '',
         parent_id: '',
         description: '',
         sort_order: '0',
-        is_active: true
+        is_active: true,
+        default_base_unit_id: '',
+        default_purchase_unit_id: '',
+        default_sales_unit_id: ''
     });
 
     const [showInfo, setShowInfo] = useState(true);
+
+    const fetchCategories = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const token = localStorage.getItem('auth_token');
+            const [catRes, formRes] = await Promise.all([
+                axios.get('/api/categories-crud', { headers: { Authorization: `Bearer ${token}` } }),
+                axios.get('/api/product/form-data', { headers: { Authorization: `Bearer ${token}` } })
+            ]);
+            setCategories(catRes.data || []);
+            setUnits(formRes.data?.units || []);
+        } catch (err) {
+            setError('Failed to fetch categories list.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleOpenCreate = () => {
+        setModalMode('create');
+        setSelectedCategory(null);
+        setForm({
+            name: '',
+            slug: '',
+            parent_id: '',
+            description: '',
+            sort_order: '0',
+            is_active: true,
+            default_base_unit_id: '',
+            default_purchase_unit_id: '',
+            default_sales_unit_id: ''
+        });
+        setError(null);
+        setShowModal(true);
+    };
+
+    const handleOpenEdit = (category) => {
+        setModalMode('edit');
+        setSelectedCategory(category);
+        setForm({
+            name: category.name || '',
+            slug: category.slug || '',
+            parent_id: category.parent_id ? category.parent_id.toString() : '',
+            description: category.description || '',
+            sort_order: category.sort_order !== undefined ? category.sort_order.toString() : '0',
+            is_active: category.is_active === 1 || category.is_active === true,
+            default_base_unit_id: category.default_base_unit_id ? category.default_base_unit_id.toString() : '',
+            default_purchase_unit_id: category.default_purchase_unit_id ? category.default_purchase_unit_id.toString() : '',
+            default_sales_unit_id: category.default_sales_unit_id ? category.default_sales_unit_id.toString() : ''
+        });
+        setError(null);
+        setShowModal(true);
+    };
 
     // Category Specifications Modal state
     const [showAttrModal, setShowAttrModal] = useState(false);
@@ -138,81 +197,9 @@ export default function CategoryManager() {
         }
     };
 
-    const fetchCategories = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const token = localStorage.getItem('auth_token');
-            const res = await axios.get('/api/categories-crud', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setCategories(res.data || []);
-        } catch (err) {
-            setError('Failed to fetch categories list.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
         fetchCategories();
     }, []);
-
-    // Filter & Search calculation
-    const filteredCategories = categories.filter(c => {
-        const matchesStatus = 
-            statusFilter === 'all' ? true :
-            statusFilter === 'active' ? (c.is_active === 1 || c.is_active === true) :
-            (c.is_active === 0 || c.is_active === false);
-
-        if (!matchesStatus) return false;
-
-        if (!searchTerm.trim()) return true;
-
-        const term = searchTerm.toLowerCase();
-        const nameMatch = (c.name || '').toLowerCase().includes(term);
-        const slugMatch = (c.slug || '').toLowerCase().includes(term);
-        const parentMatch = (c.parent?.name || '').toLowerCase().includes(term);
-        const descMatch = (c.description || '').toLowerCase().includes(term);
-
-        return nameMatch || slugMatch || parentMatch || descMatch;
-    });
-
-    const totalPages = Math.ceil(filteredCategories.length / perPage) || 1;
-    const safeCurrentPage = Math.min(currentPage, totalPages);
-    const indexOfFirstItem = (safeCurrentPage - 1) * perPage;
-    const indexOfLastItem = Math.min(safeCurrentPage * perPage, filteredCategories.length);
-    const paginatedCategories = filteredCategories.slice(indexOfFirstItem, indexOfLastItem);
-
-    const handleOpenCreate = () => {
-        setModalMode('create');
-        setSelectedCategory(null);
-        setForm({
-            name: '',
-            slug: '',
-            parent_id: '',
-            description: '',
-            sort_order: '0',
-            is_active: true
-        });
-        setError(null);
-        setShowModal(true);
-    };
-
-    const handleOpenEdit = (category) => {
-        setModalMode('edit');
-        setSelectedCategory(category);
-        setForm({
-            name: category.name || '',
-            slug: category.slug || '',
-            parent_id: category.parent_id ? category.parent_id.toString() : '',
-            description: category.description || '',
-            sort_order: category.sort_order !== undefined ? category.sort_order.toString() : '0',
-            is_active: category.is_active === 1 || category.is_active === true
-        });
-        setError(null);
-        setShowModal(true);
-    };
 
     const handleDelete = async (category) => {
         if (!confirm(`Are you sure you want to delete category "${category.name}"? This action cannot be undone.`)) {
@@ -266,7 +253,10 @@ export default function CategoryManager() {
         const payload = {
             ...form,
             sort_order: parseInt(form.sort_order, 10) || 0,
-            parent_id: form.parent_id ? parseInt(form.parent_id, 10) : null
+            parent_id: form.parent_id ? parseInt(form.parent_id, 10) : null,
+            default_base_unit_id: form.default_base_unit_id ? parseInt(form.default_base_unit_id, 10) : null,
+            default_purchase_unit_id: form.default_purchase_unit_id ? parseInt(form.default_purchase_unit_id, 10) : null,
+            default_sales_unit_id: form.default_sales_unit_id ? parseInt(form.default_sales_unit_id, 10) : null,
         };
 
         try {
@@ -302,6 +292,32 @@ export default function CategoryManager() {
             return updated;
         });
     };
+
+    // Filter & Search calculation
+    const filteredCategories = categories.filter(c => {
+        const matchesStatus = 
+            statusFilter === 'all' ? true :
+            statusFilter === 'active' ? (c.is_active === 1 || c.is_active === true) :
+            (c.is_active === 0 || c.is_active === false);
+
+        if (!matchesStatus) return false;
+
+        if (!searchTerm.trim()) return true;
+
+        const term = searchTerm.toLowerCase();
+        const nameMatch = (c.name || '').toLowerCase().includes(term);
+        const slugMatch = (c.slug || '').toLowerCase().includes(term);
+        const parentMatch = (c.parent?.name || '').toLowerCase().includes(term);
+        const descMatch = (c.description || '').toLowerCase().includes(term);
+
+        return nameMatch || slugMatch || parentMatch || descMatch;
+    });
+
+    const totalPages = Math.ceil(filteredCategories.length / perPage) || 1;
+    const safeCurrentPage = Math.min(currentPage, totalPages);
+    const indexOfFirstItem = (safeCurrentPage - 1) * perPage;
+    const indexOfLastItem = Math.min(safeCurrentPage * perPage, filteredCategories.length);
+    const paginatedCategories = filteredCategories.slice(indexOfFirstItem, indexOfLastItem);
 
     // Filter out the selected category itself to prevent self-reference
     const parentOptions = categories.filter(c => !selectedCategory || c.id !== selectedCategory.id);
@@ -643,6 +659,58 @@ export default function CategoryManager() {
                                                 <option key={p.id} value={p.id}>{p.name}</option>
                                             ))}
                                         </select>
+                                    </div>
+
+                                    {/* Standard Category Units (UOM Defaults) */}
+                                    <div className="card bg-light border-0 p-3 mb-3 rounded-3">
+                                        <div className="fw-bold text-dark small mb-1 d-flex align-items-center">
+                                            <i className="fa-solid fa-ruler-combined text-primary me-2"></i>
+                                            Category Standard Units (UOM Defaults)
+                                        </div>
+                                        <div className="text-muted extra-small mb-2">
+                                            {form.parent_id ? 'Optional: Override unit defaults inherited from parent category.' : 'Set standard unit defaults for product variants created under this root category.'}
+                                        </div>
+                                        <div className="row g-2">
+                                            <div className="col-md-4">
+                                                <label className="form-label extra-small fw-semibold text-secondary mb-1">Base Unit (Stock)</label>
+                                                <select
+                                                    className="form-select form-select-sm"
+                                                    value={form.default_base_unit_id}
+                                                    onChange={(e) => handleChange('default_base_unit_id', e.target.value)}
+                                                >
+                                                    <option value="">-- {form.parent_id ? 'Inherit' : 'Select Base Unit'} --</option>
+                                                    {units.map(u => (
+                                                        <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="col-md-4">
+                                                <label className="form-label extra-small fw-semibold text-secondary mb-1">Default Purchase Unit</label>
+                                                <select
+                                                    className="form-select form-select-sm"
+                                                    value={form.default_purchase_unit_id}
+                                                    onChange={(e) => handleChange('default_purchase_unit_id', e.target.value)}
+                                                >
+                                                    <option value="">-- {form.parent_id ? 'Inherit' : 'Select Purchase Unit'} --</option>
+                                                    {units.map(u => (
+                                                        <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="col-md-4">
+                                                <label className="form-label extra-small fw-semibold text-secondary mb-1">Default Sales Unit</label>
+                                                <select
+                                                    className="form-select form-select-sm"
+                                                    value={form.default_sales_unit_id}
+                                                    onChange={(e) => handleChange('default_sales_unit_id', e.target.value)}
+                                                >
+                                                    <option value="">-- {form.parent_id ? 'Inherit' : 'Select Sales Unit'} --</option>
+                                                    {units.map(u => (
+                                                        <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div className="mb-3">

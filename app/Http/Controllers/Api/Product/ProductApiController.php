@@ -614,6 +614,9 @@ class ProductApiController extends Controller
         $inputInventoryBehavior = $request->input('inventory_behavior');
         $hasExplicitProductType = $request->has('product_type');
 
+        // Auto-fill UOM defaults from Category if omitted in request
+        $resolvedUnits = $category ? $category->getResolvedDefaultUnits() : ['base_unit_id' => null, 'purchase_unit_id' => null, 'sales_unit_id' => null];
+
         // Check if measured material is indicated by explicit input OR by category slug
         if ($inputProductType === 'MEASURED_MATERIAL' || in_array($inputInventoryBehavior, ['SLAB']) || $isSlabCategory) {
             $inventoryBehavior = $inputInventoryBehavior ?? 'SLAB';
@@ -627,13 +630,15 @@ class ProductApiController extends Controller
             // Auto-fill UOMs if omitted
             if (!$request->has('purchase_unit_id') || !$request->has('sales_unit_id') || !$request->has('base_unit_id')) {
                 $sqftUnit = Unit::whereIn('symbol', ['SQFT', 'SQ.FT.', 'SQ_FT', 'sqft', 'sq.ft.', 'sq.m'])->first() ?? Unit::first();
-                if ($sqftUnit) {
-                    $request->merge([
-                        'purchase_unit_id' => $request->input('purchase_unit_id', $sqftUnit->id),
-                        'sales_unit_id' => $request->input('sales_unit_id', $sqftUnit->id),
-                        'base_unit_id' => $request->input('base_unit_id', $sqftUnit->id),
-                    ]);
-                }
+                $defaultBase = $resolvedUnits['base_unit_id'] ?? $sqftUnit?->id;
+                $defaultPurchase = $resolvedUnits['purchase_unit_id'] ?? $sqftUnit?->id;
+                $defaultSales = $resolvedUnits['sales_unit_id'] ?? $sqftUnit?->id;
+
+                $request->merge([
+                    'purchase_unit_id' => $request->input('purchase_unit_id', $defaultPurchase),
+                    'sales_unit_id' => $request->input('sales_unit_id', $defaultSales),
+                    'base_unit_id' => $request->input('base_unit_id', $defaultBase),
+                ]);
             }
 
             // Auto-fill physical_object and measurement_unit defaults ONLY if product_type was NOT explicitly provided without them
@@ -656,13 +661,15 @@ class ProductApiController extends Controller
 
             if (!$request->has('purchase_unit_id') || !$request->has('sales_unit_id') || !$request->has('base_unit_id')) {
                 $pcsUnit = Unit::whereIn('symbol', ['PCS', 'pcs', 'PC', 'box', 'BOX'])->first() ?? Unit::first();
-                if ($pcsUnit) {
-                    $request->merge([
-                        'purchase_unit_id' => $request->input('purchase_unit_id', $pcsUnit->id),
-                        'sales_unit_id' => $request->input('sales_unit_id', $pcsUnit->id),
-                        'base_unit_id' => $request->input('base_unit_id', $pcsUnit->id),
-                    ]);
-                }
+                $defaultBase = $resolvedUnits['base_unit_id'] ?? $pcsUnit?->id;
+                $defaultPurchase = $resolvedUnits['purchase_unit_id'] ?? $pcsUnit?->id;
+                $defaultSales = $resolvedUnits['sales_unit_id'] ?? $pcsUnit?->id;
+
+                $request->merge([
+                    'purchase_unit_id' => $request->input('purchase_unit_id', $defaultPurchase),
+                    'sales_unit_id' => $request->input('sales_unit_id', $defaultSales),
+                    'base_unit_id' => $request->input('base_unit_id', $defaultBase),
+                ]);
             }
         }
 

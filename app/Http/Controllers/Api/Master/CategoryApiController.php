@@ -17,7 +17,7 @@ class CategoryApiController extends Controller
      */
     public function index(Request $request)
     {
-        $categories = Category::with('parent')->orderBy('name')->get();
+        $categories = Category::with(['parent', 'defaultBaseUnit', 'defaultPurchaseUnit', 'defaultSalesUnit'])->orderBy('name')->get();
         return response()->json($categories);
     }
 
@@ -41,7 +41,10 @@ class CategoryApiController extends Controller
             ],
             'description' => 'nullable|string',
             'sort_order' => 'nullable|integer',
-            'is_active' => 'nullable|boolean'
+            'is_active' => 'nullable|boolean',
+            'default_base_unit_id' => 'nullable|exists:units,id',
+            'default_purchase_unit_id' => 'nullable|exists:units,id',
+            'default_sales_unit_id' => 'nullable|exists:units,id',
         ]);
 
         $name = $validated['name'];
@@ -64,7 +67,7 @@ class CategoryApiController extends Controller
 
         return response()->json([
             'message' => 'Category created successfully.',
-            'category' => $category->load('parent')
+            'category' => $category->load(['parent', 'defaultBaseUnit', 'defaultPurchaseUnit', 'defaultSalesUnit'])
         ], 201);
     }
 
@@ -73,7 +76,7 @@ class CategoryApiController extends Controller
      */
     public function show($id)
     {
-        $category = Category::with('parent')->findOrFail($id);
+        $category = Category::with(['parent', 'defaultBaseUnit', 'defaultPurchaseUnit', 'defaultSalesUnit'])->findOrFail($id);
         return response()->json($category);
     }
 
@@ -98,7 +101,10 @@ class CategoryApiController extends Controller
             ],
             'description' => 'nullable|string',
             'sort_order' => 'nullable|integer',
-            'is_active' => 'nullable|boolean'
+            'is_active' => 'nullable|boolean',
+            'default_base_unit_id' => 'nullable|exists:units,id',
+            'default_purchase_unit_id' => 'nullable|exists:units,id',
+            'default_sales_unit_id' => 'nullable|exists:units,id',
         ]);
 
         if (!empty($category->slug)) {
@@ -125,7 +131,7 @@ class CategoryApiController extends Controller
 
         return response()->json([
             'message' => 'Category updated successfully.',
-            'category' => $category->load('parent')
+            'category' => $category->load(['parent', 'defaultBaseUnit', 'defaultPurchaseUnit', 'defaultSalesUnit'])
         ]);
     }
 
