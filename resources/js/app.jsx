@@ -75,7 +75,17 @@ function App() {
 
     // Font size state
     const [fontSize, setFontSize] = useState(() => {
-        return parseFloat(localStorage.getItem('app_font_size') || '13.5');
+        const stored = localStorage.getItem('app_font_size');
+        if (stored) return parseFloat(stored);
+        if (typeof window !== 'undefined') {
+            if (window.innerWidth >= 1920 && window.innerHeight >= 1080) {
+                return 14.5;
+            }
+            if (window.innerWidth <= 1440 || window.innerHeight <= 900) {
+                return 11;
+            }
+        }
+        return 13.5;
     });
 
     // Theme state
