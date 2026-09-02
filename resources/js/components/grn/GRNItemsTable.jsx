@@ -200,9 +200,9 @@ export default function GRNItemsTable({ items, onChange, products, units, purcha
                                                         <i className="fa-solid fa-plus"></i>
                                                     </button> */}
                                                 </div>
-                                                {item.product_variant_id && (
+                                                {/* {item.product_variant_id && (
                                                     <span className="badge bg-light text-secondary font-monospace mt-1 px-2">{behavior}</span>
-                                                )}
+                                                )} */}
                                             </div>
                                         )}
                                     </td>
