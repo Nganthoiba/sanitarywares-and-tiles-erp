@@ -28,16 +28,10 @@ class DashboardService
             ->where('status', 'ON_HAND')
             ->count();
 
-        // Active workflows count
-        $workflowsCount = DB::table('workflow_instances')
-            ->where('status', 'RUNNING')
-            ->count();
-
         $data = [
             'total_sales' => (float)$salesSum,
             'total_purchases' => (float)$purchaseSum,
-            'total_slabs_on_hand' => $slabsCount,
-            'active_workflows' => $workflowsCount
+            'total_slabs_on_hand' => $slabsCount
         ];
 
         $executionTimeMs = (microtime(true) - $startTime) * 1000;

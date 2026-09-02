@@ -28,8 +28,5 @@ return [
             'accounting.accounts.manage' => 'Manage Accounts & Ledgers',
             'accounting.journal.post' => 'Post Journal Entries',
         ],
-        'Workflow Management' => [
-            'workflow.definition.manage' => 'Manage Workflows Definitions',
-        ],
     ],
 ];

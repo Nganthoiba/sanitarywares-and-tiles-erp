@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate, useLocati
 import SlabInventoryView from './components/inventory/SlabInventoryView';
 import InventoryManager from './components/inventory/InventoryManager';
 import HomePage from './components/home/HomePage';
-import WorkflowMonitor from './components/workflow/WorkflowMonitor';
 import LedgerReports from './components/accounting/LedgerReports';
 import ReportingHub from './components/reporting/ReportingHub';
 import Login from './components/auth/Login';
@@ -475,7 +474,6 @@ function App() {
                         <Route path="/products/brands" element={<BrandManager />} />
                         <Route path="/products/manufacturers" element={<ManufacturerManager />} />
 
-                        <Route path="/workflows" element={<WorkflowMonitor />} />
                         <Route path="/bookkeeping" element={<LedgerReports />} />
                         <Route path="/reporting" element={<ReportingHub />} />
                             

@@ -159,28 +159,22 @@ export default function ReportingHub() {
                             <div className="row g-4">
                                 {reportData.data.map((item, idx) => (
                                     <React.Fragment key={idx}>
-                                        <div className="col-md-3">
+                                        <div className="col-md-4">
                                             <div className="p-4 rounded border bg-gradient bg-light text-center">
                                                 <h5 className="text-muted fw-bold mb-1">Total Sales</h5>
                                                 <h2 className="text-primary fw-bold mb-0">₹{item.total_sales.toLocaleString()}</h2>
                                             </div>
                                         </div>
-                                        <div className="col-md-3">
+                                        <div className="col-md-4">
                                             <div className="p-4 rounded border bg-gradient bg-light text-center">
                                                 <h5 className="text-muted fw-bold mb-1">Procurement Costs</h5>
                                                 <h2 className="text-danger fw-bold mb-0">₹{item.total_purchases.toLocaleString()}</h2>
                                             </div>
                                         </div>
-                                        <div className="col-md-3">
+                                        <div className="col-md-4">
                                             <div className="p-4 rounded border bg-gradient bg-light text-center">
                                                 <h5 className="text-muted fw-bold mb-1">Slabs Inventory</h5>
                                                 <h2 className="text-success fw-bold mb-0">{item.total_slabs_on_hand} Pcs</h2>
-                                            </div>
-                                        </div>
-                                        <div className="col-md-3">
-                                            <div className="p-4 rounded border bg-gradient bg-light text-center">
-                                                <h5 className="text-muted fw-bold mb-1">Running Workflows</h5>
-                                                <h2 className="text-warning fw-bold mb-0">{item.active_workflows}</h2>
                                             </div>
                                         </div>
                                     </React.Fragment>

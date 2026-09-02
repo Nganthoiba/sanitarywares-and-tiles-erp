@@ -3,7 +3,7 @@ import re
 
 # Directory to scan for PHP files
 directories = ["app", "tests", "database"]
-standalone_tests = ["test_inventory.php", "test_accounting.php", "test_reporting.php", "test_workflow.php"]
+standalone_tests = ["test_inventory.php", "test_accounting.php", "test_reporting.php"]
 
 # Singular mapping
 singular_map = {
@@ -25,10 +25,6 @@ singular_map = {
     "product_attributes": "product_attribute",
     "account_groups": "account_group",
     "accounts": "account",
-    "workflow_definitions": "workflow_definition",
-    "workflow_steps": "workflow_step",
-    "workflow_conditions": "workflow_condition",
-    "workflow_actions": "workflow_action",
     "financial_years": "financial_year",
     "journal_batches": "journal_batch"
 }

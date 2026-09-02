@@ -62,9 +62,6 @@ class PermissionSeeder extends Seeder
                 'accounting.accounts.manage' => ['Manage Accounts & Ledgers', 'Manage chart of accounts and general ledger'],
                 'accounting.journal.post'    => ['Post Journal Entries', 'Post financial journal entries'],
             ],
-            'Workflow Management' => [
-                'workflow.definition.manage' => ['Manage Workflows Definitions', 'Define and configure BPM workflow processes'],
-            ],
             'Stackholder Administration' => [
                 'supplier.view'         => ['View Suppliers', 'View supplier details and information'],
                 'supplier.create'       => ['Register New Supplier', 'Register new supplier and provide details'],

@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Inventory\GraniteSlabApiController;
-use App\Http\Controllers\Api\Workflow\WorkflowController;
 use App\Http\Controllers\Api\Accounting\AccountingApiController;
 use App\Http\Controllers\Api\Reporting\ReportingApiController;
 use App\Http\Controllers\Api\Inventory\InventoryApiController;
@@ -114,10 +113,6 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::post('/inventory/counts/{id}/approve', [InventoryApiController::class, 'approveCount']);
     Route::get('/inventory/{id}/valuation', [InventoryApiController::class, 'getValuation']);
 
-    // Core Workflow Routes
-    Route::get('/workflows/definitions', [WorkflowController::class, 'listDefinitions']);
-    Route::get('/workflows/instances', [WorkflowController::class, 'listInstances']);
-    Route::post('/workflows/approvals/{id}', [WorkflowController::class, 'approve']);
 
     // Core Accounting Routes
     Route::get('/accounting/accounts', [AccountingApiController::class, 'index']);
