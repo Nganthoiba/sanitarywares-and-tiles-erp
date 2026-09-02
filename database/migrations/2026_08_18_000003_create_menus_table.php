@@ -10,9 +10,9 @@ return new class extends Migration {
         Schema::create('menus', function (Blueprint $table) {
             $table->id();
             $table->string('menu_name');
-            $table->string('route_uri');
+            $table->string('menu_type', 20)->default('PAGE');
+            $table->string('route_uri')->nullable();
             $table->string('icon')->nullable();
-            $table->string('group_name')->nullable();
             $table->foreignId('parent_id')
                 ->nullable()
                 ->constrained('menus')

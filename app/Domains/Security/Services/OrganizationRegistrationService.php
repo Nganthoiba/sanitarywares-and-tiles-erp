@@ -68,8 +68,7 @@ class OrganizationRegistrationService
 
             // 4. Create Default Administrator Role for the organization & Assign Permissions
             $adminRole = Role::updateOrCreate(
-                // ['organization_id' => $org->id, 'slug' => 'administrator'],
-                ['slug' => 'administrator'],
+                ['organization_id' => $org->id, 'slug' => 'administrator'],
                 [
                     'name' => 'Organization Administrator',
                     'is_system' => true,

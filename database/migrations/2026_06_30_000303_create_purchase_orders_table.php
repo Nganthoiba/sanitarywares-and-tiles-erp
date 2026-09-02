@@ -15,7 +15,13 @@ return new class extends Migration {
             $table->foreignId('purchase_requisition_id')->index()->nullable()->constrained('purchase_requisitions')->onDelete('set null');
             $table->string('po_number', 50);
             $table->date('po_date');
+            $table->date('expected_delivery_date')->nullable();
+            $table->string('reference_number', 100)->nullable();
+            $table->text('payment_terms')->nullable();
+            $table->text('delivery_terms')->nullable();
             $table->decimal('total_amount', 15, 4)->default(0.0000);
+            $table->decimal('discount_amount', 15, 4)->default(0.0000);
+            $table->decimal('tax_amount', 15, 4)->default(0.0000);
             $table->string('status')->default('DRAFT'); // DRAFT, SUBMITTED, APPROVED, SENT, PARTIALLY_RECEIVED, FULLY_RECEIVED, CLOSED, CANCELLED
             $table->text('remarks')->nullable();
             $table->timestamps();

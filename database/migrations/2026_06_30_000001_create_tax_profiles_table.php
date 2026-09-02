@@ -9,7 +9,6 @@ return new class extends Migration {
     {
         Schema::create('tax_profiles', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organization_id')->index()->constrained('organizations')->onDelete('cascade');
             $table->string('name');
             $table->string('hsn_code', 20)->nullable();
             $table->decimal('cgst_rate', 5, 2)->default(0.00);
@@ -20,7 +19,7 @@ return new class extends Migration {
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();
-            $table->index(['organization_id', 'is_active']);
+            $table->index('is_active');
         });
     }
     public function down(): void

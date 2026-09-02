@@ -27,6 +27,7 @@ return new class extends Migration {
             $table->timestamps();
             $table->softDeletes();
 
+            $table->unique(['organization_id', 'object_code'], 'inv_obj_org_code_unique');
             $table->index(['organization_id', 'product_variant_id']);
             $table->index(['organization_id', 'warehouse_id', 'status']);
             $table->index('object_code');

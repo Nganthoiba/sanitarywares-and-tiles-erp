@@ -71,7 +71,8 @@ class UserAndRoleManagementTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertGreaterThanOrEqual(1, count($response->json()));
-        $this->assertEquals('Administrator', $response->json('0.name'));
+        $roleNames = collect($response->json())->pluck('name');
+        $this->assertTrue($roleNames->contains('Administrator'));
     }
 
     public function test_admin_can_create_custom_role_with_permissions()

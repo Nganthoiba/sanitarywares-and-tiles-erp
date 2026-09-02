@@ -16,6 +16,7 @@ return new class extends Migration {
             $table->string('phone', 20)->nullable();
             $table->string('gstin', 15)->nullable();
             $table->text('address')->nullable();
+            $table->text('about_supplier')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();

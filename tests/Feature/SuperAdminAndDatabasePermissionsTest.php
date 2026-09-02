@@ -102,7 +102,7 @@ class SuperAdminAndDatabasePermissionsTest extends TestCase
         $newOrgId = $createResponse->json('organization.id');
 
         // Suspend
-        $suspendResponse = $this->postJson("/api/platform/organizations/{$newOrgId}/suspend");
+        $suspendResponse = $this->postJson("/api/platform/organizations/{$newOrgId}/suspend", ['reason' => 'Non-payment of subscription fees']);
         $suspendResponse->assertStatus(200)
             ->assertJsonPath('organization.is_active', false);
 

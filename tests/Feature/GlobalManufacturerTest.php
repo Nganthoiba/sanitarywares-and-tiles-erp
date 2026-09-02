@@ -120,7 +120,7 @@ class GlobalManufacturerTest extends TestCase
                 'legal_name' => 'Kajaria Ceramics Limited',
                 'trade_name' => 'Kajaria',
                 'cin' => 'L26914UP1985PLC007321',
-                'registration_no' => 'REG-KAJ-9988',
+                'registration_number' => 'REG-KAJ-9988',
                 'business_constitution' => 'Public Limited',
                 'registered_address' => 'Andheri East, Mumbai',
                 'phone' => '022-12345678',

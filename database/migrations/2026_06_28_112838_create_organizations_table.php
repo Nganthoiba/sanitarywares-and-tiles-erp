@@ -16,9 +16,14 @@ return new class extends Migration
             $table->string('code', 20)->unique();
             $table->string('name');
             $table->string('legal_name')->nullable();
+            $table->string('business_type')->nullable();
+            $table->string('country')->nullable();
+            $table->string('state')->nullable();
+            $table->string('city')->nullable();
 
             $table->string('gstin', 20)->nullable();
             $table->string('pan', 20)->nullable();
+            $table->string('business_registration_number')->nullable();
 
             $table->string('email')->nullable();
             $table->string('phone', 20)->nullable();
@@ -30,6 +35,9 @@ return new class extends Migration
             $table->date('subscription_expiry')->nullable();
 
             $table->boolean('is_active')->default(true);
+            $table->text('suspension_reason')->nullable();
+            $table->json('settings')->nullable();
+            $table->json('preferences')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

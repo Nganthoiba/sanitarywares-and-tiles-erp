@@ -9,8 +9,11 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('organization_id')->index()->constrained('organizations')->onDelete('cascade');
             $table->foreignId('warehouse_id')->index()->constrained('warehouses')->onDelete('cascade');
-            $table->foreignId('purchase_order_id')->index()->constrained('purchase_orders')->onDelete('cascade');
+            $table->foreignId('storage_location_id')->index()->nullable()->constrained('storage_locations')->onDelete('set null');
+            $table->foreignId('purchase_order_id')->index()->nullable()->constrained('purchase_orders')->onDelete('cascade');
+            $table->foreignId('supplier_id')->index()->nullable()->constrained('suppliers')->onDelete('set null');
             $table->string('grn_number', 50);
+            $table->string('batch_number', 50)->nullable();
             $table->date('received_date');
             $table->string('status')->default('RECEIVED'); // RECEIVED, INSPECTED, PUT_AWAY
             $table->text('remarks')->nullable();
