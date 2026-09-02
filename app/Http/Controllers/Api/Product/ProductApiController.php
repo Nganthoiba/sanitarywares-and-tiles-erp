@@ -186,17 +186,21 @@ class ProductApiController extends Controller
             }
 
             if ($piecesPerBox && $piecesPerBox > 0) {
-                $boxUnit = Unit::whereIn('symbol', ['BOX', 'box', 'Box'])->first();
-                $pcsUnit = Unit::whereIn('symbol', ['PCS', 'pcs', 'PC'])->first();
+                $boxUnit = Unit::whereIn('symbol', ['BOX', 'box', 'Box'])->orWhereIn('name', ['box', 'boxes', 'Box', 'Boxes'])->first() ?? Unit::find($variant->purchase_unit_id);
+                $pcsUnit = Unit::whereIn('symbol', ['PCS', 'pcs', 'PC', 'pc'])->orWhereIn('name', ['piece', 'pieces', 'Piece', 'Pieces'])->first() ?? Unit::find($variant->base_unit_id);
 
-                if ($boxUnit && $pcsUnit) {
-                    UnitConversion::create([
-                        'organization_id' => $orgId,
-                        'product_variant_id' => $variant->id,
-                        'from_unit_id' => $boxUnit->id,
-                        'to_unit_id' => $pcsUnit->id,
-                        'multiplier' => (float) $piecesPerBox,
-                    ]);
+                if ($boxUnit && $pcsUnit && $boxUnit->id !== $pcsUnit->id) {
+                    UnitConversion::updateOrCreate(
+                        [
+                            'organization_id' => $orgId,
+                            'product_variant_id' => $variant->id,
+                            'from_unit_id' => $boxUnit->id,
+                            'to_unit_id' => $pcsUnit->id,
+                        ],
+                        [
+                            'multiplier' => (float) $piecesPerBox,
+                        ]
+                    );
                 }
             }
 
@@ -446,10 +450,10 @@ class ProductApiController extends Controller
             }
 
             if ($piecesPerBox && $piecesPerBox > 0) {
-                $boxUnit = Unit::whereIn('symbol', ['BOX', 'box', 'Box'])->first();
-                $pcsUnit = Unit::whereIn('symbol', ['PCS', 'pcs', 'PC'])->first();
+                $boxUnit = Unit::whereIn('symbol', ['BOX', 'box', 'Box'])->orWhereIn('name', ['box', 'boxes', 'Box', 'Boxes'])->first() ?? Unit::find($variant->purchase_unit_id);
+                $pcsUnit = Unit::whereIn('symbol', ['PCS', 'pcs', 'PC', 'pc'])->orWhereIn('name', ['piece', 'pieces', 'Piece', 'Pieces'])->first() ?? Unit::find($variant->base_unit_id);
 
-                if ($boxUnit && $pcsUnit) {
+                if ($boxUnit && $pcsUnit && $boxUnit->id !== $pcsUnit->id) {
                     UnitConversion::updateOrCreate(
                         [
                             'organization_id' => $orgId,

@@ -207,6 +207,48 @@ class InventoryService
             return $quantity / (float) $conversion->multiplier;
         }
 
+        // 5. Try product variant pieces_per_box conversion fallback & auto-persist
+        $variant = Product::find($variantId);
+        if ($variant && $variant->pieces_per_box && (float) $variant->pieces_per_box > 0) {
+            $ppb = (float) $variant->pieces_per_box;
+            $fromUnit = Unit::find($fromUnitId);
+            $toUnit = Unit::find($toUnitId);
+
+            if ($fromUnit && $toUnit) {
+                $isFromBox = (strcasecmp($fromUnit->symbol, 'BOX') === 0 || strcasecmp($fromUnit->name, 'box') === 0 || strcasecmp($fromUnit->name, 'boxes') === 0 || (int)$fromUnitId === (int)$variant->purchase_unit_id);
+                $isToPcs = (in_array(strtolower($toUnit->symbol), ['pcs', 'pc', 'piece']) || in_array(strtolower($toUnit->name), ['piece', 'pieces', 'pcs', 'pc']) || (int)$toUnitId === (int)$variant->base_unit_id);
+
+                $isFromPcs = (in_array(strtolower($fromUnit->symbol), ['pcs', 'pc', 'piece']) || in_array(strtolower($fromUnit->name), ['piece', 'pieces', 'pcs', 'pc']));
+                $isToBox = (strcasecmp($toUnit->symbol, 'BOX') === 0 || strcasecmp($toUnit->name, 'box') === 0 || strcasecmp($toUnit->name, 'boxes') === 0);
+
+                if (($isFromBox && $isToPcs) || ((int)$fromUnitId === (int)$variant->purchase_unit_id && (int)$toUnitId === (int)$variant->base_unit_id)) {
+                    UnitConversion::firstOrCreate([
+                        'organization_id' => $organizationId,
+                        'product_variant_id' => $variantId,
+                        'from_unit_id' => $fromUnitId,
+                        'to_unit_id' => $toUnitId,
+                    ], [
+                        'multiplier' => $ppb,
+                    ]);
+
+                    return $quantity * $ppb;
+                }
+
+                if (($isFromPcs && $isToBox) || ((int)$fromUnitId === (int)$variant->base_unit_id && (int)$toUnitId === (int)$variant->purchase_unit_id)) {
+                    UnitConversion::firstOrCreate([
+                        'organization_id' => $organizationId,
+                        'product_variant_id' => $variantId,
+                        'from_unit_id' => $toUnitId,
+                        'to_unit_id' => $fromUnitId,
+                    ], [
+                        'multiplier' => $ppb,
+                    ]);
+
+                    return $quantity / $ppb;
+                }
+            }
+        }
+
         throw new \Exception("No unit conversion defined from unit ID {$fromUnitId} to unit ID {$toUnitId} for product variant ID {$variantId}.");
     }
 
