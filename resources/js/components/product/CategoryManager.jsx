@@ -293,6 +293,21 @@ export default function CategoryManager() {
         });
     };
 
+    const getUnitSymbol = (unitId, unitObj) => {
+        if (unitObj?.symbol) return unitObj.symbol;
+        if (unitObj?.name) return unitObj.name;
+        if (!unitId) return null;
+        const found = units.find(u => String(u.id) === String(unitId));
+        return found ? (found.symbol || found.name) : null;
+    };
+
+    const getUnitFullName = (unitId, unitObj) => {
+        if (unitObj?.name) return `${unitObj.name}${unitObj.symbol ? ` (${unitObj.symbol})` : ''}`;
+        if (!unitId) return '';
+        const found = units.find(u => String(u.id) === String(unitId));
+        return found ? `${found.name}${found.symbol ? ` (${found.symbol})` : ''}` : '';
+    };
+
     // Filter & Search calculation
     const filteredCategories = categories.filter(c => {
         const matchesStatus = 
@@ -309,8 +324,11 @@ export default function CategoryManager() {
         const slugMatch = (c.slug || '').toLowerCase().includes(term);
         const parentMatch = (c.parent?.name || '').toLowerCase().includes(term);
         const descMatch = (c.description || '').toLowerCase().includes(term);
+        const baseUnitMatch = (c.default_base_unit?.name || '').toLowerCase().includes(term) || (c.default_base_unit?.symbol || '').toLowerCase().includes(term);
+        const purchaseUnitMatch = (c.default_purchase_unit?.name || '').toLowerCase().includes(term) || (c.default_purchase_unit?.symbol || '').toLowerCase().includes(term);
+        const salesUnitMatch = (c.default_sales_unit?.name || '').toLowerCase().includes(term) || (c.default_sales_unit?.symbol || '').toLowerCase().includes(term);
 
-        return nameMatch || slugMatch || parentMatch || descMatch;
+        return nameMatch || slugMatch || parentMatch || descMatch || baseUnitMatch || purchaseUnitMatch || salesUnitMatch;
     });
 
     const totalPages = Math.ceil(filteredCategories.length / perPage) || 1;
@@ -378,7 +396,7 @@ export default function CategoryManager() {
                             <input
                                 type="text"
                                 className="form-control border-start-0 ps-0"
-                                placeholder="Search by category name, slug, parent..."
+                                placeholder="Search category, slug, units, parent..."
                                 value={searchTerm}
                                 onChange={(e) => {
                                     setSearchTerm(e.target.value);
@@ -440,86 +458,141 @@ export default function CategoryManager() {
                 ) : (
                     <>
                         <div className="table-responsive">
-                            <table className="table table-hover align-middle">
+                            <table className="table table-hover align-middle mb-0">
                                 <thead>
-                                    <tr className="text-secondary font-monospace" style={{ fontSize: '0.8rem' }}>
-                                        <th>Category Name</th>
-                                        <th>Parent Category</th>
-                                        <th>Sort Order</th>
-                                        <th>Status</th>
-                                        <th className="text-end">Actions</th>
+                                    <tr className="text-secondary text-uppercase" style={{ fontSize: '0.75rem', letterSpacing: '0.04em' }}>
+                                        <th style={{ width: '22%' }}>Category</th>
+                                        <th style={{ width: '18%' }}>Parent Category</th>
+                                        <th style={{ width: '32%' }}>
+                                            Default Units (UOM)
+                                            <span className="text-secondary font-monospace ms-1 fw-normal" style={{ fontSize: '0.68rem', textTransform: 'none' }}>
+                                                [B: Base | P: Purchase | S: Sales]
+                                            </span>
+                                        </th>
+                                        <th className="text-center" style={{ width: '8%' }}>Order</th>
+                                        <th className="text-center" style={{ width: '10%' }}>Status</th>
+                                        <th className="text-end" style={{ width: '10%' }}>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="small">
-                                    {paginatedCategories.map((c) => (
-                                        <tr key={c.id}>
-                                            <td>
-                                                <div className="fw-bold text-dark small">{c.name}</div>
-                                                <div className="font-monospace text-muted small" style={{ fontSize: '0.75rem' }}>{c.slug}</div>
-                                            </td>
-                                            <td>{c.parent ? c.parent.name : <span className="text-muted small italic">Root</span>}</td>
-                                            <td className="font-monospace">{c.sort_order}</td>
-                                            <td>
-                                                {c.is_active === 1 || c.is_active === true ? (
-                                                    <span className="badge bg-success-subtle text-success px-2 py-1">
-                                                        <i className="fa-solid fa-circle-check me-1"></i> ACTIVE
-                                                    </span>
-                                                ) : (
-                                                    <span className="badge bg-danger-subtle text-danger px-2 py-1">
-                                                        <i className="fa-solid fa-circle-xmark me-1"></i> INACTIVE
-                                                    </span>
-                                                )}
-                                            </td>
-                                             <td className="text-end">
-                                                <div className="d-flex justify-content-end gap-1">
-                                                    <button
-                                                        className="btn btn-xs btn-outline-info px-2"
-                                                        onClick={() => handleOpenAttributesModal(c)}
-                                                        style={{ fontSize: '0.75rem' }}
-                                                        title="Configure category product specification attributes"
-                                                    >
-                                                        <i className="fa-solid fa-sliders me-1"></i> Specs
-                                                    </button>
-                                                    <button
-                                                        className="btn btn-xs btn-outline-primary px-2"
-                                                        onClick={() => handleOpenEdit(c)}
-                                                        style={{ fontSize: '0.75rem' }}
-                                                    >
-                                                        <i className="fa-solid fa-pen me-1"></i> Edit
-                                                    </button>
-                                                    {c.is_active === 1 || c.is_active === true ? (
-                                                        <button
-                                                            className="btn btn-xs btn-outline-warning px-2"
-                                                            onClick={() => handleToggleStatus(c)}
-                                                            style={{ fontSize: '0.75rem' }}
-                                                            title="Deactivate category"
-                                                        >
-                                                            <i className="fa-solid fa-ban me-1"></i> Deactivate
-                                                        </button>
+                                    {paginatedCategories.map((c) => {
+                                        const baseSym = getUnitSymbol(c.default_base_unit_id, c.default_base_unit);
+                                        const purSym = getUnitSymbol(c.default_purchase_unit_id, c.default_purchase_unit);
+                                        const saleSym = getUnitSymbol(c.default_sales_unit_id, c.default_sales_unit);
+                                        const hasUnits = baseSym || purSym || saleSym;
+
+                                        return (
+                                            <tr key={c.id}>
+                                                <td>
+                                                    <div className="d-flex align-items-center">
+                                                        <i className="fa-solid fa-folder text-primary me-2 opacity-75"></i>
+                                                        <div>
+                                                            <div className="fw-semibold text-dark">{c.name}</div>
+                                                            <div className="font-monospace text-muted extra-small">{c.slug}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    {c.parent ? (
+                                                        <span className="badge bg-light text-dark border font-normal">
+                                                            {c.parent.name}
+                                                        </span>
                                                     ) : (
-                                                        <button
-                                                            className="btn btn-xs btn-outline-success px-2"
-                                                            onClick={() => handleToggleStatus(c)}
-                                                            style={{ fontSize: '0.75rem' }}
-                                                            title="Activate category"
-                                                        >
-                                                            <i className="fa-solid fa-circle-check me-1"></i> Activate
-                                                        </button>
+                                                        <span className="text-muted small italic opacity-60">Root Category</span>
                                                     )}
-                                                    <button
-                                                        className="btn btn-xs btn-outline-danger px-2"
-                                                        onClick={() => handleDelete(c)}
-                                                        style={{ fontSize: '0.75rem' }}
-                                                    >
-                                                        <i className="fa-solid fa-trash me-1"></i> Delete
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                </td>
+                                                <td>
+                                                    {hasUnits ? (
+                                                        <div className="d-flex align-items-center gap-1 flex-wrap">
+                                                            {baseSym && (
+                                                                <span 
+                                                                    className="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2 py-1"
+                                                                    title={`Base Stock Unit: ${getUnitFullName(c.default_base_unit_id, c.default_base_unit)}`}
+                                                                >
+                                                                    <span className="text-secondary opacity-75 me-1" style={{ fontSize: '0.65rem' }}>B:</span>{baseSym}
+                                                                </span>
+                                                            )}
+                                                            {purSym && (
+                                                                <span 
+                                                                    className="badge bg-info-subtle text-info border border-info-subtle font-monospace px-2 py-1"
+                                                                    title={`Purchase Unit: ${getUnitFullName(c.default_purchase_unit_id, c.default_purchase_unit)}`}
+                                                                >
+                                                                    <span className="text-secondary opacity-75 me-1" style={{ fontSize: '0.65rem' }}>P:</span>{purSym}
+                                                                </span>
+                                                            )}
+                                                            {saleSym && (
+                                                                <span 
+                                                                    className="badge bg-success-subtle text-success border border-success-subtle font-monospace px-2 py-1"
+                                                                    title={`Sales Unit: ${getUnitFullName(c.default_sales_unit_id, c.default_sales_unit)}`}
+                                                                >
+                                                                    <span className="text-secondary opacity-75 me-1" style={{ fontSize: '0.65rem' }}>S:</span>{saleSym}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-muted italic small opacity-50">-</span>
+                                                    )}
+                                                </td>
+                                                <td className="text-center font-monospace text-secondary">{c.sort_order}</td>
+                                                <td className="text-center">
+                                                    {c.is_active === 1 || c.is_active === true ? (
+                                                        <span className="badge bg-success-subtle text-success px-2 py-1">
+                                                            <i className="fa-solid fa-circle me-1" style={{ fontSize: '0.45rem' }}></i> Active
+                                                        </span>
+                                                    ) : (
+                                                        <span className="badge bg-secondary-subtle text-secondary px-2 py-1">
+                                                            <i className="fa-solid fa-circle me-1" style={{ fontSize: '0.45rem' }}></i> Inactive
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="text-end">
+                                                    <div className="btn-group btn-group-sm">
+                                                        <button
+                                                            className="btn btn-sm btn-light text-info border-0 px-2"
+                                                            onClick={() => handleOpenAttributesModal(c)}
+                                                            title="Configure Product Specification Attributes (Specs)"
+                                                        >
+                                                            <i className="fa-solid fa-sliders"></i>
+                                                        </button>
+                                                        <button
+                                                            className="btn btn-sm btn-light text-primary border-0 px-2"
+                                                            onClick={() => handleOpenEdit(c)}
+                                                            title="Edit Category"
+                                                        >
+                                                            <i className="fa-solid fa-pen-to-square"></i>
+                                                        </button>
+                                                        {c.is_active === 1 || c.is_active === true ? (
+                                                            <button
+                                                                className="btn btn-sm btn-light text-warning border-0 px-2"
+                                                                onClick={() => handleToggleStatus(c)}
+                                                                title="Deactivate Category"
+                                                            >
+                                                                <i className="fa-solid fa-ban"></i>
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                className="btn btn-sm btn-light text-success border-0 px-2"
+                                                                onClick={() => handleToggleStatus(c)}
+                                                                title="Activate Category"
+                                                            >
+                                                                <i className="fa-solid fa-circle-check"></i>
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            className="btn btn-sm btn-light text-danger border-0 px-2"
+                                                            onClick={() => handleDelete(c)}
+                                                            title="Delete Category"
+                                                        >
+                                                            <i className="fa-solid fa-trash-can"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                     {filteredCategories.length === 0 && (
                                         <tr>
-                                            <td colSpan="5" className="text-center py-5">
+                                            <td colSpan="6" className="text-center py-5">
                                                 <div className="text-muted mb-2">
                                                     <i className="fa-solid fa-filter-circle-xmark fs-2 opacity-50"></i>
                                                 </div>
