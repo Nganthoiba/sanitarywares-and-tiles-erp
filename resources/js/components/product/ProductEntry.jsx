@@ -759,20 +759,38 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                                         )}
                                                     </td>
                                                     <td className="text-end">
-                                                        <div className="d-flex gap-1 justify-content-end">
-                                                            <button className="btn btn-xs btn-outline-primary" onClick={() => viewProductDetail(p.id)} title="View Detail">
-                                                                <i className="fa-solid fa-eye"></i> View
-                                                            </button>
-                                                            <button className="btn btn-xs btn-outline-secondary" onClick={() => setupEditProduct(p.id)} title="Edit specifications">
-                                                                <i className="fa-solid fa-pen"></i> Edit
+                                                        <div className="btn-group btn-group-sm">
+                                                            <button 
+                                                                className="btn btn-sm btn-light text-primary border-0 px-2" 
+                                                                onClick={() => viewProductDetail(p.id)} 
+                                                                title="View Product Details"
+                                                            >
+                                                                <i className="fa-solid fa-eye"></i>
                                                             </button>
                                                             <button 
-                                                                className={`btn btn-xs ${p.is_active ? 'btn-outline-danger' : 'btn-outline-success'}`}
-                                                                onClick={() => toggleProductActiveStatus(p)}
-                                                                title={p.is_active ? 'Deactivate Product' : 'Activate Product'}
+                                                                className="btn btn-sm btn-light text-secondary border-0 px-2" 
+                                                                onClick={() => setupEditProduct(p.id)} 
+                                                                title="Edit Product Specifications"
                                                             >
-                                                                <i className={`fa-solid ${p.is_active ? 'fa-ban' : 'fa-check'}`}></i> {p.is_active ? 'Disable' : 'Enable'}
+                                                                <i className="fa-solid fa-pen-to-square"></i>
                                                             </button>
+                                                            {p.is_active ? (
+                                                                <button 
+                                                                    className="btn btn-sm btn-light text-danger border-0 px-2"
+                                                                    onClick={() => toggleProductActiveStatus(p)}
+                                                                    title="Deactivate Product Variant"
+                                                                >
+                                                                    <i className="fa-solid fa-ban"></i>
+                                                                </button>
+                                                            ) : (
+                                                                <button 
+                                                                    className="btn btn-sm btn-light text-success border-0 px-2"
+                                                                    onClick={() => toggleProductActiveStatus(p)}
+                                                                    title="Activate Product Variant"
+                                                                >
+                                                                    <i className="fa-solid fa-circle-check"></i>
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>
