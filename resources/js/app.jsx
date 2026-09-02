@@ -1,3 +1,4 @@
+import './bootstrap';
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate, useLocation, Outlet } from 'react-router-dom';
@@ -97,7 +98,16 @@ function App() {
                     'Cache-Control': 'no-cache'
                 }
             })
-            .then(res => res.ok ? res.json() : null)
+            .then(async (res) => {
+                const data = await res.json().catch(() => null);
+                if (res.status === 401 || (data && data.message === 'Unauthenticated.')) {
+                    localStorage.clear();
+                    setUser(null);
+                    navigate('/login');
+                    return null;
+                }
+                return res.ok ? data : null;
+            })
             .then(userData => {
                 if (userData) {
                     const orgName = userData.organization?.name || 'Platform Administration';
@@ -133,6 +143,7 @@ function App() {
             .catch(() => {});
         }
     };
+
 
     // Refresh user context on mount (web page refresh) and when role permissions are updated
     useEffect(() => {
