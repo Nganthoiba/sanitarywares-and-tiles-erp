@@ -58,7 +58,7 @@ class ProductApiController extends Controller
             ],
             'brand_id' => [
                 'required',
-                Rule::exists('brands', 'id')->where('organization_id', $orgId)
+                Rule::exists('brands', 'id')
             ],
             'name' => 'required|string|max:255',
             'sku' => [
