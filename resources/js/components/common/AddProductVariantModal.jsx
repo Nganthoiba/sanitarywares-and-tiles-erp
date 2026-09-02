@@ -348,10 +348,11 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
     };
 
     return (
-        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.55)', zIndex: 1060 }}>
-            <div className="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
-                <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '14px'}}>
-                    <div className="modal-header border-bottom pb-3 pt-4 px-4 bg-light">
+        <>
+            <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.55)', zIndex: 1060 }}>
+                <div className="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered" style={{ maxHeight: 'calc(100vh - 2.5rem)' }}>
+                    <form onSubmit={handleProductSubmit} className="modal-content border-0 shadow-lg" style={{ borderRadius: '14px', maxHeight: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    <div className="modal-header border-bottom pb-3 pt-4 px-4 bg-light flex-shrink-0">
                         <h5 className="modal-title fw-bold text-dark d-flex align-items-center mb-0">
                             <i className="fa-solid fa-cube text-primary me-2 fs-4"></i>
                             {productForm.id ? 'Edit Product Specifications' : 'Add New Product Variant'}
@@ -359,8 +360,7 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                         <button type="button" className="btn-close" onClick={onClose} aria-label="Close"></button>
                     </div>
 
-                    <form onSubmit={handleProductSubmit}>
-                        <div className="modal-body px-4 py-4">
+                    <div className="modal-body px-4 py-4" style={{ overflowY: 'auto', flex: '1 1 auto' }}>
                             {/* Alert Messages */}
                             {error && (
                                 <div className="alert alert-danger py-2 small mb-3 animate__animated animate__fadeIn d-flex align-items-center justify-content-between">
@@ -543,15 +543,15 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                             </div>
                         </div>
 
-                        <div className="modal-footer border-top pt-3 pb-4 px-4 bg-light">
+                        <div className="modal-footer border-top pt-3 pb-3 px-4 bg-light flex-shrink-0">
                             <button type="button" className="btn btn-secondary px-3 btn-sm" onClick={onClose} disabled={saving}>Cancel</button>
                             <button type="submit" className="btn btn-primary px-4 btn-sm" disabled={saving || loading}>
                                 {saving ? <span className="spinner-border spinner-border-sm me-2"></span> : null}
                                 {productForm.id ? 'Update Product Specification' : 'Save Product Variant'}
                             </button>
                         </div>
-                    </form>
-                </div>
+                </form>
+            </div>
             </div>
 
             {/* Quick Add Sub-Modals */}
@@ -660,6 +660,6 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                     </div>
                 </div>
             )}
-        </div>
+        </>
     );
 }
