@@ -272,4 +272,28 @@ class PlatformMenuManagementTest extends TestCase
         $groupCount = Menu::whereNull('parent_id')->count();
         $this->assertGreaterThan(0, $groupCount);
     }
+
+    public function test_super_admin_can_toggle_menu_enabled_status()
+    {
+        Sanctum::actingAs($this->superAdmin);
+
+        $menu = Menu::create([
+            'menu_name' => 'Toggle Test Menu',
+            'menu_type' => 'PAGE',
+            'route_uri' => '/toggle-test',
+            'enabled'   => true,
+        ]);
+
+        // Toggle from enabled -> disabled
+        $res1 = $this->postJson("/api/platform/menus/{$menu->id}/toggle");
+        $res1->assertStatus(200)
+            ->assertJsonPath('menu.enabled', false);
+        $this->assertFalse((bool)$menu->fresh()->enabled);
+
+        // Toggle from disabled -> enabled
+        $res2 = $this->postJson("/api/platform/menus/{$menu->id}/toggle");
+        $res2->assertStatus(200)
+            ->assertJsonPath('menu.enabled', true);
+        $this->assertTrue((bool)$menu->fresh()->enabled);
+    }
 }

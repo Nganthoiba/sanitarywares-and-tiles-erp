@@ -170,6 +170,21 @@ class PlatformMenuController extends Controller
     }
 
     /**
+     * Toggle enabled status of a menu item.
+     */
+    public function toggle($id)
+    {
+        $menu = Menu::findOrFail($id);
+        $menu->enabled = !$menu->enabled;
+        $menu->save();
+
+        return response()->json([
+            'message' => $menu->enabled ? 'Menu item activated successfully.' : 'Menu item deactivated successfully.',
+            'menu'    => $menu->fresh()->load(['permission', 'parent']),
+        ]);
+    }
+
+    /**
      * Check if potentialParentId is a descendant of menuId.
      */
     private function isDescendant($menuId, $potentialParentId): bool

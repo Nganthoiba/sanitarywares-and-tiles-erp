@@ -11,6 +11,11 @@ export default function MenuManagement() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+
+    // Tree search & filter states
+    const [searchQuery, setSearchQuery] = useState('');
+    const [typeFilter, setTypeFilter] = useState('ALL');
+    const [statusFilter, setStatusFilter] = useState('ALL');
     
     // Modal state for Add/Edit Menu
     const [showModal, setShowModal] = useState(false);
@@ -274,6 +279,33 @@ export default function MenuManagement() {
         }
     };
 
+    // Toggle menu enabled status (Activate / Deactivate)
+    const handleToggleEnabled = async (menu) => {
+        setError('');
+        setSuccessMessage('');
+        try {
+            const res = await fetch(`/api/platform/menus/${menu.id}/toggle`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                }
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.message || 'Failed to toggle menu status.');
+            }
+
+            setSuccessMessage(data.message || `Menu item ${menu.enabled ? 'deactivated' : 'activated'} successfully.`);
+            await fetchMenus();
+            window.dispatchEvent(new CustomEvent('navigation-refresh'));
+        } catch (err) {
+            setError(err.message);
+        }
+    };
+
     // Reorder action (move up/down within same parent)
     const handleMoveOrder = async (menu, direction) => {
         const siblings = flatList.filter(m => String(m.parent_id || '') === String(menu.parent_id || ''))
@@ -328,6 +360,45 @@ export default function MenuManagement() {
 
         const forbiddenIds = new Set([editingId, ...getDescendantIds(editingId)]);
         return flatList.filter(m => m.menu_type === 'GROUP' && !forbiddenIds.has(m.id));
+    };
+
+    // Filter tree hierarchy based on search query, type, and active status
+    const getFilteredTree = () => {
+        const query = searchQuery.trim().toLowerCase();
+        if (!query && typeFilter === 'ALL' && statusFilter === 'ALL') {
+            return tree;
+        }
+
+        const filterNodes = (nodes) => {
+            return nodes.map(node => {
+                const matchesSearch = !query || 
+                    (node.menu_name && node.menu_name.toLowerCase().includes(query)) ||
+                    (node.route_uri && node.route_uri.toLowerCase().includes(query));
+
+                const matchesType = typeFilter === 'ALL' || node.menu_type === typeFilter;
+                const matchesStatus = statusFilter === 'ALL' || (statusFilter === 'ACTIVE' ? Boolean(node.enabled) : !node.enabled);
+
+                const selfMatches = matchesSearch && matchesType && matchesStatus;
+
+                let filteredChildren = [];
+                if (node.children && node.children.length > 0) {
+                    filteredChildren = filterNodes(node.children);
+                }
+
+                const childMatches = filteredChildren.length > 0;
+
+                if (selfMatches || childMatches) {
+                    return {
+                        ...node,
+                        children: filteredChildren
+                    };
+                }
+
+                return null;
+            }).filter(Boolean);
+        };
+
+        return filterNodes(tree);
     };
 
     // Render tree node component
@@ -391,6 +462,26 @@ export default function MenuManagement() {
                             </button>
                         )}
 
+                        {item.enabled ? (
+                            <button 
+                                className="btn btn-xs btn-outline-warning py-0 px-2 shadow-none" 
+                                onClick={() => handleToggleEnabled(item)}
+                                title="Deactivate Menu Item"
+                                style={{ fontSize: '0.75rem' }}
+                            >
+                                <i className="fa-solid fa-ban me-1"></i> Deactivate
+                            </button>
+                        ) : (
+                            <button 
+                                className="btn btn-xs btn-outline-success py-0 px-2 shadow-none" 
+                                onClick={() => handleToggleEnabled(item)}
+                                title="Activate Menu Item"
+                                style={{ fontSize: '0.75rem' }}
+                            >
+                                <i className="fa-solid fa-circle-check me-1"></i> Activate
+                            </button>
+                        )}
+
                         <button 
                             className={`btn btn-xs ${isSelected ? 'btn-primary' : 'btn-outline-secondary'} py-0 px-2 shadow-none`}
                             onClick={() => selectMenuForEdit(item)}
@@ -436,13 +527,13 @@ export default function MenuManagement() {
                         className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 shadow-sm"
                         onClick={() => resetFormForNew('GROUP')}
                     >
-                        <i className="fa-solid fa-folder-plus"></i> + Create Group
+                        <i className="fa-solid fa-folder-plus"></i>  Create Group
                     </button>
                     <button 
                         className="btn btn-sm btn-primary d-flex align-items-center gap-1 shadow-sm"
                         onClick={() => resetFormForNew('PAGE')}
                     >
-                        <i className="fa-solid fa-plus"></i> + Add Menu Item
+                        <i className="fa-solid fa-plus"></i>  Add Menu Item
                     </button>
                 </div>
             </div>
@@ -468,13 +559,74 @@ export default function MenuManagement() {
             <div className="row g-4">
                 <div className="col-12">
                     <div className="card shadow-sm border-0">
-                        <div className="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
-                            <h6 className="fw-bold mb-0 text-dark">
-                                <i className="fa-solid fa-sitemap me-2 text-secondary"></i> Navigation Tree
-                            </h6>
-                            <span className="badge bg-light text-dark font-monospace border">
-                                {flatList.length} Items
-                            </span>
+                        <div className="card-header bg-white py-3 border-bottom">
+                            <div className="row g-2 align-items-center justify-content-between">
+                                <div className="col-12 col-md-5">
+                                    <div className="input-group input-group-sm">
+                                        <span className="input-group-text bg-light text-muted">
+                                            <i className="fa-solid fa-magnifying-glass"></i>
+                                        </span>
+                                        <input 
+                                            type="text" 
+                                            className="form-control" 
+                                            placeholder="Search menus (e.g. Purchase, GRN, /users)..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                        />
+                                        {searchQuery && (
+                                            <button 
+                                                className="btn btn-outline-secondary" 
+                                                type="button"
+                                                onClick={() => setSearchQuery('')}
+                                            >
+                                                <i className="fa-solid fa-xmark"></i>
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="col-12 col-md-7 d-flex align-items-center justify-content-md-end gap-2 flex-wrap">
+                                    {/* Type Filter */}
+                                    <select 
+                                        className="form-select form-select-sm w-auto"
+                                        value={typeFilter}
+                                        onChange={(e) => setTypeFilter(e.target.value)}
+                                    >
+                                        <option value="ALL">All Types</option>
+                                        <option value="PAGE">Pages Only</option>
+                                        <option value="GROUP">Groups Only</option>
+                                    </select>
+
+                                    {/* Status Filter */}
+                                    <select 
+                                        className="form-select form-select-sm w-auto"
+                                        value={statusFilter}
+                                        onChange={(e) => setStatusFilter(e.target.value)}
+                                    >
+                                        <option value="ALL">All Statuses</option>
+                                        <option value="ACTIVE">Active Only</option>
+                                        <option value="INACTIVE">Inactive Only</option>
+                                    </select>
+
+                                    {(searchQuery || typeFilter !== 'ALL' || statusFilter !== 'ALL') && (
+                                        <button 
+                                            className="btn btn-sm btn-outline-danger py-1 px-2"
+                                            onClick={() => {
+                                                setSearchQuery('');
+                                                setTypeFilter('ALL');
+                                                setStatusFilter('ALL');
+                                            }}
+                                            title="Clear Filters"
+                                        >
+                                            <i className="fa-solid fa-filter-circle-xmark me-1"></i> Reset
+                                        </button>
+                                    )}
+
+                                    <span className="badge bg-light text-dark font-monospace border ms-md-2">
+                                        {flatList.length} Items
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                         <div className="card-body p-3 overflow-auto" style={{ maxHeight: '720px' }}>
                             {loading ? (
@@ -487,9 +639,26 @@ export default function MenuManagement() {
                                     <i className="fa-solid fa-folder-open fs-3 mb-2 opacity-50 d-block"></i>
                                     No menus found in database. Seed default menus or create one.
                                 </div>
+                            ) : getFilteredTree().length === 0 ? (
+                                <div className="text-center py-5 text-muted">
+                                    <i className="fa-solid fa-magnifying-glass fs-3 mb-2 opacity-50 d-block"></i>
+                                    No menus found matching your search and filter criteria.
+                                    <div className="mt-2">
+                                        <button 
+                                            className="btn btn-sm btn-link text-primary p-0"
+                                            onClick={() => {
+                                                setSearchQuery('');
+                                                setTypeFilter('ALL');
+                                                setStatusFilter('ALL');
+                                            }}
+                                        >
+                                            Reset Search & Filters
+                                        </button>
+                                    </div>
+                                </div>
                             ) : (
                                 <div className="menu-tree-container">
-                                    {tree.map(item => renderTreeNode(item, 0))}
+                                    {getFilteredTree().map(item => renderTreeNode(item, 0))}
                                 </div>
                             )}
                         </div>

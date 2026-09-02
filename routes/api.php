@@ -73,6 +73,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::post('/menus', [PlatformMenuController::class, 'store']);
         Route::post('/menus/reorder', [PlatformMenuController::class, 'reorder']);
         Route::put('/menus/{id}', [PlatformMenuController::class, 'update']);
+        Route::post('/menus/{id}/toggle', [PlatformMenuController::class, 'toggle']);
         Route::delete('/menus/{id}', [PlatformMenuController::class, 'destroy']);
     });
 
