@@ -16,6 +16,32 @@ export default function MenuManagement() {
     const [searchQuery, setSearchQuery] = useState('');
     const [typeFilter, setTypeFilter] = useState('ALL');
     const [statusFilter, setStatusFilter] = useState('ALL');
+
+    // Collapsed menu group IDs state
+    const [collapsedGroupIds, setCollapsedGroupIds] = useState(new Set());
+
+    const toggleGroupCollapse = (groupId) => {
+        setCollapsedGroupIds(prev => {
+            const next = new Set(prev);
+            if (next.has(groupId)) {
+                next.delete(groupId);
+            } else {
+                next.add(groupId);
+            }
+            return next;
+        });
+    };
+
+    const expandAllGroups = () => {
+        setCollapsedGroupIds(new Set());
+    };
+
+    const collapseAllGroups = () => {
+        const groupIds = flatList
+            .filter(m => m.menu_type === 'GROUP' || flatList.some(c => String(c.parent_id) === String(m.id)))
+            .map(m => m.id);
+        setCollapsedGroupIds(new Set(groupIds));
+    };
     
     // Modal state for Add/Edit Menu
     const [showModal, setShowModal] = useState(false);
@@ -65,7 +91,7 @@ export default function MenuManagement() {
         { label: 'Plus / Create', value: 'fa-solid fa-plus' },
     ];
 
-    const fetchMenus = async () => {
+    const fetchMenus = async (isInitial = false) => {
         setLoading(true);
         setError('');
         try {
@@ -79,8 +105,20 @@ export default function MenuManagement() {
             if (!res.ok) {
                 throw new Error(data.message || `Failed to load platform menus (HTTP ${res.status}).`);
             }
-            setTree(data.tree || []);
-            setFlatList(data.flat || []);
+            const treeData = data.tree || [];
+            const flatData = data.flat || [];
+            setTree(treeData);
+            setFlatList(flatData);
+
+            if (isInitial) {
+                const groupNodes = flatData.filter(m => m.menu_type === 'GROUP' || flatData.some(c => String(c.parent_id) === String(m.id)));
+                if (groupNodes.length > 1) {
+                    const collapsed = new Set(groupNodes.slice(1).map(g => g.id));
+                    setCollapsedGroupIds(collapsed);
+                } else {
+                    setCollapsedGroupIds(new Set());
+                }
+            }
         } catch (err) {
             setError(err.message);
         } finally {
@@ -118,7 +156,7 @@ export default function MenuManagement() {
     };
 
     useEffect(() => {
-        fetchMenus();
+        fetchMenus(true);
         fetchPermissions();
     }, []);
 
@@ -405,19 +443,48 @@ export default function MenuManagement() {
     const renderTreeNode = (item, level = 0) => {
         const isSelected = editingId === item.id;
         const hasChildren = item.children && item.children.length > 0;
+        const isGroup = item.menu_type === 'GROUP' || hasChildren;
+        const isCollapsed = collapsedGroupIds.has(item.id) && !searchQuery.trim();
+
+        const defaultIcon = isGroup 
+            ? (isCollapsed ? 'fa-solid fa-folder' : 'fa-solid fa-folder-open')
+            : 'fa-solid fa-circle-dot';
 
         return (
             <div key={item.id} className="menu-tree-node mb-1">
                 <div 
-                    className={`d-flex align-items-center justify-content-between p-2 rounded border transition-all ${isSelected ? 'border-primary bg-primary-subtle shadow-sm' : 'bg-white hover-bg-light'}`}
+                    className={`d-flex align-items-center justify-content-between p-2 rounded border transition-all ${isSelected ? 'border-primary bg-primary-subtle shadow-sm' : 'bg-white hover-bg-light'} ${isGroup ? 'cursor-pointer' : ''}`}
                     style={{ marginLeft: `${level * 20}px` }}
+                    onClick={() => {
+                        if (isGroup) {
+                            toggleGroupCollapse(item.id);
+                        }
+                    }}
                 >
                     <div className="d-flex align-items-center gap-2 overflow-hidden me-2">
-                        <span className="text-muted font-monospace opacity-50 cursor-grab" style={{ fontSize: '0.8rem' }}>⋮⋮</span>
+                        <span className="text-muted font-monospace opacity-50 cursor-grab" style={{ fontSize: '0.8rem' }} onClick={(e) => e.stopPropagation()}>⋮⋮</span>
 
-                        <i className={`${item.icon || (item.menu_type === 'GROUP' ? 'fa-solid fa-folder' : 'fa-solid fa-circle-dot')} text-secondary`} style={{ width: '18px', textAlign: 'center' }}></i>
+                        {isGroup && (
+                            <span 
+                                className="text-primary opacity-75 hover-opacity-100 p-0.5 d-inline-flex align-items-center justify-content-center" 
+                                style={{ width: '16px', height: '16px' }}
+                                title={isCollapsed ? 'Click to expand group' : 'Click to collapse group'}
+                            >
+                                <i className={`fa-solid ${isCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{ fontSize: '0.72rem' }}></i>
+                            </span>
+                        )}
 
-                        <span className="fw-semibold text-truncate" style={{ fontSize: '0.88rem' }}>{item.menu_name}</span>
+                        <i className={`${item.icon || defaultIcon} ${isGroup ? 'text-primary' : 'text-secondary'}`} style={{ width: '18px', textAlign: 'center' }}></i>
+
+                        <span className={`fw-semibold text-truncate ${isGroup ? 'text-dark fw-bold' : ''}`} style={{ fontSize: '0.88rem' }}>
+                            {item.menu_name}
+                        </span>
+
+                        {hasChildren && (
+                            <span className="badge bg-light text-muted border rounded-pill" style={{ fontSize: '0.62rem' }}>
+                                {item.children.length} {item.children.length === 1 ? 'item' : 'items'}
+                            </span>
+                        )}
 
                         <span className={`badge ${item.menu_type === 'GROUP' ? 'bg-info-subtle text-info border border-info-subtle' : 'bg-secondary-subtle text-secondary border'} rounded-pill`} style={{ fontSize: '0.65rem' }}>
                             {item.menu_type}
@@ -436,18 +503,18 @@ export default function MenuManagement() {
                         )}
                     </div>
 
-                    <div className="d-flex align-items-center gap-1 flex-shrink-0">
+                    <div className="d-flex align-items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                         <button 
                             className="btn btn-xs btn-outline-secondary p-1 shadow-none border-0" 
                             title="Move Up" 
-                            onClick={() => handleMoveOrder(item, 'up')}
+                            onClick={(e) => { e.stopPropagation(); handleMoveOrder(item, 'up'); }}
                         >
                             <i className="fa-solid fa-chevron-up" style={{ fontSize: '0.7rem' }}></i>
                         </button>
                         <button 
                             className="btn btn-xs btn-outline-secondary p-1 shadow-none border-0" 
                             title="Move Down" 
-                            onClick={() => handleMoveOrder(item, 'down')}
+                            onClick={(e) => { e.stopPropagation(); handleMoveOrder(item, 'down'); }}
                         >
                             <i className="fa-solid fa-chevron-down" style={{ fontSize: '0.7rem' }}></i>
                         </button>
@@ -456,7 +523,7 @@ export default function MenuManagement() {
                             <button 
                                 className="btn btn-xs btn-outline-primary p-1 shadow-none border-0" 
                                 title="Add Child Item" 
-                                onClick={() => resetFormForNew('PAGE', item.id)}
+                                onClick={(e) => { e.stopPropagation(); resetFormForNew('PAGE', item.id); }}
                             >
                                 <i className="fa-solid fa-plus" style={{ fontSize: '0.75rem' }}></i>
                             </button>
@@ -465,7 +532,7 @@ export default function MenuManagement() {
                         {item.enabled ? (
                             <button 
                                 className="btn btn-xs btn-outline-warning py-0 px-2 shadow-none" 
-                                onClick={() => handleToggleEnabled(item)}
+                                onClick={(e) => { e.stopPropagation(); handleToggleEnabled(item); }}
                                 title="Deactivate Menu Item"
                                 style={{ fontSize: '0.75rem' }}
                             >
@@ -474,7 +541,7 @@ export default function MenuManagement() {
                         ) : (
                             <button 
                                 className="btn btn-xs btn-outline-success py-0 px-2 shadow-none" 
-                                onClick={() => handleToggleEnabled(item)}
+                                onClick={(e) => { e.stopPropagation(); handleToggleEnabled(item); }}
                                 title="Activate Menu Item"
                                 style={{ fontSize: '0.75rem' }}
                             >
@@ -484,7 +551,7 @@ export default function MenuManagement() {
 
                         <button 
                             className={`btn btn-xs ${isSelected ? 'btn-primary' : 'btn-outline-secondary'} py-0 px-2 shadow-none`}
-                            onClick={() => selectMenuForEdit(item)}
+                            onClick={(e) => { e.stopPropagation(); selectMenuForEdit(item); }}
                             style={{ fontSize: '0.75rem' }}
                         >
                             <i className="fa-solid fa-pen-to-square me-1"></i> Edit
@@ -492,7 +559,7 @@ export default function MenuManagement() {
 
                         <button 
                             className="btn btn-xs btn-outline-danger py-0 px-2 shadow-none border-0" 
-                            onClick={() => confirmDelete(item)}
+                            onClick={(e) => { e.stopPropagation(); confirmDelete(item); }}
                             title="Delete Menu"
                             style={{ fontSize: '0.75rem' }}
                         >
@@ -501,7 +568,7 @@ export default function MenuManagement() {
                     </div>
                 </div>
 
-                {hasChildren && (
+                {hasChildren && !isCollapsed && (
                     <div className="menu-tree-children mt-1">
                         {item.children.map(child => renderTreeNode(child, level + 1))}
                     </div>
@@ -586,6 +653,26 @@ export default function MenuManagement() {
                                 </div>
 
                                 <div className="col-12 col-md-7 d-flex align-items-center justify-content-md-end gap-2 flex-wrap">
+                                    {/* Expand / Collapse All Controls */}
+                                    <div className="btn-group btn-group-sm">
+                                        <button 
+                                            type="button" 
+                                            className="btn btn-outline-secondary py-1 px-2"
+                                            onClick={expandAllGroups}
+                                            title="Expand All Menu Groups"
+                                        >
+                                            <i className="fa-solid fa-folder-open me-1 text-primary"></i> Expand All
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            className="btn btn-outline-secondary py-1 px-2"
+                                            onClick={collapseAllGroups}
+                                            title="Collapse All Menu Groups"
+                                        >
+                                            <i className="fa-solid fa-folder me-1 text-secondary"></i> Collapse All
+                                        </button>
+                                    </div>
+
                                     {/* Type Filter */}
                                     <select 
                                         className="form-select form-select-sm w-auto"
