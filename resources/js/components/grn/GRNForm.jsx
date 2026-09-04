@@ -41,7 +41,7 @@ export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
         items: []
     });
 
-    const isReadOnly = formData.status === 'APPROVED';
+    const isReadOnly = Boolean(formData.status && formData.status !== 'DRAFT');
 
     // Load form options
     useEffect(() => {
@@ -99,6 +99,8 @@ export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
                             quantity_received: item.quantity_received,
                             quantity_accepted: item.quantity_accepted,
                             quantity_rejected: item.quantity_rejected,
+                            unit_price: item.unit_price || '',
+                            batch_number: item.batch_number || '',
                             slabs: item.slabs || []
                         }))
                     });
@@ -184,6 +186,27 @@ export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
         }
     };
 
+    const handleCancelGRN = async () => {
+        if (!window.confirm("Are you sure you want to cancel this posted GRN and reverse all associated stock movements?")) {
+            return;
+        }
+        setSaving(true);
+        setError(null);
+        setSuccess(null);
+        try {
+            const token = localStorage.getItem('auth_token');
+            await axios.post(`/api/grn/${formData.id}/cancel`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setSuccess('Goods Receipt Note cancelled and inventory stock reversed successfully!');
+            setTimeout(() => onSaveSuccess(), 1500);
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to cancel Goods Receipt Note.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const filteredLocations = contexts.storage_locations.filter(
         loc => loc.warehouse_id === parseInt(formData.warehouse_id)
     );
@@ -205,7 +228,7 @@ export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
                 <div>
                     <h3 className="fw-bold text-dark">
                         <i className="fa-solid fa-file-invoice me-2 text-primary"></i>
-                        {grnId ? `Edit GRN: ${formData.grn_number || 'Draft'}` : 'New Goods Receipt Note'}
+                        {grnId ? (isReadOnly ? `View GRN: ${formData.grn_number || ''}` : `Edit GRN: ${formData.grn_number || 'Draft'}`) : 'New Goods Receipt Note'}
                     </h3>
                     <p className="text-muted small mb-0">Record incoming stock inventory into a storage yard.</p>
                 </div>
@@ -404,21 +427,30 @@ export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
                 units={contexts.units}
             />
 
-            <div className="d-flex align-items-center justify-content-end gap-2 py-4">
-                <button className="btn btn-outline-secondary px-4" onClick={onBack} disabled={saving}>
-                    Cancel
-                </button>
-                {!isReadOnly && (
-                    <>
-                        <button className="btn btn-secondary px-4 text-white" onClick={() => handleSave(false)} disabled={saving}>
-                            {saving ? 'Saving...' : 'Save Draft'}
+            {!isReadOnly ? (
+                <div className="d-flex align-items-center justify-content-end gap-2 py-4">
+                    <button className="btn btn-outline-secondary px-4" onClick={onBack} disabled={saving}>
+                        Back
+                    </button>
+                    <button className="btn btn-secondary px-4 text-white" onClick={() => handleSave(false)} disabled={saving}>
+                        {saving ? 'Saving...' : 'Save Draft'}
+                    </button>
+                    <button className="btn btn-primary px-4" onClick={() => handleSave(true)} disabled={saving}>
+                        {saving ? 'Processing...' : 'Approve & Post to Stock'}
+                    </button>
+                </div>
+            ) : (
+                <div className="d-flex align-items-center justify-content-end gap-2 py-4">
+                    <button className="btn btn-outline-secondary px-4" onClick={onBack}>
+                        Back to Listing
+                    </button>
+                    {(formData.status === 'APPROVED' || formData.status === 'LOCKED') && (
+                        <button className="btn btn-outline-danger px-4" onClick={handleCancelGRN} disabled={saving}>
+                            {saving ? 'Cancelling...' : 'Cancel & Reverse Stock'}
                         </button>
-                        <button className="btn btn-primary px-4" onClick={() => handleSave(true)} disabled={saving}>
-                            {saving ? 'Processing...' : 'Approve & Post to Stock'}
-                        </button>
-                    </>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
 
             <QuickWarehouseModal
                 show={showQuickWHModal}

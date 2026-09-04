@@ -25,7 +25,7 @@ class DashboardService
         // Slabs on hand count
         $slabsCount = DB::table('inventory_objects')
             ->where('organization_id', $orgId)
-            ->where('status', 'ON_HAND')
+            ->whereIn('status', ['AVAILABLE', 'ON_HAND'])
             ->count();
 
         $data = [

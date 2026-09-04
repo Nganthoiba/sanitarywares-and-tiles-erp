@@ -222,7 +222,11 @@ export default function GRNList({ initialViewMode = 'list', onViewModeChange }) 
                                         <td>{grn.supplier_name || 'Direct Receipt'}</td>
                                         <td>{grn.warehouse_name}</td>
                                         <td>
-                                            {grn.status === 'APPROVED' ? (
+                                            {grn.status === 'CANCELLED' ? (
+                                                <span className="badge bg-danger-subtle text-danger px-2 py-1">
+                                                    <i className="fa-solid fa-ban me-1"></i> CANCELLED
+                                                </span>
+                                            ) : grn.status !== 'DRAFT' ? (
                                                 <span className="badge bg-success-subtle text-success px-2 py-1">
                                                     <i className="fa-solid fa-lock me-1"></i> APPROVED
                                                 </span>

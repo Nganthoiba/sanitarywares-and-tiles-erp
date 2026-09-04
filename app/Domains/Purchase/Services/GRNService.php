@@ -61,8 +61,9 @@ class GRNService
                         'quantity_received' => $itemData['quantity_received'],
                         'quantity_accepted' => $itemData['quantity_accepted'] ?? $itemData['quantity_received'],
                         'quantity_rejected' => $itemData['quantity_rejected'] ?? 0.0000,
+                        'unit_price' => $itemData['unit_price'] ?? null,
+                        'batch_number' => $itemData['batch_number'] ?? null,
                     ]);
-
 
                     // If item is granite slabs and has slabs data
                     if ($hasSlabs) {
@@ -129,8 +130,9 @@ class GRNService
                         'quantity_received' => $itemData['quantity_received'],
                         'quantity_accepted' => $itemData['quantity_accepted'] ?? $itemData['quantity_received'],
                         'quantity_rejected' => $itemData['quantity_rejected'] ?? 0.0000,
+                        'unit_price' => $itemData['unit_price'] ?? null,
+                        'batch_number' => $itemData['batch_number'] ?? null,
                     ]);
-
 
                     if ($hasSlabs) {
                         foreach ($itemData['slabs'] as $slabData) {
@@ -178,6 +180,7 @@ class GRNService
             foreach ($grn->items as $item) {
                 $variant = $item->variant;
                 $receivedQty = (float) $item->quantity_received;
+                $acceptedQty = (float) $item->quantity_accepted;
                 $hasSlabs = !$item->slabs->isEmpty();
 
                 if ($receivedQty <= 0) {
@@ -208,13 +211,16 @@ class GRNService
                     }
                 }
 
+                // Determine unit price (from item input, order item, or default 0)
+                $price = $item->unit_price !== null ? (float) $item->unit_price : ($item->orderItem ? (float) $item->orderItem->unit_price : 0.00);
+
                 // If product is granite, ensure slab count equals accepted received qty
                 if ($variant->inventory_behavior === 'SLAB') {
                     if (!$hasSlabs) {
                         throw new Exception("Granite slabs are required for slab product variant: " . $variant->name);
                     }
                     $slabCount = $item->slabs()->count();
-                    if ($slabCount !== (int) $receivedQty) {
+                    if ($slabCount !== (int) $receivedQty && $slabCount !== (int) $acceptedQty) {
                         throw new Exception("Slab count ({$slabCount}) must match received quantity ({$receivedQty}) for Granite variant: " . $variant->name);
                     }
 
@@ -224,7 +230,6 @@ class GRNService
                         $totalArea += ((float) $slab->length * (float) $slab->width) / 144.0;
                     }
                     
-                    $price = $item->orderItem ? (float) $item->orderItem->unit_price : 0.00;
                     $totalValue += $totalArea * $price;
                     $receivedPricingQty = $totalArea;
                 } else {
@@ -232,17 +237,15 @@ class GRNService
                         throw new Exception("Slabs data must not be provided for non-slab product variant: " . $variant->name);
                     }
 
-                    // Bulk calculation: received quantity * price
-                    $price = $item->orderItem ? (float) $item->orderItem->unit_price : 0.00;
-                    
+                    // Bulk calculation: accepted quantity * price
                     if ($item->orderItem && $item->orderItem->pricing_unit_id && $item->orderItem->pricing_unit_id != $item->orderItem->unit_id) {
                         if ($item->orderItem->pricing_conversion_factor !== null) {
-                            $receivedPricingQty = $receivedQty * (float) $item->orderItem->pricing_conversion_factor;
+                            $receivedPricingQty = $acceptedQty * (float) $item->orderItem->pricing_conversion_factor;
                         } else {
-                            $receivedPricingQty = app(\App\Domains\Inventory\Services\InventoryService::class)->convertQuantity($receivedQty, $item->orderItem->unit_id, $item->orderItem->pricing_unit_id, $variant->id, $grn->organization_id);
+                            $receivedPricingQty = app(\App\Domains\Inventory\Services\InventoryService::class)->convertQuantity($acceptedQty, $item->orderItem->unit_id, $item->orderItem->pricing_unit_id, $variant->id, $grn->organization_id);
                         }
                     } else {
-                        $receivedPricingQty = $receivedQty;
+                        $receivedPricingQty = $acceptedQty;
                     }
 
                     $totalValue += $receivedPricingQty * $price;
@@ -372,6 +375,33 @@ class GRNService
 
             // 5. Finalize transition approved -> locked
             $grn->status = GoodsReceiptStatus::LOCKED->value;
+            $grn->save();
+
+            return $grn;
+        });
+    }
+
+    /**
+     * Cancel an approved Goods Receipt Note and reverse inventory transactions.
+     */
+    public function cancelGRN(int $id): GoodsReceiptNote
+    {
+        return DB::transaction(function () use ($id) {
+            $grn = GoodsReceiptNote::lockForUpdate()->findOrFail($id);
+
+            if ($grn->status === 'CANCELLED') {
+                throw new Exception("This GRN is already cancelled.");
+            }
+
+            if (!in_array($grn->status, [GoodsReceiptStatus::APPROVED->value, GoodsReceiptStatus::LOCKED->value])) {
+                throw new Exception("Only approved Goods Receipt Notes can be cancelled.");
+            }
+
+            // 1. Reverse inventory stock movements
+            $this->inventoryService->reverseGRN($grn);
+
+            // 2. Set status to CANCELLED
+            $grn->status = 'CANCELLED';
             $grn->save();
 
             return $grn;

@@ -23,6 +23,8 @@ class GoodsReceiptItemResource extends JsonResource
             'quantity_received' => (float) $this->quantity_received,
             'quantity_accepted' => (float) $this->quantity_accepted,
             'quantity_rejected' => (float) $this->quantity_rejected,
+            'unit_price' => $this->unit_price !== null ? (float) $this->unit_price : null,
+            'batch_number' => $this->batch_number,
             'slabs' => GoodsReceiptItemSlabResource::collection($this->whenLoaded('slabs')),
         ];
     }

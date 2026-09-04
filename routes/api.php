@@ -95,6 +95,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     });
 
     // Core Inventory Routes
+    Route::get('/inventory', [InventoryApiController::class, 'index']);
     Route::get('/granite/slabs', [GraniteSlabApiController::class, 'index']);
     Route::get('/granite/slabs/{id}', [GraniteSlabApiController::class, 'show']);
     Route::post('/granite/slabs/{id}/cut', [GraniteSlabApiController::class, 'cut']);
@@ -159,6 +160,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::get('/grn/{id}', [GRNApiController::class, 'show']);
     Route::put('/grn/{id}', [GRNApiController::class, 'update']);
     Route::post('/grn/{id}/approve', [GRNApiController::class, 'approve']);
+    Route::post('/grn/{id}/cancel', [GRNApiController::class, 'cancel']);
 
     // Core Purchase Order Routes
     Route::get('/purchase-orders/form-data', [PurchaseOrderApiController::class, 'getFormData']);

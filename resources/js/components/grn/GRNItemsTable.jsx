@@ -149,13 +149,14 @@ export default function GRNItemsTable({ items, onChange, products, units, purcha
                 <table className="table table-hover align-middle">
                     <thead>
                         <tr className="text-secondary font-monospace" style={{ fontSize: '0.8rem' }}>
-                            <th style={{ width: '30%' }}>Product Variant</th>
+                            <th style={{ width: '25%' }}>Product Variant</th>
                             {purchaseOrder && <th style={{ width: '15%' }}>PO Item / Ordered Qty</th>}
-                            <th style={{ width: '12%' }}>Recv Qty</th>
-                            <th style={{ width: '12%' }}>Unit</th>
-                            <th style={{ width: '12%' }}>Accepted</th>
-                            <th style={{ width: '12%' }}>Rejected</th>
-                            <th style={{ width: '15%' }}>Action / Slabs</th>
+                            <th style={{ width: '10%' }}>Recv Qty</th>
+                            <th style={{ width: '10%' }}>Unit</th>
+                            <th style={{ width: '10%' }}>Accepted</th>
+                            <th style={{ width: '10%' }}>Rejected</th>
+                            <th style={{ width: '10%' }}>Unit Price</th>
+                            <th style={{ width: '12%' }}>Action / Slabs</th>
                             {!readOnly && <th style={{ width: '5%' }}></th>}
                         </tr>
                     </thead>
@@ -283,6 +284,20 @@ export default function GRNItemsTable({ items, onChange, products, units, purcha
                                                 className="form-control form-control-sm font-monospace text-danger"
                                                 value={item.quantity_rejected}
                                                 onChange={(e) => handleItemChange(index, 'quantity_rejected', e.target.value)}
+                                            />
+                                        )}
+                                    </td>
+                                    <td>
+                                        {readOnly ? (
+                                            <span className="font-monospace">{item.unit_price ? Number(item.unit_price).toFixed(2) : '-'}</span>
+                                        ) : (
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                className="form-control form-control-sm font-monospace"
+                                                placeholder="0.00"
+                                                value={item.unit_price || ''}
+                                                onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
                                             />
                                         )}
                                     </td>

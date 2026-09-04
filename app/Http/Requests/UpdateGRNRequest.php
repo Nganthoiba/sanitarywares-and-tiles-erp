@@ -28,6 +28,8 @@ class UpdateGRNRequest extends FormRequest
             'items.*.quantity_received' => ['required', 'numeric', 'gt:0'],
             'items.*.quantity_accepted' => ['nullable', 'numeric', 'min:0'],
             'items.*.quantity_rejected' => ['nullable', 'numeric', 'min:0'],
+            'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
+            'items.*.batch_number' => ['nullable', 'string', 'max:50'],
             'items.*.slabs' => ['nullable', 'array'],
             'items.*.slabs.*.length' => ['required_with:items.*.slabs', 'numeric', 'gt:0'],
             'items.*.slabs.*.width' => ['required_with:items.*.slabs', 'numeric', 'gt:0'],

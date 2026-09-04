@@ -14,10 +14,15 @@ class InventoryObjectResource extends JsonResource
             'organization_id' => $this->organization_id,
             'product_variant_id' => $this->product_variant_id,
             'variant_name' => $this->variant->name ?? null,
+            'variant_sku' => $this->variant->sku ?? null,
+            'inventory_behavior' => $this->variant->inventory_behavior ?? 'STANDARD',
+            'unit_symbol' => $this->variant->baseUnit->symbol ?? null,
             'warehouse_id' => $this->warehouse_id,
             'warehouse_name' => $this->warehouse->name ?? null,
             'storage_location_id' => $this->storage_location_id,
+            'storage_location_name' => $this->storageLocation->name ?? null,
             'object_code' => $this->object_code,
+            'slab_code' => $this->slabDetail ? $this->slabDetail->slab_code : $this->object_code,
 
             // Slab details
             'length' => $this->slabDetail ? (float) $this->slabDetail->length : null,
@@ -28,6 +33,7 @@ class InventoryObjectResource extends JsonResource
 
             'quantity' => (float) $this->quantity,
             'area' => (float) $this->area,
+            'area_on_hand' => (float) $this->area,
             'batch_number' => $this->batch_number,
             'serial_number' => $this->serial_number,
             'status' => $this->status,

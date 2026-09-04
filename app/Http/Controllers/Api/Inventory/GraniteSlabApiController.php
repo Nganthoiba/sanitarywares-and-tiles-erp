@@ -22,7 +22,7 @@ class GraniteSlabApiController extends Controller
     public function index(Request $request): JsonResponse
     {
         // Auto-scoped multi-tenancy based on authenticated organization or active filter
-        $query = InventoryObject::where('slab_code', '!=', null);
+        $query = InventoryObject::has('slabDetail');
 
         if ($request->has('organization_id')) {
             $query->where('organization_id', $request->input('organization_id'));

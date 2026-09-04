@@ -80,12 +80,17 @@ export default function InventoryManager() {
     const [selectedValId, setSelectedValId] = useState("");
     const [valMethod, setValMethod] = useState("SPECIFIC_ID");
 
+    const getAuthHeaders = () => {
+        const token = localStorage.getItem('auth_token');
+        return token ? { Authorization: `Bearer ${token}` } : {};
+    };
+
     // Load data
     const loadInventoryData = async () => {
         setLoading(true);
         try {
-            // Fetch slabs and populate inventory mock/real tables
-            const res = await axios.get("/api/granite/slabs");
+            // Fetch inventory stock matrix
+            const res = await axios.get("/api/inventory", { headers: getAuthHeaders() });
             if (res.data.success) {
                 const data = res.data.data;
                 setInventory(data);
@@ -93,7 +98,7 @@ export default function InventoryManager() {
 
                 // calculate stats
                 const totalI = data.length;
-                const totalA = data.reduce((acc, s) => acc + parseFloat(s.area_on_hand || 0), 0);
+                const totalA = data.reduce((acc, s) => acc + parseFloat(s.area || s.area_on_hand || 0), 0);
                 const availI = data.filter(s => s.status === "AVAILABLE" || s.status === "ON_HAND").length;
 
                 setStats({
@@ -119,7 +124,7 @@ export default function InventoryManager() {
     const handleReserveSubmit = async (e) => {
         e.preventDefault();
         try {
-            const res = await axios.post("/api/inventory/reserve", resForm);
+            const res = await axios.post("/api/inventory/reserve", resForm, { headers: getAuthHeaders() });
             if (res.data.success) {
                 alert("Soft Reservation Completed successfully.");
                 setReservations([...reservations, res.data.data]);
@@ -134,7 +139,7 @@ export default function InventoryManager() {
     const handleAllocateSubmit = async (e) => {
         e.preventDefault();
         try {
-            const res = await axios.post("/api/inventory/allocate", allocForm);
+            const res = await axios.post("/api/inventory/allocate", allocForm, { headers: getAuthHeaders() });
             if (res.data.success) {
                 alert("Hard Inventory Allocation verified & recorded.");
                 setAllocations([...allocations, res.data.data]);
@@ -149,7 +154,7 @@ export default function InventoryManager() {
     const handleTransferSubmit = async (e) => {
         e.preventDefault();
         try {
-            const res = await axios.post("/api/inventory/transfers", transferForm);
+            const res = await axios.post("/api/inventory/transfers", transferForm, { headers: getAuthHeaders() });
             if (res.data.success) {
                 alert("Transfer sheet created. Status: In-Transit.");
                 setTransfers([...transfers, res.data.data]);
@@ -162,7 +167,7 @@ export default function InventoryManager() {
 
     const handleReceiveTransfer = async (id) => {
         try {
-            const res = await axios.post(`/api/inventory/transfers/${id}/complete`);
+            const res = await axios.post(`/api/inventory/transfers/${id}/complete`, {}, { headers: getAuthHeaders() });
             if (res.data.success) {
                 alert("Transfer completed. Stock added to target warehouse.");
                 loadInventoryData();
@@ -176,7 +181,7 @@ export default function InventoryManager() {
     const handleAdjustmentSubmit = async (e) => {
         e.preventDefault();
         try {
-            const res = await axios.post("/api/inventory/adjustments", adjustmentForm);
+            const res = await axios.post("/api/inventory/adjustments", adjustmentForm, { headers: getAuthHeaders() });
             if (res.data.success) {
                 alert("Adjustment draft generated.");
                 setAdjustments([...adjustments, res.data.data]);
@@ -188,7 +193,7 @@ export default function InventoryManager() {
 
     const handleApproveAdjustment = async (id) => {
         try {
-            const res = await axios.post(`/api/inventory/adjustments/${id}/approve`);
+            const res = await axios.post(`/api/inventory/adjustments/${id}/approve`, {}, { headers: getAuthHeaders() });
             if (res.data.success) {
                 alert("Adjustment approved. Slabs updated.");
                 loadInventoryData();
@@ -202,7 +207,7 @@ export default function InventoryManager() {
     const handleAuditSubmit = async (e) => {
         e.preventDefault();
         try {
-            const res = await axios.post("/api/inventory/counts", auditForm);
+            const res = await axios.post("/api/inventory/counts", auditForm, { headers: getAuthHeaders() });
             if (res.data.success) {
                 alert("Cycle audit count list generated.");
                 setAuditList([...auditList, res.data.data]);
@@ -215,7 +220,7 @@ export default function InventoryManager() {
 
     const handleApproveAuditCount = async (id) => {
         try {
-            const res = await axios.post(`/api/inventory/counts/${id}/approve`);
+            const res = await axios.post(`/api/inventory/counts/${id}/approve`, {}, { headers: getAuthHeaders() });
             if (res.data.success) {
                 alert("Cycle Count audit approved and posted.");
                 loadInventoryData();
@@ -229,7 +234,7 @@ export default function InventoryManager() {
     const handleCreateSlab = async (e) => {
         e.preventDefault();
         try {
-            const res = await axios.post("/api/granite/slabs/new", slabForm);
+            const res = await axios.post("/api/granite/slabs/new", slabForm, { headers: getAuthHeaders() });
             if (res.data.success) {
                 alert("Slab registered successfully.");
                 loadInventoryData();
@@ -244,7 +249,8 @@ export default function InventoryManager() {
         if (!selectedValId) return;
         try {
             const res = await axios.get(`/api/inventory/${selectedValId}/valuation`, {
-                params: { method: valMethod }
+                params: { method: valMethod },
+                headers: getAuthHeaders()
             });
             if (res.data.success) {
                 setValuationResults(res.data.data);
@@ -252,6 +258,16 @@ export default function InventoryManager() {
         } catch (err) {
             alert(err.response?.data?.message || "Failed to retrieve valuation.");
         }
+    };
+
+    // Helper to format option strings for both Slab and Bulk inventory
+    const formatStockLabel = (s) => {
+        const code = s.object_code || s.slab_code || `ID-${s.id}`;
+        const name = s.variant_name ? ` [${s.variant_name}]` : '';
+        const qty = (s.inventory_behavior === 'SLAB' || s.length)
+            ? `${parseFloat(s.area || s.area_on_hand || 0).toFixed(2)} SQFT`
+            : `${parseFloat(s.quantity || 0).toFixed(2)} ${s.unit_symbol || 'PCS'}`;
+        return `${code}${name} - ${qty} (${s.status})`;
     };
 
     return (
@@ -289,8 +305,8 @@ export default function InventoryManager() {
                             <div className="row g-4 mb-4">
                                 <div className="col-12 col-md-3">
                                     <div className="card border-0 bg-dark text-white p-3 shadow-sm rounded">
-                                        <small className="text-muted">Total Slab Units</small>
-                                        <h3 className="mb-0 fw-bold">{stats.totalItems} Slabs</h3>
+                                        <small className="text-white-50">Total Stock Records</small>
+                                        <h3 className="mb-0 fw-bold">{stats.totalItems} Items</h3>
                                     </div>
                                 </div>
                                 <div className="col-12 col-md-3">
@@ -301,7 +317,7 @@ export default function InventoryManager() {
                                 </div>
                                 <div className="col-12 col-md-3">
                                     <div className="card border-0 bg-success text-white p-3 shadow-sm rounded">
-                                        <small className="text-white-50">Slabs On Hand</small>
+                                        <small className="text-white-50">Stock On Hand</small>
                                         <h3 className="mb-0 fw-bold">{stats.availableItems} Avail</h3>
                                     </div>
                                 </div>
@@ -318,30 +334,69 @@ export default function InventoryManager() {
                                 <table className="table table-hover align-middle">
                                     <thead className="table-light">
                                         <tr>
-                                            <th>Slab Code</th>
-                                            <th>Dimensions (L x W)</th>
-                                            <th>Area (SQFT)</th>
-                                            <th>Thickness</th>
-                                            <th>Origin / Finish</th>
+                                            <th>Item / Variant</th>
+                                            <th>Stock Code / Batch</th>
+                                            <th>Location</th>
+                                            <th>Quantity & Unit</th>
+                                            <th>Dimensions / Area</th>
+                                            <th>Type / Specs</th>
                                             <th>Status</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {inventory.map((item) => (
-                                            <tr key={item.id}>
-                                                <td className="fw-bold font-monospace text-primary">{item.slab_code}</td>
-                                                <td>{item.length}” x {item.width}”</td>
-                                                <td><strong>{parseFloat(item.area_on_hand).toFixed(2)}</strong> SQFT</td>
-                                                <td>{item.thickness} mm</td>
-                                                <td>{item.origin} / {item.finish}</td>
-                                                <td>
-                                                    <span className={`badge ${
-                                                        item.status === 'AVAILABLE' || item.status === 'ON_HAND' ? 'bg-success bg-opacity-10 text-success' : 
-                                                        item.status === 'RESERVED' ? 'bg-warning bg-opacity-10 text-warning' : 'bg-secondary bg-opacity-10 text-secondary'
-                                                    }`}>{item.status}</span>
+                                        {inventory.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="7" className="text-center py-4 text-muted">
+                                                    No inventory stock entries found.
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : (
+                                            inventory.map((item) => (
+                                                <tr key={item.id}>
+                                                    <td>
+                                                        <div className="fw-bold text-dark">{item.variant_name || 'Standard Product'}</div>
+                                                        {item.variant_sku && <small className="text-muted">SKU: {item.variant_sku}</small>}
+                                                    </td>
+                                                    <td>
+                                                        <span className="fw-bold font-monospace text-primary">{item.object_code || item.slab_code}</span>
+                                                        {item.batch_number && <div className="small text-muted">Batch: {item.batch_number}</div>}
+                                                    </td>
+                                                    <td>
+                                                        <div className="small fw-semibold">{item.warehouse_name || 'Main Warehouse'}</div>
+                                                        {item.storage_location_name && <small className="text-muted">{item.storage_location_name}</small>}
+                                                    </td>
+                                                    <td>
+                                                        <strong>{parseFloat(item.quantity || 0).toFixed(2)}</strong> {item.unit_symbol || (item.inventory_behavior === 'SLAB' ? 'Slab' : 'Units')}
+                                                    </td>
+                                                    <td>
+                                                        {item.length && item.width ? (
+                                                            <div>
+                                                                <span>{item.length}” x {item.width}”</span>
+                                                                <br />
+                                                                <strong className="small text-primary">{parseFloat(item.area || 0).toFixed(2)} SQFT</strong>
+                                                            </div>
+                                                        ) : item.area > 0 ? (
+                                                            <strong>{parseFloat(item.area).toFixed(2)} SQFT</strong>
+                                                        ) : (
+                                                            <span className="text-muted">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        {item.origin || item.finish ? (
+                                                            <small>{item.origin || ''} {item.finish ? `/ ${item.finish}` : ''}</small>
+                                                        ) : (
+                                                            <span className="badge bg-light text-dark">{item.inventory_behavior || 'STANDARD'}</span>
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        <span className={`badge ${
+                                                            item.status === 'AVAILABLE' || item.status === 'ON_HAND' ? 'bg-success bg-opacity-10 text-success' : 
+                                                            item.status === 'RESERVED' ? 'bg-warning bg-opacity-10 text-warning' : 'bg-secondary bg-opacity-10 text-secondary'
+                                                        }`}>{item.status}</span>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -355,11 +410,11 @@ export default function InventoryManager() {
                                 <h5 className="fw-bold text-primary mb-3">Create Soft/Hard Reservation</h5>
                                 <form onSubmit={handleReserveSubmit}>
                                     <div className="mb-3">
-                                        <label className="form-label">Select Slab Unit</label>
+                                        <label className="form-label">Select Stock / Slab Item</label>
                                         <select className="form-select" value={resForm.inventory_object_id} onChange={(e) => setResForm({...resForm, inventory_object_id: e.target.value})} required>
-                                            <option value="">-- Choose available slab --</option>
+                                            <option value="">-- Choose available stock item --</option>
                                             {inventory.map(s => (
-                                                <option key={s.id} value={s.id}>{s.slab_code} - {s.area_on_hand} SQFT ({s.status})</option>
+                                                <option key={s.id} value={s.id}>{formatStockLabel(s)}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -384,11 +439,11 @@ export default function InventoryManager() {
                                 <h5 className="fw-bold text-success mb-3">Submit Hard Order Allocation</h5>
                                 <form onSubmit={handleAllocateSubmit}>
                                     <div className="mb-3">
-                                        <label className="form-label">Select Slab Unit</label>
+                                        <label className="form-label">Select Stock / Slab Item</label>
                                         <select className="form-select" value={allocForm.inventory_object_id} onChange={(e) => setAllocForm({...allocForm, inventory_object_id: e.target.value})} required>
-                                            <option value="">-- Choose available slab --</option>
+                                            <option value="">-- Choose available stock item --</option>
                                             {inventory.map(s => (
-                                                <option key={s.id} value={s.id}>{s.slab_code} - {s.area_on_hand} SQFT ({s.status})</option>
+                                                <option key={s.id} value={s.id}>{formatStockLabel(s)}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -435,9 +490,9 @@ export default function InventoryManager() {
                                             updated.items[0].inventory_object_id = e.target.value;
                                             setTransferForm(updated);
                                         }} required>
-                                            <option value="">-- Choose slab --</option>
+                                            <option value="">-- Choose item --</option>
                                             {inventory.map(s => (
-                                                <option key={s.id} value={s.id}>{s.slab_code} ({s.status})</option>
+                                                <option key={s.id} value={s.id}>{formatStockLabel(s)}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -490,15 +545,15 @@ export default function InventoryManager() {
                                         </select>
                                     </div>
                                     <div className="col-md-4">
-                                        <label className="form-label">Slab Unit</label>
+                                        <label className="form-label">Stock Item</label>
                                         <select className="form-select" onChange={(e) => {
                                             const updated = { ...adjustmentForm };
                                             updated.items[0].inventory_object_id = e.target.value;
                                             setAdjustmentForm(updated);
                                         }} required>
-                                            <option value="">-- Choose slab --</option>
+                                            <option value="">-- Choose item --</option>
                                             {inventory.map(s => (
-                                                <option key={s.id} value={s.id}>{s.slab_code} ({s.status})</option>
+                                                <option key={s.id} value={s.id}>{formatStockLabel(s)}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -612,11 +667,11 @@ export default function InventoryManager() {
                             <div className="card p-3 mb-4 bg-light">
                                 <div className="row g-3">
                                     <div className="col-md-5">
-                                        <label className="form-label">Select Slab Unit</label>
+                                        <label className="form-label">Select Stock Item</label>
                                         <select className="form-select" value={selectedValId} onChange={(e) => setSelectedValId(e.target.value)}>
-                                            <option value="">-- Choose slab --</option>
+                                            <option value="">-- Choose item --</option>
                                             {inventory.map(s => (
-                                                <option key={s.id} value={s.id}>{s.slab_code} (Area: {s.area_on_hand} SQFT)</option>
+                                                <option key={s.id} value={s.id}>{formatStockLabel(s)}</option>
                                             ))}
                                         </select>
                                     </div>

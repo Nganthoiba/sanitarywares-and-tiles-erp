@@ -548,12 +548,12 @@ class ProductApiController extends Controller
 
         $onHandCount = \App\Domains\Inventory\Models\InventoryObject::where('organization_id', $orgId)
             ->where('product_variant_id', $variant->id)
-            ->whereIn('status', ['ON_HAND', 'RESERVED'])
+            ->whereIn('status', ['AVAILABLE', 'ON_HAND', 'RESERVED'])
             ->count();
 
         $onHandQty = \App\Domains\Inventory\Models\InventoryObject::where('organization_id', $orgId)
             ->where('product_variant_id', $variant->id)
-            ->whereIn('status', ['ON_HAND', 'RESERVED'])
+            ->whereIn('status', ['AVAILABLE', 'ON_HAND', 'RESERVED'])
             ->sum('quantity');
 
         $reservedQty = \App\Domains\Inventory\Models\InventoryObject::where('organization_id', $orgId)
@@ -563,12 +563,12 @@ class ProductApiController extends Controller
 
         $availableQty = \App\Domains\Inventory\Models\InventoryObject::where('organization_id', $orgId)
             ->where('product_variant_id', $variant->id)
-            ->where('status', 'ON_HAND')
+            ->whereIn('status', ['AVAILABLE', 'ON_HAND'])
             ->sum('quantity');
 
         $totalArea = \App\Domains\Inventory\Models\InventoryObject::where('organization_id', $orgId)
             ->where('product_variant_id', $variant->id)
-            ->whereIn('status', ['ON_HAND', 'RESERVED'])
+            ->whereIn('status', ['AVAILABLE', 'ON_HAND', 'RESERVED'])
             ->sum('area');
 
         $reservedArea = \App\Domains\Inventory\Models\InventoryObject::where('organization_id', $orgId)
@@ -578,7 +578,7 @@ class ProductApiController extends Controller
 
         $availableArea = \App\Domains\Inventory\Models\InventoryObject::where('organization_id', $orgId)
             ->where('product_variant_id', $variant->id)
-            ->where('status', 'ON_HAND')
+            ->whereIn('status', ['AVAILABLE', 'ON_HAND'])
             ->sum('area');
 
         return response()->json([

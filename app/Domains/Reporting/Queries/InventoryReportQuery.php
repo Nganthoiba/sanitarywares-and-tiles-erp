@@ -51,7 +51,7 @@ class InventoryReportQuery
                 DB::raw('sum(inventory_objects.area) as total_area')
             )
             ->where('inventory_objects.organization_id', $orgId)
-            ->where('inventory_objects.status', 'ON_HAND');
+            ->whereIn('inventory_objects.status', ['AVAILABLE', 'ON_HAND']);
 
         if (!empty($filters['warehouse_id'])) {
             $query->where('inventory_objects.warehouse_id', $filters['warehouse_id']);

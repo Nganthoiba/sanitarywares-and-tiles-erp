@@ -26,6 +26,7 @@ class InventoryService
                 ->where('organization_id', $grn->organization_id)
                 ->where('reference_type', 'GoodsReceiptNote')
                 ->where('reference_id', $grn->id)
+                ->where('movement_type', 'PURCHASE')
                 ->exists();
 
             if ($alreadyProcessed) {
@@ -34,9 +35,16 @@ class InventoryService
 
             foreach ($grn->items as $item) {
                 $variant = $item->variant;
+                $acceptedQty = (float) $item->quantity_accepted;
+
+                if ($acceptedQty <= 0) {
+                    continue;
+                }
+
+                $itemBatch = $item->batch_number ?? $grn->batch_number ?? $grn->grn_number;
 
                 if ($variant->inventory_behavior === 'SLAB') {
-                    // Granite slab receipt: 1 inventory_object per slab
+                    // Granite slab receipt: 1 inventory_object per accepted slab
                     foreach ($item->slabs as $index => $slabData) {
                         $length = (float) $slabData->length;
                         $width = (float) $slabData->width;
@@ -62,7 +70,7 @@ class InventoryService
                             'object_code' => $slabCode,
                             'quantity' => 1.0000,
                             'area' => $area,
-                            'batch_number' => $grn->batch_number ?? $grn->grn_number,
+                            'batch_number' => $itemBatch,
                             'status' => 'AVAILABLE',
                         ]);
 
@@ -96,39 +104,43 @@ class InventoryService
                         $movement->save();
                     }
                 } else {
-                    // Bulk inventory receipt (Tiles, Sanitary, etc.): ONE aggregated inventory_object
-                    $receivedQty = (float) $item->quantity_received;
+                    // Bulk inventory receipt (Tiles, Sanitary, etc.): Aggregated stock by batch/location
                     $fromUnitId = $item->unit_id;
                     $baseUnitId = $variant->base_unit_id;
 
-                    // 1. Convert received qty to base unit (e.g. Box to PCS)
-                    $baseQty = $this->convertQuantity($receivedQty, $fromUnitId, $baseUnitId, $variant->id, $grn->organization_id);
+                    // 1. Convert accepted qty to base unit (e.g. Box to PCS)
+                    $baseQty = $this->convertQuantity($acceptedQty, $fromUnitId, $baseUnitId, $variant->id, $grn->organization_id);
 
                     // 2. Calculate area in SQFT if applicable
-                    $area = $this->getAreaForQuantity($receivedQty, $fromUnitId, $variant->id, $grn->organization_id);
+                    $area = $this->getAreaForQuantity($acceptedQty, $fromUnitId, $variant->id, $grn->organization_id);
 
-                    // Generate a unique object code for the bulk batch
-                    $objectCode = 'BULK-' . $grn->grn_number . '-' . $item->id;
+                    // Check for an existing bulk inventory object for same variant, location & batch
+                    $inventoryObj = InventoryObject::where('organization_id', $grn->organization_id)
+                        ->where('product_variant_id', $item->product_variant_id)
+                        ->where('warehouse_id', $grn->warehouse_id)
+                        ->where('storage_location_id', $grn->storage_location_id)
+                        ->where('batch_number', $itemBatch)
+                        ->where('status', 'AVAILABLE')
+                        ->first();
 
-                    // Check if bulk inventory object already exists to prevent duplicate
-                    $exists = InventoryObject::where('organization_id', $grn->organization_id)
-                        ->where('object_code', $objectCode)
-                        ->exists();
-                    if ($exists) {
-                        throw new \Exception("Inventory object with code {$objectCode} already exists.");
+                    if ($inventoryObj) {
+                        $inventoryObj->quantity = (float) $inventoryObj->quantity + $baseQty;
+                        $inventoryObj->area = (float) $inventoryObj->area + $area;
+                        $inventoryObj->save();
+                    } else {
+                        $objectCode = 'BULK-' . $grn->grn_number . '-' . $item->id;
+                        $inventoryObj = InventoryObject::create([
+                            'organization_id' => $grn->organization_id,
+                            'product_variant_id' => $item->product_variant_id,
+                            'warehouse_id' => $grn->warehouse_id,
+                            'storage_location_id' => $grn->storage_location_id,
+                            'object_code' => $objectCode,
+                            'quantity' => $baseQty,
+                            'area' => $area,
+                            'batch_number' => $itemBatch,
+                            'status' => 'AVAILABLE',
+                        ]);
                     }
-
-                    $inventoryObj = InventoryObject::create([
-                        'organization_id' => $grn->organization_id,
-                        'product_variant_id' => $item->product_variant_id,
-                        'warehouse_id' => $grn->warehouse_id,
-                        'storage_location_id' => $grn->storage_location_id,
-                        'object_code' => $objectCode,
-                        'quantity' => $baseQty,
-                        'area' => $area,
-                        'batch_number' => $grn->batch_number ?? $grn->grn_number,
-                        'status' => 'AVAILABLE',
-                    ]);
 
                     // Link inventory object to the GRN item
                     $item->update(['inventory_object_id' => $inventoryObj->id]);
@@ -151,6 +163,47 @@ class InventoryService
 
             // Dispatch event for downstream systems (accounting, reports, etc.)
             event(new InventoryReceived($grn));
+        });
+    }
+
+    /**
+     * Reverse stock receipt when a Goods Receipt Note is cancelled.
+     */
+    public function reverseGRN(GoodsReceiptNote $grn): void
+    {
+        DB::transaction(function () use ($grn) {
+            $movements = InventoryMovement::where('organization_id', $grn->organization_id)
+                ->where('reference_type', 'GoodsReceiptNote')
+                ->where('reference_id', $grn->id)
+                ->where('movement_type', 'PURCHASE')
+                ->get();
+
+            foreach ($movements as $movement) {
+                // Create reversal movement
+                $reversal = new InventoryMovement([
+                    'organization_id' => $grn->organization_id,
+                    'inventory_object_id' => $movement->inventory_object_id,
+                    'movement_type' => 'RETURN',
+                    'quantity_delta' => -$movement->quantity_delta,
+                    'area_delta' => -$movement->area_delta,
+                    'from_warehouse_id' => $grn->warehouse_id,
+                    'from_storage_location_id' => $grn->storage_location_id,
+                    'reference_type' => 'GoodsReceiptNote',
+                    'reference_id' => $grn->id,
+                ]);
+                $reversal->save();
+
+                // Update inventory object
+                $obj = InventoryObject::find($movement->inventory_object_id);
+                if ($obj) {
+                    $obj->quantity = max(0, (float) $obj->quantity - (float) $movement->quantity_delta);
+                    $obj->area = max(0, (float) $obj->area - (float) $movement->area_delta);
+                    if ($obj->quantity <= 0) {
+                        $obj->status = 'CANCELLED';
+                    }
+                    $obj->save();
+                }
+            }
         });
     }
 

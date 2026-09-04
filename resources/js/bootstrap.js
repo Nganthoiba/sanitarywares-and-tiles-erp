@@ -4,6 +4,15 @@ window.axios = axios;
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 window.axios.defaults.headers.common['Accept'] = 'application/json';
 
+// Automatically attach Bearer token from localStorage if present
+window.axios.interceptors.request.use((config) => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+});
+
 // Helper to check if a request URL targets /api/user (e.g., http://127.0.0.1:8000/api/user or /api/user)
 export const isApiUserUrl = (url) => {
     if (!url || typeof url !== 'string') return false;

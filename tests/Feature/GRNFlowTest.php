@@ -670,4 +670,103 @@ class GRNFlowTest extends TestCase
         $response->assertStatus(422);
         $response->assertJsonFragment(['success' => false]);
     }
+
+    public function test_grn_accepted_quantity_increases_inventory_not_received_quantity()
+    {
+        // 100 received, 98 accepted, 2 rejected. Stock must increase by +98 boxes (980 pcs).
+        $grn = GoodsReceiptNote::create([
+            'organization_id' => $this->org->id,
+            'warehouse_id' => $this->warehouse->id,
+            'storage_location_id' => $this->location->id,
+            'grn_number' => 'GRN-PARTIAL-ACCEPT-1',
+            'received_date' => '2026-08-09',
+            'status' => GoodsReceiptStatus::DRAFT->value,
+        ]);
+
+        $grn->items()->create([
+            'organization_id' => $this->org->id,
+            'product_variant_id' => $this->tileVariant->id,
+            'unit_id' => $this->boxUnit->id,
+            'quantity_received' => 100.0000,
+            'quantity_accepted' => 98.0000,
+            'quantity_rejected' => 2.0000,
+            'unit_price' => 500.00,
+        ]);
+
+        $response = $this->actingAs($this->user, 'sanctum')
+            ->postJson("/api/grn/{$grn->id}/approve");
+
+        $response->assertStatus(200);
+
+        // 98 boxes * 10 multiplier = 980 PCS
+        $this->assertDatabaseHas('inventory_objects', [
+            'organization_id' => $this->org->id,
+            'product_variant_id' => $this->tileVariant->id,
+            'quantity' => 980.0000,
+        ]);
+
+        $this->assertDatabaseHas('inventory_movements', [
+            'organization_id' => $this->org->id,
+            'reference_type' => 'GoodsReceiptNote',
+            'reference_id' => $grn->id,
+            'movement_type' => 'PURCHASE',
+            'quantity_delta' => 980.0000,
+        ]);
+    }
+
+    public function test_grn_cancellation_reverses_inventory_stock()
+    {
+        // 1. Create and approve GRN
+        $grn = GoodsReceiptNote::create([
+            'organization_id' => $this->org->id,
+            'warehouse_id' => $this->warehouse->id,
+            'storage_location_id' => $this->location->id,
+            'grn_number' => 'GRN-CANCEL-1',
+            'received_date' => '2026-08-09',
+            'status' => GoodsReceiptStatus::DRAFT->value,
+        ]);
+
+        $grn->items()->create([
+            'organization_id' => $this->org->id,
+            'product_variant_id' => $this->tileVariant->id,
+            'unit_id' => $this->boxUnit->id,
+            'quantity_received' => 10.0000,
+            'quantity_accepted' => 10.0000,
+            'quantity_rejected' => 0.0000,
+            'unit_price' => 200.00,
+        ]);
+
+        $this->actingAs($this->user, 'sanctum')->postJson("/api/grn/{$grn->id}/approve");
+
+        // Verify stock is +100 PCS
+        $this->assertDatabaseHas('inventory_objects', [
+            'organization_id' => $this->org->id,
+            'product_variant_id' => $this->tileVariant->id,
+            'quantity' => 100.0000,
+        ]);
+
+        // 2. Cancel GRN
+        $response = $this->actingAs($this->user, 'sanctum')
+            ->postJson("/api/grn/{$grn->id}/cancel");
+
+        $response->assertStatus(200);
+        $this->assertEquals('CANCELLED', $grn->fresh()->status);
+
+        // Verify reversal movement created
+        $this->assertDatabaseHas('inventory_movements', [
+            'organization_id' => $this->org->id,
+            'reference_type' => 'GoodsReceiptNote',
+            'reference_id' => $grn->id,
+            'movement_type' => 'RETURN',
+            'quantity_delta' => -100.0000,
+        ]);
+
+        // Verify stock is reduced back to 0
+        $this->assertDatabaseHas('inventory_objects', [
+            'organization_id' => $this->org->id,
+            'product_variant_id' => $this->tileVariant->id,
+            'quantity' => 0.0000,
+            'status' => 'CANCELLED',
+        ]);
+    }
 }

@@ -16,9 +16,11 @@ return new class extends Migration {
             // Link to newly auto-created inventory object on receipt
             $table->foreignId('inventory_object_id')->index()->nullable()->constrained('inventory_objects')->onDelete('set null');
             
-            $table->integer('quantity_received');
-            $table->integer('quantity_accepted');
-            $table->integer('quantity_rejected')->default(0);
+            $table->decimal('quantity_received', 15, 4);
+            $table->decimal('quantity_accepted', 15, 4);
+            $table->decimal('quantity_rejected', 15, 4)->default(0.0000);
+            $table->decimal('unit_price', 15, 4)->nullable();
+            $table->string('batch_number', 50)->nullable();
             $table->decimal('received_pricing_quantity', 15, 4)->default(0.0000);
             $table->timestamps();
             $table->softDeletes();

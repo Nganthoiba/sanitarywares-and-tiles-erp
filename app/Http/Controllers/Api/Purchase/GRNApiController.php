@@ -124,6 +124,27 @@ class GRNApiController extends Controller
     }
 
     /**
+     * Cancel an approved Goods Receipt Note (reversing inventory posting).
+     */
+    public function cancel($id)
+    {
+        try {
+            $grn = $this->grnService->cancelGRN($id);
+            $grn->load(['items.variant', 'items.unit', 'items.slabs', 'warehouse', 'storageLocation', 'supplier', 'order']);
+            return response()->json([
+                'success' => true,
+                'message' => 'Goods Receipt Note cancelled and inventory reversed successfully.',
+                'data' => new GoodsReceiptNoteResource($grn)
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
      * Retrieve all form data and reference arrays required for GRN entry.
      */
     public function getFormData(Request $request)

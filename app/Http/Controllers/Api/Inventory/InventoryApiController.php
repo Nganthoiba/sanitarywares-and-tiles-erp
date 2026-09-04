@@ -18,6 +18,7 @@ use App\Domains\Inventory\Models\InventoryTransfer;
 use App\Domains\Inventory\Models\InventoryAdjustment;
 use App\Domains\Inventory\Models\InventoryCount;
 use App\Domains\Inventory\Models\InventoryValuation;
+use App\Http\Resources\InventoryObjectResource;
 
 class InventoryApiController extends Controller
 {
@@ -30,6 +31,40 @@ class InventoryApiController extends Controller
         protected GraniteService $graniteService,
         protected ValuationService $valuationService
     ) {}
+
+    /**
+     * GET /api/inventory
+     */
+    public function index(Request $request)
+    {
+        $query = InventoryObject::with(['variant.baseUnit', 'warehouse', 'storageLocation', 'slabDetail']);
+
+        if ($request->has('organization_id')) {
+            $query->where('organization_id', $request->input('organization_id'));
+        }
+
+        if ($request->has('warehouse_id')) {
+            $query->where('warehouse_id', $request->input('warehouse_id'));
+        }
+
+        if ($request->has('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->has('inventory_behavior')) {
+            $behavior = $request->input('inventory_behavior');
+            $query->whereHas('variant', function ($q) use ($behavior) {
+                $q->where('inventory_behavior', $behavior);
+            });
+        }
+
+        $slabs = $query->orderBy('created_at', 'desc')->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => InventoryObjectResource::collection($slabs),
+        ]);
+    }
 
     // 1. Reserves
     public function reserve(Request $request)
