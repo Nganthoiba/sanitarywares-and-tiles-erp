@@ -331,6 +331,48 @@ class ProductAttributeTest extends TestCase
         $response->assertStatus(404);
     }
 
+    /** @test */
+    public function test_update_product_variant_with_global_attributes_succeeds()
+    {
+        $globalAttr = ProductAttribute::withoutGlobalScopes()->create([
+            'organization_id' => null,
+            'name' => 'Tile Size',
+            'slug' => 'tile-size',
+            'type' => 'selection'
+        ]);
+
+        $product = $this->createOrgAProduct();
+
+        $response = $this->actingAs($this->user)
+            ->putJson("/api/product/variants/{$product->id}", [
+                'category_id' => $this->category->id,
+                'brand_id' => $this->brand->id,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'inventory_behavior' => 'STANDARD',
+                'primary_unit_id' => $this->boxUnit->id,
+                'secondary_unit_id' => null,
+                'pricing_unit_id' => $this->boxUnit->id,
+                'tax_profile_id' => $this->taxProfile->id,
+                'is_active' => true,
+                'attributes' => [
+                    [
+                        'attribute_id' => $globalAttr->id,
+                        'value' => '2 × 2 ft'
+                    ]
+                ]
+            ]);
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('product_attribute_values', [
+            'organization_id' => $this->org->id,
+            'product_variant_id' => $product->id,
+            'product_attribute_id' => $globalAttr->id,
+            'value' => '2 × 2 ft'
+        ]);
+    }
+
     private function createOrgAProduct(): Product
     {
         return Product::create([

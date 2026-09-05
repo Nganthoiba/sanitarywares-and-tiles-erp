@@ -96,6 +96,8 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
 
     // Core Inventory Routes
     Route::get('/inventory', [InventoryApiController::class, 'index']);
+    Route::get('/inventory/form-data', [InventoryApiController::class, 'getFormData']);
+    Route::get('/inventory/movements', [InventoryApiController::class, 'getMovements']);
     Route::get('/granite/slabs', [GraniteSlabApiController::class, 'index']);
     Route::get('/granite/slabs/{id}', [GraniteSlabApiController::class, 'show']);
     Route::post('/granite/slabs/{id}/cut', [GraniteSlabApiController::class, 'cut']);

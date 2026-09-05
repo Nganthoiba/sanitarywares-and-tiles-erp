@@ -2,397 +2,715 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 
 export default function InventoryManager() {
-    const [activeSection, setActiveSection] = useState("dashboard");
-    const [inventory, setInventory] = useState([]);
+    const [viewMode, setViewMode] = useState("stock"); // 'stock' | 'history'
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [successMessage, setSuccessMessage] = useState(null);
 
-    // Global Stats
-    const [stats, setStats] = useState({
-        totalItems: 0,
-        totalArea: 0,
-        availableItems: 0,
-        activeReservations: 0,
-        activeAllocations: 0
+    // Stock Data & Summary Cards
+    const [stockItems, setStockItems] = useState([]);
+    const [summaryCards, setSummaryCards] = useState({
+        total_stock: 0,
+        total_on_hand_qty: 0,
+        available_stock: 0,
+        reserved_stock: 0,
+        low_stock_count: 0
     });
 
-    // Reservations Form / List
-    const [reservations, setReservations] = useState([]);
-    const [resForm, setResForm] = useState({
-        inventory_object_id: "",
-        quantity: 1,
-        area: 0,
-        reservation_type: "SOFT",
-        expires_at: ""
+    // Options & References
+    const [contexts, setContexts] = useState({
+        warehouses: [],
+        categories: [],
+        storage_locations: [],
+        product_variants: []
     });
 
-    // Allocations Form / List
-    const [allocations, setAllocations] = useState([]);
-    const [allocForm, setAllocForm] = useState({
-        inventory_object_id: "",
-        quantity: 1,
-        area: 0,
-        reference_type: "ORDER",
-        reference_id: ""
+    // Filter state
+    const [filters, setFilters] = useState({
+        warehouse_id: "",
+        category_id: "",
+        status: "ALL",
+        search: ""
     });
 
-    // Transfers Form / List
-    const [transfers, setTransfers] = useState([]);
+    // History Ledger state
+    const [movements, setMovements] = useState([]);
+    const [movementsLoading, setMovementsLoading] = useState(false);
+    const [movementsPagination, setMovementsPagination] = useState({
+        current_page: 1,
+        last_page: 1,
+        total: 0
+    });
+
+    // Item details modal/drawer state
+    const [selectedItem, setSelectedItem] = useState(null);
+    const [recentActivity, setRecentActivity] = useState([]);
+    const [activityLoading, setActivityLoading] = useState(false);
+
+    // Action Modals State
+    const [activeModal, setActiveModal] = useState(null); // 'transfer' | 'adjust' | 'count' | null
+    const [submittingAction, setSubmittingAction] = useState(false);
+
+    // Transfer Form
     const [transferForm, setTransferForm] = useState({
-        from_warehouse_id: "1",
-        to_warehouse_id: "2",
-        items: [{ inventory_object_id: "", quantity: 1 }]
-    });
-
-    // Adjustments Form / List
-    const [adjustments, setAdjustments] = useState([]);
-    const [adjustmentForm, setAdjustmentForm] = useState({
-        warehouse_id: "1",
-        adjustment_type: "DAMAGE",
-        reason: "",
-        items: [{ inventory_object_id: "", quantity_delta: -1, area_delta: 0 }]
-    });
-
-    // Cycle Audit Form / List
-    const [auditList, setAuditList] = useState([]);
-    const [auditForm, setAuditForm] = useState({
-        warehouse_id: "1",
-        count_type: "CYCLE",
+        from_warehouse_id: "",
+        to_warehouse_id: "",
+        product_variant_id: "",
+        inventory_object_id: "",
+        quantity: 1,
+        destination_location_id: "",
         remarks: ""
     });
 
-    // Granite Slabs Form / List
-    const [slabs, setSlabs] = useState([]);
-    const [slabForm, setSlabForm] = useState({
-        warehouse_id: "1",
-        product_variant_id: "1",
-        slab_code: "",
-        length: 120,
-        width: 60,
-        thickness: 20,
-        area: 50,
-        finish: "POLISHED",
-        origin: "ITALY"
+    // Adjust Form
+    const [adjustForm, setAdjustForm] = useState({
+        warehouse_id: "",
+        product_variant_id: "",
+        inventory_object_id: "",
+        adjustment_type: "DAMAGE",
+        quantity_delta: -1,
+        reason: "",
+        remarks: ""
     });
 
-    // Valuation Panel
-    const [valuationResults, setValuationResults] = useState(null);
-    const [selectedValId, setSelectedValId] = useState("");
-    const [valMethod, setValMethod] = useState("SPECIFIC_ID");
+    // Stock Count Form
+    const [countForm, setCountForm] = useState({
+        warehouse_id: "",
+        count_type: "SPOT",
+        remarks: "",
+        items: []
+    });
 
     const getAuthHeaders = () => {
-        const token = localStorage.getItem('auth_token');
+        const token = localStorage.getItem("auth_token");
         return token ? { Authorization: `Bearer ${token}` } : {};
     };
 
-    // Load data
-    const loadInventoryData = async () => {
+    // Load Stock Summary & Data
+    const loadStockData = async () => {
         setLoading(true);
+        setError(null);
         try {
-            // Fetch inventory stock matrix
-            const res = await axios.get("/api/inventory", { headers: getAuthHeaders() });
+            const params = {};
+            if (filters.warehouse_id) params.warehouse_id = filters.warehouse_id;
+            if (filters.category_id) params.category_id = filters.category_id;
+            if (filters.status !== "ALL") params.status = filters.status;
+            if (filters.search) params.search = filters.search;
+
+            const res = await axios.get("/api/inventory", {
+                headers: getAuthHeaders(),
+                params
+            });
+
             if (res.data.success) {
-                const data = res.data.data;
-                setInventory(data);
-                setSlabs(data);
-
-                // calculate stats
-                const totalI = data.length;
-                const totalA = data.reduce((acc, s) => acc + parseFloat(s.area || s.area_on_hand || 0), 0);
-                const availI = data.filter(s => s.status === "AVAILABLE" || s.status === "ON_HAND").length;
-
-                setStats({
-                    totalItems: totalI,
-                    totalArea: totalA,
-                    availableItems: availI,
-                    activeReservations: data.filter(s => s.status === "RESERVED").length,
-                    activeAllocations: data.filter(s => s.status === "ALLOCATED").length
-                });
+                setStockItems(res.data.data || []);
+                if (res.data.summary_cards) {
+                    setSummaryCards(res.data.summary_cards);
+                }
             }
         } catch (err) {
-            setError("Failed to fetch current inventory matrix.");
+            setError("Failed to fetch inventory stock records.");
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        loadInventoryData();
-    }, []);
-
-    // 1. Submit Reservation
-    const handleReserveSubmit = async (e) => {
-        e.preventDefault();
+    // Load Form Options (Warehouses, Categories, Locations, Products)
+    const loadContexts = async () => {
         try {
-            const res = await axios.post("/api/inventory/reserve", resForm, { headers: getAuthHeaders() });
-            if (res.data.success) {
-                alert("Soft Reservation Completed successfully.");
-                setReservations([...reservations, res.data.data]);
-                loadInventoryData();
-            }
-        } catch (err) {
-            alert(err.response?.data?.message || "Failed to complete reservation.");
-        }
-    };
-
-    // 2. Submit Allocation
-    const handleAllocateSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const res = await axios.post("/api/inventory/allocate", allocForm, { headers: getAuthHeaders() });
-            if (res.data.success) {
-                alert("Hard Inventory Allocation verified & recorded.");
-                setAllocations([...allocations, res.data.data]);
-                loadInventoryData();
-            }
-        } catch (err) {
-            alert(err.response?.data?.message || "Failed to complete allocation.");
-        }
-    };
-
-    // 3. Initiate Transfer
-    const handleTransferSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const res = await axios.post("/api/inventory/transfers", transferForm, { headers: getAuthHeaders() });
-            if (res.data.success) {
-                alert("Transfer sheet created. Status: In-Transit.");
-                setTransfers([...transfers, res.data.data]);
-                loadInventoryData();
-            }
-        } catch (err) {
-            alert(err.response?.data?.message || "Failed to process transfer request.");
-        }
-    };
-
-    const handleReceiveTransfer = async (id) => {
-        try {
-            const res = await axios.post(`/api/inventory/transfers/${id}/complete`, {}, { headers: getAuthHeaders() });
-            if (res.data.success) {
-                alert("Transfer completed. Stock added to target warehouse.");
-                loadInventoryData();
-            }
-        } catch (err) {
-            alert(err.response?.data?.message || "Failed to complete receiving.");
-        }
-    };
-
-    // 4. Adjustments
-    const handleAdjustmentSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const res = await axios.post("/api/inventory/adjustments", adjustmentForm, { headers: getAuthHeaders() });
-            if (res.data.success) {
-                alert("Adjustment draft generated.");
-                setAdjustments([...adjustments, res.data.data]);
-            }
-        } catch (err) {
-            alert(err.response?.data?.message || "Failed to create adjustment.");
-        }
-    };
-
-    const handleApproveAdjustment = async (id) => {
-        try {
-            const res = await axios.post(`/api/inventory/adjustments/${id}/approve`, {}, { headers: getAuthHeaders() });
-            if (res.data.success) {
-                alert("Adjustment approved. Slabs updated.");
-                loadInventoryData();
-            }
-        } catch (err) {
-            alert(err.response?.data?.message || "Failed to approve adjustment.");
-        }
-    };
-
-    // 5. Audits
-    const handleAuditSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const res = await axios.post("/api/inventory/counts", auditForm, { headers: getAuthHeaders() });
-            if (res.data.success) {
-                alert("Cycle audit count list generated.");
-                setAuditList([...auditList, res.data.data]);
-                loadInventoryData();
-            }
-        } catch (err) {
-            alert(err.response?.data?.message || "Failed to start counting.");
-        }
-    };
-
-    const handleApproveAuditCount = async (id) => {
-        try {
-            const res = await axios.post(`/api/inventory/counts/${id}/approve`, {}, { headers: getAuthHeaders() });
-            if (res.data.success) {
-                alert("Cycle Count audit approved and posted.");
-                loadInventoryData();
-            }
-        } catch (err) {
-            alert(err.response?.data?.message || "Failed to approve count sheet.");
-        }
-    };
-
-    // 6. Slabs Cut
-    const handleCreateSlab = async (e) => {
-        e.preventDefault();
-        try {
-            const res = await axios.post("/api/granite/slabs/new", slabForm, { headers: getAuthHeaders() });
-            if (res.data.success) {
-                alert("Slab registered successfully.");
-                loadInventoryData();
-            }
-        } catch (err) {
-            alert(err.response?.data?.message || "Failed to create slab.");
-        }
-    };
-
-    // 7. Valuation
-    const checkValuation = async () => {
-        if (!selectedValId) return;
-        try {
-            const res = await axios.get(`/api/inventory/${selectedValId}/valuation`, {
-                params: { method: valMethod },
+            const res = await axios.get("/api/inventory/form-data", {
                 headers: getAuthHeaders()
             });
             if (res.data.success) {
-                setValuationResults(res.data.data);
+                setContexts({
+                    warehouses: res.data.warehouses || [],
+                    categories: res.data.categories || [],
+                    storage_locations: res.data.storage_locations || [],
+                    product_variants: res.data.product_variants || []
+                });
+
+                if (res.data.warehouses?.length > 0) {
+                    const firstWhId = String(res.data.warehouses[0].id);
+                    setTransferForm(prev => ({ ...prev, from_warehouse_id: firstWhId }));
+                    setAdjustForm(prev => ({ ...prev, warehouse_id: firstWhId }));
+                    setCountForm(prev => ({ ...prev, warehouse_id: firstWhId }));
+                }
             }
         } catch (err) {
-            alert(err.response?.data?.message || "Failed to retrieve valuation.");
+            console.error("Failed to load inventory options context", err);
         }
     };
 
-    // Helper to format option strings for both Slab and Bulk inventory
-    const formatStockLabel = (s) => {
-        const code = s.object_code || s.slab_code || `ID-${s.id}`;
-        const name = s.variant_name ? ` [${s.variant_name}]` : '';
-        const qty = (s.inventory_behavior === 'SLAB' || s.length)
-            ? `${parseFloat(s.area || s.area_on_hand || 0).toFixed(2)} SQFT`
-            : `${parseFloat(s.quantity || 0).toFixed(2)} ${s.unit_symbol || 'PCS'}`;
-        return `${code}${name} - ${qty} (${s.status})`;
+    // Load Movements Ledger
+    const loadMovements = async (page = 1) => {
+        setMovementsLoading(true);
+        try {
+            const res = await axios.get("/api/inventory/movements", {
+                headers: getAuthHeaders(),
+                params: { page, per_page: 25 }
+            });
+            if (res.data.success) {
+                setMovements(res.data.data || []);
+                if (res.data.pagination) {
+                    setMovementsPagination(res.data.pagination);
+                }
+            }
+        } catch (err) {
+            console.error("Failed to fetch stock movements ledger", err);
+        } finally {
+            setMovementsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadContexts();
+        loadStockData();
+    }, []);
+
+    useEffect(() => {
+        loadStockData();
+    }, [filters.warehouse_id, filters.category_id, filters.status]);
+
+    useEffect(() => {
+        if (viewMode === "history") {
+            loadMovements(1);
+        }
+    }, [viewMode]);
+
+    // Handle Open Stock Details
+    const handleOpenDetails = async (item) => {
+        setSelectedItem(item);
+        setActivityLoading(true);
+        try {
+            const res = await axios.get("/api/inventory/movements", {
+                headers: getAuthHeaders(),
+                params: {
+                    product_variant_id: item.product_variant_id,
+                    per_page: 10
+                }
+            });
+            if (res.data.success) {
+                setRecentActivity(res.data.data || []);
+            }
+        } catch (err) {
+            setRecentActivity([]);
+        } finally {
+            setActivityLoading(false);
+        }
+    };
+
+    // 1. Submit Transfer
+    const handleTransferSubmit = async (e) => {
+        e.preventDefault();
+        setSubmittingAction(true);
+        setError(null);
+        try {
+            let objId = transferForm.inventory_object_id;
+            if (!objId) {
+                const targetStock = stockItems.find(
+                    s => String(s.product_variant_id) === String(transferForm.product_variant_id) &&
+                         String(s.warehouse_id) === String(transferForm.from_warehouse_id)
+                );
+                if (targetStock && targetStock.inventory_object_ids?.length > 0) {
+                    objId = targetStock.inventory_object_ids[0];
+                }
+            }
+
+            if (!objId) {
+                alert("Please select a valid product with active stock in the source warehouse.");
+                setSubmittingAction(false);
+                return;
+            }
+
+            const payload = {
+                from_warehouse_id: parseInt(transferForm.from_warehouse_id),
+                to_warehouse_id: parseInt(transferForm.to_warehouse_id),
+                items: [
+                    {
+                        inventory_object_id: parseInt(objId),
+                        quantity: parseFloat(transferForm.quantity)
+                    }
+                ],
+                remarks: transferForm.remarks
+            };
+
+            const res = await axios.post("/api/inventory/transfers", payload, {
+                headers: getAuthHeaders()
+            });
+
+            if (res.data.success) {
+                setSuccessMessage("Stock transfer initiated successfully.");
+                setActiveModal(null);
+                loadStockData();
+                setTimeout(() => setSuccessMessage(null), 4000);
+            }
+        } catch (err) {
+            alert(err.response?.data?.message || "Failed to initiate stock transfer.");
+        } finally {
+            setSubmittingAction(false);
+        }
+    };
+
+    // 2. Submit Adjustment
+    const handleAdjustSubmit = async (e) => {
+        e.preventDefault();
+        setSubmittingAction(true);
+        setError(null);
+        try {
+            let objId = adjustForm.inventory_object_id;
+            if (!objId) {
+                const targetStock = stockItems.find(
+                    s => String(s.product_variant_id) === String(adjustForm.product_variant_id) &&
+                         String(s.warehouse_id) === String(adjustForm.warehouse_id)
+                );
+                if (targetStock && targetStock.inventory_object_ids?.length > 0) {
+                    objId = targetStock.inventory_object_ids[0];
+                }
+            }
+
+            if (!objId) {
+                alert("Please select a product with valid stock in the selected warehouse.");
+                setSubmittingAction(false);
+                return;
+            }
+
+            const payload = {
+                warehouse_id: parseInt(adjustForm.warehouse_id),
+                adjustment_type: adjustForm.adjustment_type,
+                reason: adjustForm.reason || "Manual stock adjustment",
+                items: [
+                    {
+                        inventory_object_id: parseInt(objId),
+                        quantity_delta: parseFloat(adjustForm.quantity_delta),
+                        area_delta: 0
+                    }
+                ]
+            };
+
+            const res = await axios.post("/api/inventory/adjustments", payload, {
+                headers: getAuthHeaders()
+            });
+
+            if (res.data.success) {
+                const adjId = res.data.data?.id;
+                if (adjId) {
+                    // Automatically approve adjustment to finalize stock update
+                    await axios.post(`/api/inventory/adjustments/${adjId}/approve`, {}, { headers: getAuthHeaders() });
+                }
+                setSuccessMessage("Stock adjustment submitted and posted successfully.");
+                setActiveModal(null);
+                loadStockData();
+                setTimeout(() => setSuccessMessage(null), 4000);
+            }
+        } catch (err) {
+            alert(err.response?.data?.message || "Failed to complete stock adjustment.");
+        } finally {
+            setSubmittingAction(false);
+        }
+    };
+
+    // 3. Submit Stock Count
+    const handleCountSubmit = async (e) => {
+        e.preventDefault();
+        setSubmittingAction(true);
+        setError(null);
+        try {
+            const payload = {
+                warehouse_id: parseInt(countForm.warehouse_id),
+                count_type: countForm.count_type,
+                remarks: countForm.remarks || "Physical stock count reconciliation"
+            };
+
+            const res = await axios.post("/api/inventory/counts", payload, {
+                headers: getAuthHeaders()
+            });
+
+            if (res.data.success) {
+                const countId = res.data.data?.id;
+                if (countId && countForm.product_variant_id) {
+                    // Update counted quantity on generated count items if applicable
+                    const countItems = res.data.data?.items || [];
+                    const targetItem = countItems.find(
+                        ci => String(ci.inventory_object?.product_variant_id) === String(countForm.product_variant_id)
+                    );
+                    if (targetItem) {
+                        await axios.post(
+                            `/api/inventory/counts/items/${targetItem.id}`,
+                            { counted_quantity: parseFloat(countForm.counted_quantity), counted_area: 0 },
+                            { headers: getAuthHeaders() }
+                        );
+                    }
+                    await axios.post(`/api/inventory/counts/${countId}/approve`, {}, { headers: getAuthHeaders() });
+                }
+
+                setSuccessMessage("Stock count recorded and reconciled successfully.");
+                setActiveModal(null);
+                loadStockData();
+                setTimeout(() => setSuccessMessage(null), 4000);
+            }
+        } catch (err) {
+            alert(err.response?.data?.message || "Failed to process stock count.");
+        } finally {
+            setSubmittingAction(false);
+        }
     };
 
     return (
-        <div className="card shadow-sm border-0">
-            <div className="card-header bg-white border-bottom-0 py-3">
-                <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h4 className="mb-0 fw-bold text-dark">Enterprise Inventory Control Engine</h4>
-                        <p className="text-muted mb-0">Manage reservations, hard allocations, slab divisions, transfers, and specific ID stock audits.</p>
+        <div className="container-fluid py-4">
+            {/* Success Alert */}
+            {successMessage && (
+                <div className="alert alert-success alert-dismissible fade show shadow-sm mb-4" role="alert">
+                    <i className="bi bi-check-circle-fill me-2"></i>
+                    {successMessage}
+                    <button type="button" className="btn-close" onClick={() => setSuccessMessage(null)}></button>
+                </div>
+            )}
+
+            {/* Error Alert */}
+            {error && (
+                <div className="alert alert-danger alert-dismissible fade show shadow-sm mb-4" role="alert">
+                    <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                    {error}
+                    <button type="button" className="btn-close" onClick={() => setError(null)}></button>
+                </div>
+            )}
+
+            {/* Main Header */}
+            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                <div>
+                    <h2 className="h3 font-weight-bold mb-1 text-dark">Inventory</h2>
+                    <p className="text-secondary small mb-0">
+                        View and manage current stock across warehouses and storage locations.
+                    </p>
+                </div>
+
+                <div className="d-flex align-items-center gap-2">
+                    {/* View Switcher Tabs */}
+                    <div className="btn-group me-2" role="group">
+                        <button
+                            type="button"
+                            className={`btn btn-sm ${viewMode === "stock" ? "btn-dark fw-medium" : "btn-outline-secondary"}`}
+                            onClick={() => setViewMode("stock")}
+                        >
+                            <i className="bi bi-boxes me-1"></i> Stock View
+                        </button>
+                        <button
+                            type="button"
+                            className={`btn btn-sm ${viewMode === "history" ? "btn-dark fw-medium" : "btn-outline-secondary"}`}
+                            onClick={() => setViewMode("history")}
+                        >
+                            <i className="bi bi-journal-text me-1"></i> Stock History
+                        </button>
                     </div>
-                    <button className="btn btn-outline-secondary btn-sm" onClick={loadInventoryData}>
-                        🔄 Refresh Data
+
+                    <button
+                        className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+                        onClick={loadStockData}
+                        disabled={loading}
+                    >
+                        <i className={`bi bi-arrow-clockwise ${loading ? "spin" : ""}`}></i>
+                        Refresh
                     </button>
+
+                    {/* Actions Dropdown */}
+                    <div className="dropdown">
+                        <button
+                            className="btn btn-primary btn-sm dropdown-toggle d-flex align-items-center gap-1 fw-medium"
+                            type="button"
+                            id="inventoryActionsDropdown"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                        >
+                            <i className="bi bi-plus-lg me-1"></i> Actions
+                        </button>
+                        <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="inventoryActionsDropdown">
+                            <li>
+                                <button className="dropdown-item py-2" onClick={() => setActiveModal("transfer")}>
+                                    <i className="bi bi-arrow-left-right text-primary me-2"></i>
+                                    Transfer Stock
+                                </button>
+                            </li>
+                            <li>
+                                <button className="dropdown-item py-2" onClick={() => setActiveModal("adjust")}>
+                                    <i className="bi bi-sliders text-warning me-2"></i>
+                                    Adjust Stock
+                                </button>
+                            </li>
+                            <li>
+                                <button className="dropdown-item py-2" onClick={() => setActiveModal("count")}>
+                                    <i className="bi bi-clipboard-check text-success me-2"></i>
+                                    Stock Count
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
 
-            <div className="card-body p-0">
-                {/* Horizontal Navigation Tabs */}
-                <div className="bg-light border-y p-2 d-flex">
-                    {["dashboard", "reserve-allocate", "transfers", "adjustments", "cycle-audits", "granite-slab", "valuation"].map((tab) => (
-                        <button
-                            key={tab}
-                            className={`btn btn-sm me-2 py-2 px-3 fw-bold text-capitalize ${activeSection === tab ? "btn-primary" : "btn-light text-secondary"}`}
-                            onClick={() => setActiveSection(tab)}
-                        >
-                            {tab.replace("-", " ")}
-                        </button>
-                    ))}
-                </div>
-
-                <div className="p-4">
-                    {/* 1. Dashboard View */}
-                    {activeSection === "dashboard" && (
-                        <div>
-                            <div className="row g-4 mb-4">
-                                <div className="col-12 col-md-3">
-                                    <div className="card border-0 bg-dark text-white p-3 shadow-sm rounded">
-                                        <small className="text-white-50">Total Stock Records</small>
-                                        <h3 className="mb-0 fw-bold">{stats.totalItems} Items</h3>
-                                    </div>
+            {/* Summary Cards */}
+            <div className="row g-3 mb-4">
+                <div className="col-12 col-sm-6 col-xl-3">
+                    <div className="card border-0 shadow-sm rounded-3 h-100 bg-white">
+                        <div className="card-body p-3">
+                            <div className="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span className="text-secondary small fw-semibold text-uppercase tracking-wider">Total Stock</span>
+                                    <h3 className="h2 fw-bold text-dark mb-0 mt-1">{summaryCards.total_stock}</h3>
+                                    <span className="text-muted fs-7">Unique stock entries</span>
                                 </div>
-                                <div className="col-12 col-md-3">
-                                    <div className="card border-0 bg-primary text-white p-3 shadow-sm rounded">
-                                        <small className="text-white-50">Total Area Size</small>
-                                        <h3 className="mb-0 fw-bold">{stats.totalArea.toFixed(2)} SQFT</h3>
-                                    </div>
-                                </div>
-                                <div className="col-12 col-md-3">
-                                    <div className="card border-0 bg-success text-white p-3 shadow-sm rounded">
-                                        <small className="text-white-50">Stock On Hand</small>
-                                        <h3 className="mb-0 fw-bold">{stats.availableItems} Avail</h3>
-                                    </div>
-                                </div>
-                                <div className="col-12 col-md-3">
-                                    <div className="card border-0 bg-warning text-dark p-3 shadow-sm rounded">
-                                        <small className="text-dark-50">Reserved / Allocated</small>
-                                        <h3 className="mb-0 fw-bold">{stats.activeReservations + stats.activeAllocations} Locked</h3>
-                                    </div>
+                                <div className="p-3 bg-primary-subtle text-primary rounded-3">
+                                    <i className="bi bi-box-seam fs-4"></i>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
 
-                            <h5 className="fw-bold mb-3">Live Stock Registry</h5>
+                <div className="col-12 col-sm-6 col-xl-3">
+                    <div className="card border-0 shadow-sm rounded-3 h-100 bg-white">
+                        <div className="card-body p-3">
+                            <div className="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span className="text-secondary small fw-semibold text-uppercase tracking-wider">Available Stock</span>
+                                    <h3 className="h2 fw-bold text-success mb-0 mt-1">
+                                        {Number(summaryCards.available_stock).toLocaleString()}
+                                    </h3>
+                                    <span className="text-muted fs-7">Ready for sale/dispatch</span>
+                                </div>
+                                <div className="p-3 bg-success-subtle text-success rounded-3">
+                                    <i className="bi bi-check-circle fs-4"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="col-12 col-sm-6 col-xl-3">
+                    <div className="card border-0 shadow-sm rounded-3 h-100 bg-white">
+                        <div className="card-body p-3">
+                            <div className="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span className="text-secondary small fw-semibold text-uppercase tracking-wider">Reserved Stock</span>
+                                    <h3 className="h2 fw-bold text-warning mb-0 mt-1">
+                                        {Number(summaryCards.reserved_stock).toLocaleString()}
+                                    </h3>
+                                    <span className="text-muted fs-7">Allocated to orders/quotes</span>
+                                </div>
+                                <div className="p-3 bg-warning-subtle text-warning rounded-3">
+                                    <i className="bi bi-lock fs-4"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="col-12 col-sm-6 col-xl-3">
+                    <div className="card border-0 shadow-sm rounded-3 h-100 bg-white">
+                        <div className="card-body p-3">
+                            <div className="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span className="text-secondary small fw-semibold text-uppercase tracking-wider">Low Stock</span>
+                                    <h3 className="h2 fw-bold text-danger mb-0 mt-1">{summaryCards.low_stock_count}</h3>
+                                    <span className="text-muted fs-7">Items needing replenishment</span>
+                                </div>
+                                <div className="p-3 bg-danger-subtle text-danger rounded-3">
+                                    <i className="bi bi-exclamation-triangle fs-4"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* STOCK VIEW vs HISTORY VIEW */}
+            {viewMode === "stock" ? (
+                <>
+                    {/* Filters Toolbar */}
+                    <div className="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+                        <div className="card-body p-3">
+                            <div className="row g-2 align-items-center">
+                                {/* Warehouse Filter */}
+                                <div className="col-12 col-md-3">
+                                    <label className="form-label small text-secondary mb-1">Warehouse</label>
+                                    <select
+                                        className="form-select form-select-sm"
+                                        value={filters.warehouse_id}
+                                        onChange={(e) => setFilters(prev => ({ ...prev, warehouse_id: e.target.value }))}
+                                    >
+                                        <option value="">All Warehouses</option>
+                                        {contexts.warehouses.map(w => (
+                                            <option key={w.id} value={w.id}>{w.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Category Filter */}
+                                <div className="col-12 col-md-3">
+                                    <label className="form-label small text-secondary mb-1">Category</label>
+                                    <select
+                                        className="form-select form-select-sm"
+                                        value={filters.category_id}
+                                        onChange={(e) => setFilters(prev => ({ ...prev, category_id: e.target.value }))}
+                                    >
+                                        <option value="">All Categories</option>
+                                        {contexts.categories.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Stock Status Filter */}
+                                <div className="col-12 col-md-2">
+                                    <label className="form-label small text-secondary mb-1">Stock Status</label>
+                                    <select
+                                        className="form-select form-select-sm"
+                                        value={filters.status}
+                                        onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                                    >
+                                        <option value="ALL">All</option>
+                                        <option value="IN_STOCK">In Stock</option>
+                                        <option value="LOW_STOCK">Low Stock</option>
+                                        <option value="OUT_OF_STOCK">Out of Stock</option>
+                                    </select>
+                                </div>
+
+                                {/* Search Bar */}
+                                <div className="col-12 col-md-4">
+                                    <label className="form-label small text-secondary mb-1">Search</label>
+                                    <form onSubmit={(e) => { e.preventDefault(); loadStockData(); }}>
+                                        <div className="input-group input-group-sm">
+                                            <span className="input-group-text bg-light border-end-0">
+                                                <i className="bi bi-search text-muted"></i>
+                                            </span>
+                                            <input
+                                                type="text"
+                                                className="form-control border-start-0 ps-0"
+                                                placeholder="Search product, SKU, barcode..."
+                                                value={filters.search}
+                                                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                                            />
+                                            {filters.search && (
+                                                <button
+                                                    className="btn btn-outline-secondary"
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setFilters(prev => ({ ...prev, search: "" }));
+                                                    }}
+                                                >
+                                                    <i className="bi bi-x-lg"></i>
+                                                </button>
+                                            )}
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Stock Table */}
+                    <div className="card border-0 shadow-sm rounded-3 bg-white">
+                        <div className="card-body p-0">
                             <div className="table-responsive">
-                                <table className="table table-hover align-middle">
-                                    <thead className="table-light">
+                                <table className="table table-hover table-borderless align-middle mb-0">
+                                    <thead className="bg-light border-bottom">
                                         <tr>
-                                            <th>Item / Variant</th>
-                                            <th>Stock Code / Batch</th>
-                                            <th>Location</th>
-                                            <th>Quantity & Unit</th>
-                                            <th>Dimensions / Area</th>
-                                            <th>Type / Specs</th>
-                                            <th>Status</th>
+                                            <th className="ps-4 py-3 text-secondary text-uppercase fs-7 fw-bold">Product</th>
+                                            <th className="py-3 text-secondary text-uppercase fs-7 fw-bold">Warehouse / Location</th>
+                                            <th className="py-3 text-end text-secondary text-uppercase fs-7 fw-bold">On Hand</th>
+                                            <th className="py-3 text-end text-secondary text-uppercase fs-7 fw-bold">Reserved</th>
+                                            <th className="py-3 text-end text-secondary text-uppercase fs-7 fw-bold">Available</th>
+                                            <th className="py-3 text-center text-secondary text-uppercase fs-7 fw-bold">Status</th>
+                                            <th className="pe-4 py-3 text-end text-secondary text-uppercase fs-7 fw-bold">Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        {inventory.length === 0 ? (
+                                    <tbody className="divide-y">
+                                        {loading ? (
                                             <tr>
-                                                <td colSpan="7" className="text-center py-4 text-muted">
-                                                    No inventory stock entries found.
+                                                <td colSpan="7" className="text-center py-5 text-muted">
+                                                    <div className="spinner-border spinner-border-sm me-2 text-primary" role="status"></div>
+                                                    Loading stock records...
+                                                </td>
+                                            </tr>
+                                        ) : stockItems.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="7" className="text-center py-5 text-muted">
+                                                    <i className="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                                                    No stock items match your search or filters.
                                                 </td>
                                             </tr>
                                         ) : (
-                                            inventory.map((item) => (
+                                            stockItems.map((item) => (
                                                 <tr key={item.id}>
-                                                    <td>
-                                                        <div className="fw-bold text-dark">{item.variant_name || 'Standard Product'}</div>
-                                                        {item.variant_sku && <small className="text-muted">SKU: {item.variant_sku}</small>}
-                                                    </td>
-                                                    <td>
-                                                        <span className="fw-bold font-monospace text-primary">{item.object_code || item.slab_code}</span>
-                                                        {item.batch_number && <div className="small text-muted">Batch: {item.batch_number}</div>}
-                                                    </td>
-                                                    <td>
-                                                        <div className="small fw-semibold">{item.warehouse_name || 'Main Warehouse'}</div>
-                                                        {item.storage_location_name && <small className="text-muted">{item.storage_location_name}</small>}
-                                                    </td>
-                                                    <td>
-                                                        <strong>{parseFloat(item.quantity || 0).toFixed(2)}</strong> {item.unit_symbol || (item.inventory_behavior === 'SLAB' ? 'Slab' : 'Units')}
-                                                    </td>
-                                                    <td>
-                                                        {item.length && item.width ? (
+                                                    <td className="ps-4 py-3">
+                                                        <div className="d-flex align-items-center">
                                                             <div>
-                                                                <span>{item.length}” x {item.width}”</span>
-                                                                <br />
-                                                                <strong className="small text-primary">{parseFloat(item.area || 0).toFixed(2)} SQFT</strong>
+                                                                <div className="fw-semibold text-dark fs-6">{item.product_name}</div>
+                                                                <div className="d-flex align-items-center gap-2 mt-1">
+                                                                    <span className="badge bg-light text-secondary border font-monospace">
+                                                                        SKU: {item.sku || 'N/A'}
+                                                                    </span>
+                                                                    {item.product_specs && (
+                                                                        <span className="text-secondary small">{item.product_specs}</span>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        ) : item.area > 0 ? (
-                                                            <strong>{parseFloat(item.area).toFixed(2)} SQFT</strong>
+                                                        </div>
+                                                    </td>
+
+                                                    <td className="py-3">
+                                                        <div className="fw-medium text-dark">{item.warehouse_name}</div>
+                                                        <div className="text-muted small">
+                                                            Location: <span className="badge bg-light text-dark border ms-1">{item.storage_location_code}</span>
+                                                        </div>
+                                                    </td>
+
+                                                    <td className="py-3 text-end fw-semibold text-dark">
+                                                        {item.is_slab ? (
+                                                            <div>
+                                                                <div>{item.on_hand_qty} Slabs</div>
+                                                                <div className="text-muted fs-7 font-normal">{Number(item.on_hand_area).toFixed(2)} sq.ft.</div>
+                                                            </div>
                                                         ) : (
-                                                            <span className="text-muted">-</span>
+                                                            <div>{Number(item.on_hand_qty).toLocaleString()} {item.unit_symbol}</div>
                                                         )}
                                                     </td>
-                                                    <td>
-                                                        {item.origin || item.finish ? (
-                                                            <small>{item.origin || ''} {item.finish ? `/ ${item.finish}` : ''}</small>
+
+                                                    <td className="py-3 text-end text-warning fw-medium">
+                                                        {item.is_slab ? (
+                                                            <div>{item.reserved_qty} Slabs</div>
                                                         ) : (
-                                                            <span className="badge bg-light text-dark">{item.inventory_behavior || 'STANDARD'}</span>
+                                                            <div>{Number(item.reserved_qty).toLocaleString()} {item.unit_symbol}</div>
                                                         )}
                                                     </td>
-                                                    <td>
-                                                        <span className={`badge ${
-                                                            item.status === 'AVAILABLE' || item.status === 'ON_HAND' ? 'bg-success bg-opacity-10 text-success' : 
-                                                            item.status === 'RESERVED' ? 'bg-warning bg-opacity-10 text-warning' : 'bg-secondary bg-opacity-10 text-secondary'
-                                                        }`}>{item.status}</span>
+
+                                                    <td className="py-3 text-end fw-bold text-success">
+                                                        {item.is_slab ? (
+                                                            <div>
+                                                                <div>{item.available_qty} Slabs</div>
+                                                                <div className="text-muted fs-7 font-normal">{Number(item.available_area).toFixed(2)} sq.ft.</div>
+                                                            </div>
+                                                        ) : (
+                                                            <div>{Number(item.available_qty).toLocaleString()} {item.unit_symbol}</div>
+                                                        )}
+                                                    </td>
+
+                                                    <td className="py-3 text-center">
+                                                        {item.stock_status === "In Stock" ? (
+                                                            <span className="badge bg-success-subtle text-success border border-success px-2 py-1">In Stock</span>
+                                                        ) : item.stock_status === "Low Stock" ? (
+                                                            <span className="badge bg-warning-subtle text-warning border border-warning px-2 py-1">Low Stock</span>
+                                                        ) : (
+                                                            <span className="badge bg-danger-subtle text-danger border border-danger px-2 py-1">Out of Stock</span>
+                                                        )}
+                                                    </td>
+
+                                                    <td className="pe-4 py-3 text-end">
+                                                        <button
+                                                            className="btn btn-outline-secondary btn-sm fw-medium px-3"
+                                                            onClick={() => handleOpenDetails(item)}
+                                                        >
+                                                            View Details
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             ))
@@ -401,310 +719,549 @@ export default function InventoryManager() {
                                 </table>
                             </div>
                         </div>
-                    )}
-
-                    {/* 2. Reserve & Allocate Tab */}
-                    {activeSection === "reserve-allocate" && (
-                        <div className="row">
-                            <div className="col-md-6 border-end pe-4">
-                                <h5 className="fw-bold text-primary mb-3">Create Soft/Hard Reservation</h5>
-                                <form onSubmit={handleReserveSubmit}>
-                                    <div className="mb-3">
-                                        <label className="form-label">Select Stock / Slab Item</label>
-                                        <select className="form-select" value={resForm.inventory_object_id} onChange={(e) => setResForm({...resForm, inventory_object_id: e.target.value})} required>
-                                            <option value="">-- Choose available stock item --</option>
-                                            {inventory.map(s => (
-                                                <option key={s.id} value={s.id}>{formatStockLabel(s)}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="row mb-3">
-                                        <div className="col-6">
-                                            <label className="form-label">Reserved Qty</label>
-                                            <input type="number" className="form-control" value={resForm.quantity} onChange={(e) => setResForm({...resForm, quantity: e.target.value})} required />
-                                        </div>
-                                        <div className="col-6">
-                                            <label className="form-label">Reservation Type</label>
-                                            <select className="form-select" value={resForm.reservation_type} onChange={(e) => setResForm({...resForm, reservation_type: e.target.value})}>
-                                                <option value="SOFT">SOFT (No physical change)</option>
-                                                <option value="HARD">HARD (Blocks status to RESERVED)</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <button type="submit" className="btn btn-primary w-100">Submit Reservation</button>
-                                </form>
-                            </div>
-
-                            <div className="col-md-6 ps-4">
-                                <h5 className="fw-bold text-success mb-3">Submit Hard Order Allocation</h5>
-                                <form onSubmit={handleAllocateSubmit}>
-                                    <div className="mb-3">
-                                        <label className="form-label">Select Stock / Slab Item</label>
-                                        <select className="form-select" value={allocForm.inventory_object_id} onChange={(e) => setAllocForm({...allocForm, inventory_object_id: e.target.value})} required>
-                                            <option value="">-- Choose available stock item --</option>
-                                            {inventory.map(s => (
-                                                <option key={s.id} value={s.id}>{formatStockLabel(s)}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="row mb-3">
-                                        <div className="col-6">
-                                            <label className="form-label">Sales Reference ID</label>
-                                            <input type="number" className="form-control" placeholder="10492" value={allocForm.reference_id} onChange={(e) => setAllocForm({...allocForm, reference_id: e.target.value})} required />
-                                        </div>
-                                        <div className="col-6">
-                                            <label className="form-label">Allocated Qty</label>
-                                            <input type="number" className="form-control" value={allocForm.quantity} readOnly />
-                                        </div>
-                                    </div>
-                                    <button type="submit" className="btn btn-success w-100">Commit Allocation</button>
-                                </form>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 3. Transfers Tab */}
-                    {activeSection === "transfers" && (
+                    </div>
+                </>
+            ) : (
+                /* STOCK HISTORY LEDGER VIEW */
+                <div className="card border-0 shadow-sm rounded-3 bg-white">
+                    <div className="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                         <div>
-                            <h5 className="fw-bold text-dark mb-3">Warehouse Stock Transfers</h5>
-                            <form onSubmit={handleTransferSubmit} className="card p-3 mb-4 bg-light">
-                                <div className="row g-3 align-items-center">
-                                    <div className="col-md-3">
-                                        <label className="form-label">Source Warehouse</label>
-                                        <select className="form-select" value={transferForm.from_warehouse_id} onChange={(e) => setTransferForm({...transferForm, from_warehouse_id: e.target.value})}>
-                                            <option value="1">Main Slab Depot (W1)</option>
-                                            <option value="2">Sanitary & Tiles Loft (W2)</option>
-                                        </select>
-                                    </div>
-                                    <div className="col-md-3">
-                                        <label className="form-label">Destination Warehouse</label>
-                                        <select className="form-select" value={transferForm.to_warehouse_id} onChange={(e) => setTransferForm({...transferForm, to_warehouse_id: e.target.value})}>
-                                            <option value="2">Sanitary & Tiles Loft (W2)</option>
-                                            <option value="1">Main Slab Depot (W1)</option>
-                                        </select>
-                                    </div>
-                                    <div className="col-md-4">
-                                        <label className="form-label">Choose Item</label>
-                                        <select className="form-select" onChange={(e) => {
-                                            const updated = { ...transferForm };
-                                            updated.items[0].inventory_object_id = e.target.value;
-                                            setTransferForm(updated);
-                                        }} required>
-                                            <option value="">-- Choose item --</option>
-                                            {inventory.map(s => (
-                                                <option key={s.id} value={s.id}>{formatStockLabel(s)}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="col-md-2 d-grid align-self-end">
-                                        <button type="submit" className="btn btn-primary">Start Transfer</button>
-                                    </div>
-                                </div>
-                            </form>
-
-                            {/* Active in-transit transfers list */}
-                            <h6 className="fw-bold mb-2">Pending In-Transit Sheets:</h6>
-                            <div className="card p-3 bg-light">
-                                {transfers.length === 0 ? <small className="text-muted">No active transfers currently in-transit.</small> : (
-                                    <div className="list-group">
-                                        {transfers.map((t, idx) => (
-                                            <div key={idx} className="list-group-item d-flex justify-content-between align-items-center">
-                                                <div>
-                                                    <strong>{t.transfer_number}</strong> - Date: {t.transfer_date} | Status: <span className="badge bg-warning">{t.status}</span>
-                                                </div>
-                                                <button className="btn btn-sm btn-outline-success" onClick={() => handleReceiveTransfer(t.id)}>
-                                                    ✅ Record Inbound Receipt
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                            <h5 className="mb-0 fw-bold text-dark fs-6">Stock Movement History</h5>
+                            <span className="text-muted fs-7">Audit trail of all receipts, sales, transfers, and adjustments.</span>
                         </div>
-                    )}
-
-                    {/* 4. Adjustments Tab */}
-                    {activeSection === "adjustments" && (
-                        <div>
-                            <h5 className="fw-bold text-dark mb-3">Inventory Adjustments (Discrepancy / Damage)</h5>
-                            <form onSubmit={handleAdjustmentSubmit} className="card p-3 mb-4 bg-light">
-                                <div className="row g-3">
-                                    <div className="col-md-3">
-                                        <label className="form-label">Warehouse</label>
-                                        <select className="form-select" value={adjustmentForm.warehouse_id} onChange={(e) => setAdjustmentForm({...adjustmentForm, warehouse_id: e.target.value})}>
-                                            <option value="1">Main Slab Depot (W1)</option>
-                                        </select>
-                                    </div>
-                                    <div className="col-md-3">
-                                        <label className="form-label">Adjustment Type</label>
-                                        <select className="form-select" value={adjustmentForm.adjustment_type} onChange={(e) => setAdjustmentForm({...adjustmentForm, adjustment_type: e.target.value})}>
-                                            <option value="POSITIVE">Positive Add</option>
-                                            <option value="NEGATIVE">Negative Deduct</option>
-                                            <option value="DAMAGE">Damage Waste</option>
-                                            <option value="SCRAP">Scrap</option>
-                                        </select>
-                                    </div>
-                                    <div className="col-md-4">
-                                        <label className="form-label">Stock Item</label>
-                                        <select className="form-select" onChange={(e) => {
-                                            const updated = { ...adjustmentForm };
-                                            updated.items[0].inventory_object_id = e.target.value;
-                                            setAdjustmentForm(updated);
-                                        }} required>
-                                            <option value="">-- Choose item --</option>
-                                            {inventory.map(s => (
-                                                <option key={s.id} value={s.id}>{formatStockLabel(s)}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="col-md-2 d-grid align-self-end">
-                                        <button type="submit" className="btn btn-danger">Log Discrepancy</button>
-                                    </div>
-                                </div>
-                            </form>
-
-                            {/* Authorizations queue */}
-                            <h6 className="fw-bold mb-2">Adjustments Awaiting Approval (Manager Authorization):</h6>
-                            <div className="card p-3 bg-light">
-                                {adjustments.length === 0 ? <small className="text-muted">No pending stock adjustment sheets.</small> : (
-                                    <div className="list-group">
-                                        {adjustments.map((a, idx) => (
-                                            <div key={idx} className="list-group-item d-flex justify-content-between align-items-center">
-                                                <div>
-                                                    <strong>{a.adjustment_number}</strong> - Type: {a.adjustment_type} | Status: <span className="badge bg-warning">{a.status}</span>
-                                                </div>
-                                                <button className="btn btn-sm btn-success" onClick={() => handleApproveAdjustment(a.id)}>
-                                                    🔑 Approve & Post
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                        <button className="btn btn-sm btn-outline-secondary" onClick={() => loadMovements(1)}>
+                            <i className="bi bi-arrow-clockwise me-1"></i> Refresh History
+                        </button>
+                    </div>
+                    <div className="card-body p-0">
+                        <div className="table-responsive">
+                            <table className="table table-hover table-borderless align-middle mb-0">
+                                <thead className="bg-light border-bottom">
+                                    <tr>
+                                        <th className="ps-4 py-3 text-secondary text-uppercase fs-7 fw-bold">Date</th>
+                                        <th className="py-3 text-secondary text-uppercase fs-7 fw-bold">Product</th>
+                                        <th className="py-3 text-secondary text-uppercase fs-7 fw-bold">Movement</th>
+                                        <th className="py-3 text-end text-secondary text-uppercase fs-7 fw-bold">Quantity Delta</th>
+                                        <th className="py-3 text-secondary text-uppercase fs-7 fw-bold">Warehouse / Location</th>
+                                        <th className="py-3 text-secondary text-uppercase fs-7 fw-bold">Reference</th>
+                                        <th className="pe-4 py-3 text-secondary text-uppercase fs-7 fw-bold">User</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {movementsLoading ? (
+                                        <tr>
+                                            <td colSpan="7" className="text-center py-5 text-muted">
+                                                <div className="spinner-border spinner-border-sm me-2 text-primary" role="status"></div>
+                                                Loading stock movement history...
+                                            </td>
+                                        </tr>
+                                    ) : movements.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="7" className="text-center py-5 text-muted">
+                                                No stock movements recorded yet.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        movements.map((m) => (
+                                            <tr key={m.id}>
+                                                <td className="ps-4 py-3 text-muted fs-7">{m.date}</td>
+                                                <td className="py-3">
+                                                    <div className="fw-semibold text-dark fs-7">{m.product_name}</div>
+                                                    <span className="text-muted fs-7 font-monospace">SKU: {m.sku}</span>
+                                                </td>
+                                                <td className="py-3">
+                                                    <span className={`badge px-2 py-1 ${
+                                                        m.movement_label === 'Receipt' ? 'bg-success-subtle text-success' :
+                                                        m.movement_label === 'Sale' ? 'bg-primary-subtle text-primary' :
+                                                        m.movement_label === 'Transfer' ? 'bg-info-subtle text-info' :
+                                                        m.movement_label === 'Adjustment' ? 'bg-warning-subtle text-warning' :
+                                                        'bg-secondary-subtle text-secondary'
+                                                    }`}>
+                                                        {m.movement_label}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 text-end fw-bold">
+                                                    <span className={m.quantity_delta > 0 ? 'text-success' : m.quantity_delta < 0 ? 'text-danger' : 'text-dark'}>
+                                                        {m.quantity_delta > 0 ? `+${m.quantity_delta}` : m.quantity_delta} {m.unit_symbol}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 fs-7">
+                                                    <div>{m.warehouse_name}</div>
+                                                    <span className="text-muted">Loc: {m.location_code}</span>
+                                                </td>
+                                                <td className="py-3 fs-7">
+                                                    <span className="badge bg-light text-dark border">
+                                                        {m.reference_label}
+                                                    </span>
+                                                </td>
+                                                <td className="pe-4 py-3 text-muted fs-7">{m.user_name}</td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
-                    )}
-
-                    {/* 5. Cycle Audits Tab */}
-                    {activeSection === "cycle-audits" && (
-                        <div>
-                            <h5 className="fw-bold text-dark mb-3">Cycle stock-take & Audit reconciliations</h5>
-                            <form onSubmit={handleAuditSubmit} className="card p-3 mb-4 bg-light">
-                                <div className="row g-3 align-items-center">
-                                    <div className="col-md-4">
-                                        <label className="form-label">Warehouse Scope</label>
-                                        <select className="form-select" value={auditForm.warehouse_id} onChange={(e) => setAuditForm({...auditForm, warehouse_id: e.target.value})}>
-                                            <option value="1">Main Slab Depot (W1)</option>
-                                        </select>
-                                    </div>
-                                    <div className="col-md-4">
-                                        <label className="form-label">Count Type</label>
-                                        <select className="form-select" value={auditForm.count_type} onChange={(e) => setAuditForm({...auditForm, count_type: e.target.value})}>
-                                            <option value="CYCLE">Random cycle check</option>
-                                            <option value="ANNUAL">Annual comprehensive stocktake</option>
-                                        </select>
-                                    </div>
-                                    <div className="col-md-4 d-grid align-self-end">
-                                        <button type="submit" className="btn btn-dark">Initiate stocktake sheet</button>
-                                    </div>
-                                </div>
-                            </form>
-
-                            {/* Active counts */}
-                            <h6 className="fw-bold mb-2">Ongoing Counts:</h6>
-                            <div className="card p-3 bg-light">
-                                {auditList.length === 0 ? <small className="text-muted">No ongoing cycle checks.</small> : (
-                                    <div className="list-group">
-                                        {auditList.map((c, idx) => (
-                                            <div key={idx} className="list-group-item d-flex justify-content-between align-items-center">
-                                                <div>
-                                                    <strong>{c.count_number}</strong> - Type: {c.count_type} | Status: <span className="badge bg-warning">{c.status}</span>
-                                                </div>
-                                                <button className="btn btn-sm btn-outline-success" onClick={() => handleApproveAuditCount(c.id)}>
-                                                    🔐 Verify & Close variances
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 6. Granite Slab Tab */}
-                    {activeSection === "granite-slab" && (
-                        <div>
-                            <h5 className="fw-bold text-dark mb-3">Register New Slab</h5>
-                            <form onSubmit={handleCreateSlab} className="card p-3 mb-4 bg-light">
-                                <div className="row g-3">
-                                    <div className="col-md-3">
-                                        <label className="form-label">Slab Code</label>
-                                        <input type="text" className="form-control" placeholder="ONYX-ITAL-005" value={slabForm.slab_code} onChange={(e) => setSlabForm({...slabForm, slab_code: e.target.value})} required />
-                                    </div>
-                                    <div className="col-md-3">
-                                        <label className="form-label">Product Variant ID</label>
-                                        <input type="number" className="form-control" value={slabForm.product_variant_id} onChange={(e) => setSlabForm({...slabForm, product_variant_id: e.target.value})} />
-                                    </div>
-                                    <div className="col-md-2">
-                                        <label className="form-label">Length (Inches)</label>
-                                        <input type="number" className="form-control" value={slabForm.length} onChange={(e) => setSlabForm({...slabForm, length: e.target.value})} />
-                                    </div>
-                                    <div className="col-md-2">
-                                        <label className="form-label">Width (Inches)</label>
-                                        <input type="number" className="form-control" value={slabForm.width} onChange={(e) => setSlabForm({...slabForm, width: e.target.value})} />
-                                    </div>
-                                    <div className="col-md-2 d-grid align-self-end">
-                                        <button type="submit" className="btn btn-primary">Create Slab</button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    )}
-
-                    {/* 7. Valuation Tab */}
-                    {activeSection === "valuation" && (
-                        <div>
-                            <h5 className="fw-bold text-dark mb-3">Live Stock Cost Valuation</h5>
-                            <div className="card p-3 mb-4 bg-light">
-                                <div className="row g-3">
-                                    <div className="col-md-5">
-                                        <label className="form-label">Select Stock Item</label>
-                                        <select className="form-select" value={selectedValId} onChange={(e) => setSelectedValId(e.target.value)}>
-                                            <option value="">-- Choose item --</option>
-                                            {inventory.map(s => (
-                                                <option key={s.id} value={s.id}>{formatStockLabel(s)}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="col-md-4">
-                                        <label className="form-label">Valuation Formula</label>
-                                        <select className="form-select" value={valMethod} onChange={(e) => setValMethod(e.target.value)}>
-                                            <option value="SPECIFIC_ID">SPECIFIC ID (Real costs basis)</option>
-                                            <option value="FIFO">FIFO (First-In, First-Out)</option>
-                                            <option value="LIFO">LIFO (Last-In, First-Out)</option>
-                                            <option value="WAC">WAC (Weighted Average cost)</option>
-                                        </select>
-                                    </div>
-                                    <div className="col-md-3 d-grid align-self-end">
-                                        <button className="btn btn-info text-white" onClick={checkValuation}>Calculate Valuation</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {valuationResults && (
-                                <div className="alert alert-info border-0 shadow-sm p-4 d-flex align-items-start justify-content-between">
-                                    <div>
-                                        <h5 className="fw-bold mb-2">Analytical Valuation Results</h5>
-                                        <div>Method Code: <strong>{valuationResults.valuation_method}</strong></div>
-                                        <div>Estimated Unit Cost: <strong>${parseFloat(valuationResults.unit_cost).toFixed(2)} / SQFT</strong></div>
-                                        <div className="fs-4 mt-2 text-primary">Total Inventory Asset Value: <strong>${parseFloat(valuationResults.total_value).toFixed(2)}</strong></div>
-                                    </div>
-                                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setValuationResults(null)} aria-label="Close"></button>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {/* STOCK DETAILS MODAL / DRAWER */}
+            {selectedItem && (
+                <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+                    <div className="modal-dialog modal-lg modal-dialog-scrollable">
+                        <div className="modal-content border-0 shadow-lg rounded-3">
+                            <div className="modal-header border-bottom py-3">
+                                <div>
+                                    <h5 className="modal-title fw-bold text-dark">{selectedItem.product_name}</h5>
+                                    <div className="d-flex align-items-center gap-2 mt-1">
+                                        <span className="badge bg-light text-secondary border font-monospace">SKU: {selectedItem.sku || 'N/A'}</span>
+                                        <span className="badge bg-secondary-subtle text-secondary">{selectedItem.category_name}</span>
+                                        <span className={`badge ${selectedItem.stock_status === 'In Stock' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}`}>
+                                            {selectedItem.stock_status}
+                                        </span>
+                                    </div>
+                                </div>
+                                <button type="button" className="btn-close" onClick={() => setSelectedItem(null)}></button>
+                            </div>
+
+                            <div className="modal-body p-4">
+                                {/* Stock Level Summary Cards */}
+                                <div className="row g-3 mb-4">
+                                    <div className="col-4">
+                                        <div className="p-3 bg-light rounded-3 text-center border">
+                                            <span className="text-secondary small fw-semibold text-uppercase">On Hand</span>
+                                            <h4 className="fw-bold text-dark mt-1 mb-0">
+                                                {selectedItem.on_hand_qty} {selectedItem.unit_symbol}
+                                            </h4>
+                                            {selectedItem.on_hand_area > 0 && (
+                                                <span className="text-muted fs-7">{selectedItem.on_hand_area} sq.ft.</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="col-4">
+                                        <div className="p-3 bg-light rounded-3 text-center border">
+                                            <span className="text-secondary small fw-semibold text-uppercase">Reserved</span>
+                                            <h4 className="fw-bold text-warning mt-1 mb-0">
+                                                {selectedItem.reserved_qty} {selectedItem.unit_symbol}
+                                            </h4>
+                                        </div>
+                                    </div>
+                                    <div className="col-4">
+                                        <div className="p-3 bg-light rounded-3 text-center border">
+                                            <span className="text-secondary small fw-semibold text-uppercase">Available</span>
+                                            <h4 className="fw-bold text-success mt-1 mb-0">
+                                                {selectedItem.available_qty} {selectedItem.unit_symbol}
+                                            </h4>
+                                            {selectedItem.available_area > 0 && (
+                                                <span className="text-muted fs-7">{selectedItem.available_area} sq.ft.</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Location & Packaging info */}
+                                <div className="row g-3 mb-4">
+                                    <div className="col-md-6">
+                                        <div className="card border-0 bg-light p-3 rounded-3">
+                                            <span className="text-secondary small fw-semibold">Warehouse & Location</span>
+                                            <div className="fw-bold text-dark mt-1">{selectedItem.warehouse_name}</div>
+                                            <div className="text-muted small">Storage Bin / Bay: <span className="badge bg-white text-dark border ms-1">{selectedItem.storage_location_code}</span></div>
+                                        </div>
+                                    </div>
+                                    <div className="col-md-6">
+                                        <div className="card border-0 bg-light p-3 rounded-3">
+                                            <span className="text-secondary small fw-semibold">Packaging Information</span>
+                                            <div className="fw-medium text-dark mt-1">
+                                                {selectedItem.packaging_info || "Standard Unit Packaging"}
+                                            </div>
+                                            <div className="text-muted small">Batch: <span className="font-monospace text-dark ms-1">{selectedItem.batch_number}</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Slabs Breakdown if Granite/Marble */}
+                                {selectedItem.is_slab && selectedItem.slabs?.length > 0 && (
+                                    <div className="mb-4">
+                                        <h6 className="fw-bold text-dark mb-3">Individual Slabs Inventory ({selectedItem.slabs_count} Slabs)</h6>
+                                        <div className="table-responsive border rounded-3">
+                                            <table className="table table-sm align-middle mb-0">
+                                                <thead className="bg-light">
+                                                    <tr>
+                                                        <th className="ps-3 py-2 fs-7 text-secondary">Slab Code</th>
+                                                        <th className="py-2 fs-7 text-secondary">Dimensions (L × W)</th>
+                                                        <th className="py-2 fs-7 text-secondary">Area (sq.ft)</th>
+                                                        <th className="py-2 fs-7 text-secondary">Location</th>
+                                                        <th className="pe-3 py-2 fs-7 text-secondary text-end">Status</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {selectedItem.slabs.map(slab => (
+                                                        <tr key={slab.id}>
+                                                            <td className="ps-3 fw-mono text-dark fs-7">{slab.slab_code}</td>
+                                                            <td className="fs-7">{slab.length} × {slab.width} in ({slab.thickness}mm)</td>
+                                                            <td className="fs-7 fw-semibold">{Number(slab.area).toFixed(2)}</td>
+                                                            <td className="fs-7"><span className="badge bg-light text-dark border">{slab.storage_location_code}</span></td>
+                                                            <td className="pe-3 text-end">
+                                                                <span className="badge bg-success-subtle text-success fs-7">{slab.status}</span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Recent Activity */}
+                                <div>
+                                    <h6 className="fw-bold text-dark mb-3">Recent Stock Activity</h6>
+                                    {activityLoading ? (
+                                        <div className="text-center py-3 text-muted">
+                                            <div className="spinner-border spinner-border-sm me-2 text-primary" role="status"></div>
+                                            Loading recent transactions...
+                                        </div>
+                                    ) : recentActivity.length === 0 ? (
+                                        <div className="text-center py-3 text-muted small border rounded-3 bg-light">
+                                            No recent stock movements recorded for this item.
+                                        </div>
+                                    ) : (
+                                        <div className="table-responsive border rounded-3">
+                                            <table className="table table-sm align-middle mb-0 fs-7">
+                                                <thead className="bg-light">
+                                                    <tr>
+                                                        <th className="ps-3 py-2 text-secondary">Date</th>
+                                                        <th className="py-2 text-secondary">Movement</th>
+                                                        <th className="py-2 text-end text-secondary">Qty Delta</th>
+                                                        <th className="py-2 text-secondary">Reference</th>
+                                                        <th className="pe-3 py-2 text-secondary">User</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {recentActivity.map(act => (
+                                                        <tr key={act.id}>
+                                                            <td className="ps-3 text-muted">{act.date}</td>
+                                                            <td>
+                                                                <span className="badge bg-light text-dark border me-1">{act.movement_label}</span>
+                                                            </td>
+                                                            <td className="text-end fw-semibold">
+                                                                <span className={act.quantity_delta > 0 ? "text-success" : "text-danger"}>
+                                                                    {act.quantity_delta > 0 ? `+${act.quantity_delta}` : act.quantity_delta}
+                                                                </span>
+                                                            </td>
+                                                            <td><span className="badge bg-light text-dark border">{act.reference_label}</span></td>
+                                                            <td className="pe-3 text-muted">{act.user_name}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="modal-footer bg-light py-2">
+                                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedItem(null)}>
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* TRANSFER STOCK MODAL */}
+            {activeModal === "transfer" && (
+                <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+                    <div className="modal-dialog">
+                        <div className="modal-content border-0 shadow-lg rounded-3">
+                            <form onSubmit={handleTransferSubmit}>
+                                <div className="modal-header border-bottom py-3">
+                                    <h5 className="modal-title fw-bold text-dark">
+                                        <i className="bi bi-arrow-left-right text-primary me-2"></i>
+                                        Transfer Stock
+                                    </h5>
+                                    <button type="button" className="btn-close" onClick={() => setActiveModal(null)}></button>
+                                </div>
+                                <div className="modal-body p-4">
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-secondary">From Warehouse</label>
+                                        <select
+                                            className="form-select"
+                                            required
+                                            value={transferForm.from_warehouse_id}
+                                            onChange={e => setTransferForm({ ...transferForm, from_warehouse_id: e.target.value })}
+                                        >
+                                            <option value="">Select Source Warehouse</option>
+                                            {contexts.warehouses.map(w => (
+                                                <option key={w.id} value={w.id}>{w.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-secondary">To Warehouse</label>
+                                        <select
+                                            className="form-select"
+                                            required
+                                            value={transferForm.to_warehouse_id}
+                                            onChange={e => setTransferForm({ ...transferForm, to_warehouse_id: e.target.value })}
+                                        >
+                                            <option value="">Select Destination Warehouse</option>
+                                            {contexts.warehouses.filter(w => String(w.id) !== String(transferForm.from_warehouse_id)).map(w => (
+                                                <option key={w.id} value={w.id}>{w.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-secondary">Product</label>
+                                        <select
+                                            className="form-select"
+                                            required
+                                            value={transferForm.product_variant_id}
+                                            onChange={e => setTransferForm({ ...transferForm, product_variant_id: e.target.value })}
+                                        >
+                                            <option value="">Select Product to Transfer</option>
+                                            {stockItems
+                                                .filter(s => !transferForm.from_warehouse_id || String(s.warehouse_id) === String(transferForm.from_warehouse_id))
+                                                .map(s => (
+                                                    <option key={s.id} value={s.product_variant_id}>
+                                                        {s.product_name} (Avail: {s.available_qty} {s.unit_symbol})
+                                                    </option>
+                                                ))
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-secondary">Quantity to Transfer</label>
+                                        <input
+                                            type="number"
+                                            className="form-control"
+                                            min="1"
+                                            required
+                                            value={transferForm.quantity}
+                                            onChange={e => setTransferForm({ ...transferForm, quantity: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-secondary">Remarks / Reason</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="e.g. Store replenishment"
+                                            value={transferForm.remarks}
+                                            onChange={e => setTransferForm({ ...transferForm, remarks: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="modal-footer bg-light py-2">
+                                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setActiveModal(null)}>Cancel</button>
+                                    <button type="submit" className="btn btn-primary btn-sm px-4" disabled={submittingAction}>
+                                        {submittingAction ? "Transferring..." : "Submit Transfer"}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ADJUST STOCK MODAL */}
+            {activeModal === "adjust" && (
+                <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+                    <div className="modal-dialog">
+                        <div className="modal-content border-0 shadow-lg rounded-3">
+                            <form onSubmit={handleAdjustSubmit}>
+                                <div className="modal-header border-bottom py-3">
+                                    <h5 className="modal-title fw-bold text-dark">
+                                        <i className="bi bi-sliders text-warning me-2"></i>
+                                        Adjust Stock
+                                    </h5>
+                                    <button type="button" className="btn-close" onClick={() => setActiveModal(null)}></button>
+                                </div>
+                                <div className="modal-body p-4">
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-secondary">Warehouse</label>
+                                        <select
+                                            className="form-select"
+                                            required
+                                            value={adjustForm.warehouse_id}
+                                            onChange={e => setAdjustForm({ ...adjustForm, warehouse_id: e.target.value })}
+                                        >
+                                            <option value="">Select Warehouse</option>
+                                            {contexts.warehouses.map(w => (
+                                                <option key={w.id} value={w.id}>{w.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-secondary">Product</label>
+                                        <select
+                                            className="form-select"
+                                            required
+                                            value={adjustForm.product_variant_id}
+                                            onChange={e => setAdjustForm({ ...adjustForm, product_variant_id: e.target.value })}
+                                        >
+                                            <option value="">Select Product</option>
+                                            {stockItems
+                                                .filter(s => !adjustForm.warehouse_id || String(s.warehouse_id) === String(adjustForm.warehouse_id))
+                                                .map(s => (
+                                                    <option key={s.id} value={s.product_variant_id}>
+                                                        {s.product_name} (Current: {s.on_hand_qty} {s.unit_symbol})
+                                                    </option>
+                                                ))
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-secondary">Adjustment Type</label>
+                                        <select
+                                            className="form-select"
+                                            value={adjustForm.adjustment_type}
+                                            onChange={e => setAdjustForm({ ...adjustForm, adjustment_type: e.target.value })}
+                                        >
+                                            <option value="DAMAGE">Damage / Breakage</option>
+                                            <option value="FOUND">Stock Found (+)</option>
+                                            <option value="CORRECTION">Quantity Correction</option>
+                                            <option value="EXPIRY">Expiry / Wastage</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-secondary">Adjustment Quantity (+ or -)</label>
+                                        <input
+                                            type="number"
+                                            className="form-control"
+                                            required
+                                            value={adjustForm.quantity_delta}
+                                            onChange={e => setAdjustForm({ ...adjustForm, quantity_delta: e.target.value })}
+                                        />
+                                        <span className="text-muted fs-7">Use negative number for reduction (e.g. -5), positive for addition (+5).</span>
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-secondary">Reason & Remarks</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="Reason for adjustment"
+                                            value={adjustForm.reason}
+                                            onChange={e => setAdjustForm({ ...adjustForm, reason: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="modal-footer bg-light py-2">
+                                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setActiveModal(null)}>Cancel</button>
+                                    <button type="submit" className="btn btn-warning text-white btn-sm px-4" disabled={submittingAction}>
+                                        {submittingAction ? "Submitting..." : "Apply Adjustment"}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* STOCK COUNT MODAL */}
+            {activeModal === "count" && (
+                <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+                    <div className="modal-dialog">
+                        <div className="modal-content border-0 shadow-lg rounded-3">
+                            <form onSubmit={handleCountSubmit}>
+                                <div className="modal-header border-bottom py-3">
+                                    <h5 className="modal-title fw-bold text-dark">
+                                        <i className="bi bi-clipboard-check text-success me-2"></i>
+                                        Stock Count Reconciliation
+                                    </h5>
+                                    <button type="button" className="btn-close" onClick={() => setActiveModal(null)}></button>
+                                </div>
+                                <div className="modal-body p-4">
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-secondary">Warehouse</label>
+                                        <select
+                                            className="form-select"
+                                            required
+                                            value={countForm.warehouse_id}
+                                            onChange={e => setCountForm({ ...countForm, warehouse_id: e.target.value })}
+                                        >
+                                            <option value="">Select Warehouse</option>
+                                            {contexts.warehouses.map(w => (
+                                                <option key={w.id} value={w.id}>{w.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-secondary">Count Type</label>
+                                        <select
+                                            className="form-select"
+                                            value={countForm.count_type}
+                                            onChange={e => setCountForm({ ...countForm, count_type: e.target.value })}
+                                        >
+                                            <option value="SPOT">Spot Count</option>
+                                            <option value="CYCLE">Cycle Count</option>
+                                            <option value="ANNUAL">Annual Physical Audit</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-secondary">Product to Audit</label>
+                                        <select
+                                            className="form-select"
+                                            value={countForm.product_variant_id}
+                                            onChange={e => setCountForm({ ...countForm, product_variant_id: e.target.value })}
+                                        >
+                                            <option value="">Select Product (or Audit All)</option>
+                                            {stockItems
+                                                .filter(s => !countForm.warehouse_id || String(s.warehouse_id) === String(countForm.warehouse_id))
+                                                .map(s => (
+                                                    <option key={s.id} value={s.product_variant_id}>
+                                                        {s.product_name} (System: {s.on_hand_qty} {s.unit_symbol})
+                                                    </option>
+                                                ))
+                                            }
+                                        </select>
+                                    </div>
+
+                                    {countForm.product_variant_id && (
+                                        <div className="mb-3">
+                                            <label className="form-label small fw-semibold text-secondary">Physical Counted Quantity</label>
+                                            <input
+                                                type="number"
+                                                className="form-control"
+                                                required
+                                                value={countForm.counted_quantity}
+                                                onChange={e => setCountForm({ ...countForm, counted_quantity: e.target.value })}
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold text-secondary">Audit Remarks</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="Physical count verification notes"
+                                            value={countForm.remarks}
+                                            onChange={e => setCountForm({ ...countForm, remarks: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="modal-footer bg-light py-2">
+                                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setActiveModal(null)}>Cancel</button>
+                                    <button type="submit" className="btn btn-success btn-sm px-4" disabled={submittingAction}>
+                                        {submittingAction ? "Processing..." : "Reconcile Count"}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

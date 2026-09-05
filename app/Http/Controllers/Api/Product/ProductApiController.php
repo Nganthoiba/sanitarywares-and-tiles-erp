@@ -267,7 +267,9 @@ class ProductApiController extends Controller
         $validated = $request->validate([
             'attribute_id' => [
                 'required',
-                Rule::exists('product_attributes', 'id')->where('organization_id', $orgId)
+                Rule::exists('product_attributes', 'id')->where(function ($query) use ($orgId) {
+                    return $query->where('organization_id', $orgId)->orWhereNull('organization_id');
+                })
             ],
             'value' => 'required|string'
         ]);
@@ -399,7 +401,9 @@ class ProductApiController extends Controller
             'attributes' => 'nullable|array',
             'attributes.*.attribute_id' => [
                 'required',
-                Rule::exists('product_attributes', 'id')->where('organization_id', $orgId)
+                Rule::exists('product_attributes', 'id')->where(function ($query) use ($orgId) {
+                    return $query->where('organization_id', $orgId)->orWhereNull('organization_id');
+                })
             ],
             'attributes.*.value' => 'required|string'
         ]);
