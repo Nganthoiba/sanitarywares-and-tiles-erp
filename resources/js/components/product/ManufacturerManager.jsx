@@ -10,7 +10,7 @@ export default function ManufacturerManager() {
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
-    const [perPage, setPerPage] = useState(15);
+    const [perPage, setPerPage] = useState(10);
     const [paginationMeta, setPaginationMeta] = useState({
         total: 0,
         from: 0,
