@@ -33,9 +33,14 @@ export default function InventoryManager() {
         search: ""
     });
 
+    // Stock View Pagination state
+    const [stockPage, setStockPage] = useState(1);
+    const [stockPerPage, setStockPerPage] = useState(15);
+
     // History Ledger state
     const [movements, setMovements] = useState([]);
     const [movementsLoading, setMovementsLoading] = useState(false);
+    const [movementsPerPage, setMovementsPerPage] = useState(25);
     const [movementsPagination, setMovementsPagination] = useState({
         current_page: 1,
         last_page: 1,
@@ -142,12 +147,12 @@ export default function InventoryManager() {
     };
 
     // Load Movements Ledger
-    const loadMovements = async (page = 1) => {
+    const loadMovements = async (page = 1, perPage = movementsPerPage) => {
         setMovementsLoading(true);
         try {
             const res = await axios.get("/api/inventory/movements", {
                 headers: getAuthHeaders(),
-                params: { page, per_page: 25 }
+                params: { page, per_page: perPage }
             });
             if (res.data.success) {
                 setMovements(res.data.data || []);
@@ -168,12 +173,13 @@ export default function InventoryManager() {
     }, []);
 
     useEffect(() => {
+        setStockPage(1);
         loadStockData();
-    }, [filters.warehouse_id, filters.category_id, filters.status]);
+    }, [filters.warehouse_id, filters.category_id, filters.status, filters.search]);
 
     useEffect(() => {
         if (viewMode === "history") {
-            loadMovements(1);
+            loadMovements(1, movementsPerPage);
         }
     }, [viewMode]);
 
@@ -356,7 +362,7 @@ export default function InventoryManager() {
     };
 
     return (
-        <div className="container-fluid py-4">
+        <div className="container-fluid">
             {/* Success Alert */}
             {successMessage && (
                 <div className="alert alert-success alert-dismissible fade show shadow-sm mb-4" role="alert">
@@ -376,7 +382,7 @@ export default function InventoryManager() {
             )}
 
             {/* Main Header */}
-            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-2">
                 <div>
                     <h2 className="h3 font-weight-bold mb-1 text-dark">Inventory</h2>
                     <p className="text-secondary small mb-0">
@@ -448,7 +454,7 @@ export default function InventoryManager() {
             </div>
 
             {/* Summary Cards */}
-            <div className="row g-3 mb-4">
+            <div className="row g-3 mb-2">
                 <div className="col-12 col-sm-6 col-xl-3">
                     <div className="card border-0 shadow-sm rounded-3 h-100 bg-white">
                         <div className="card-body p-3">
@@ -458,8 +464,8 @@ export default function InventoryManager() {
                                     <h3 className="h2 fw-bold text-dark mb-0 mt-1">{summaryCards.total_stock}</h3>
                                     <span className="text-muted fs-7">Unique stock entries</span>
                                 </div>
-                                <div className="p-3 bg-primary-subtle text-primary rounded-3">
-                                    <i className="bi bi-box-seam fs-4"></i>
+                                <div className="p-3 bg-primary-subtle text-primary rounded-3 d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
+                                    <i className="fa-solid fa-boxes-stacked fs-4"></i>
                                 </div>
                             </div>
                         </div>
@@ -477,8 +483,8 @@ export default function InventoryManager() {
                                     </h3>
                                     <span className="text-muted fs-7">Ready for sale/dispatch</span>
                                 </div>
-                                <div className="p-3 bg-success-subtle text-success rounded-3">
-                                    <i className="bi bi-check-circle fs-4"></i>
+                                <div className="p-3 bg-success-subtle text-success rounded-3 d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
+                                    <i className="fa-solid fa-circle-check fs-4"></i>
                                 </div>
                             </div>
                         </div>
@@ -496,8 +502,8 @@ export default function InventoryManager() {
                                     </h3>
                                     <span className="text-muted fs-7">Allocated to orders/quotes</span>
                                 </div>
-                                <div className="p-3 bg-warning-subtle text-warning rounded-3">
-                                    <i className="bi bi-lock fs-4"></i>
+                                <div className="p-3 bg-warning-subtle text-warning rounded-3 d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
+                                    <i className="fa-solid fa-lock fs-4"></i>
                                 </div>
                             </div>
                         </div>
@@ -513,8 +519,8 @@ export default function InventoryManager() {
                                     <h3 className="h2 fw-bold text-danger mb-0 mt-1">{summaryCards.low_stock_count}</h3>
                                     <span className="text-muted fs-7">Items needing replenishment</span>
                                 </div>
-                                <div className="p-3 bg-danger-subtle text-danger rounded-3">
-                                    <i className="bi bi-exclamation-triangle fs-4"></i>
+                                <div className="p-3 bg-danger-subtle text-danger rounded-3 d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
+                                    <i className="fa-solid fa-triangle-exclamation fs-4"></i>
                                 </div>
                             </div>
                         </div>
@@ -526,8 +532,8 @@ export default function InventoryManager() {
             {viewMode === "stock" ? (
                 <>
                     {/* Filters Toolbar */}
-                    <div className="card border-0 shadow-sm rounded-3 mb-4 bg-white">
-                        <div className="card-body p-3">
+                    <div className="card border-0 shadow-sm rounded-3 mb-2 bg-white">
+                        <div className="card-body p-2">
                             <div className="row g-2 align-items-center">
                                 {/* Warehouse Filter */}
                                 <div className="col-12 col-md-3">
@@ -603,15 +609,39 @@ export default function InventoryManager() {
                                         </div>
                                     </form>
                                 </div>
+                                
                             </div>
                         </div>
                     </div>
 
                     {/* Stock Table */}
-                    <div className="card border-0 shadow-sm rounded-3 bg-white">
+                    <div className="card border-0 shadow-sm rounded-3 bg-white mb-4">
                         <div className="card-body p-0">
                             <div className="table-responsive">
-                                <table className="table table-hover table-borderless align-middle mb-0">
+                                {!loading && stockItems.length > 0 && (
+                                    <div className="d-flex align-items-end justify-content-end">
+                                        
+                                        <div className="d-flex align-items-center gap-2">
+                                            <label className="text-secondary small text-nowrap mb-0">Per page:</label>
+                                            <select
+                                                className="form-select form-select-sm border-secondary-subtle font-monospace"
+                                                style={{ width: '75px' }}
+                                                value={stockPerPage}
+                                                onChange={(e) => {
+                                                    setStockPerPage(Number(e.target.value));
+                                                    setStockPage(1);
+                                                }}
+                                        >
+                                            <option value={10}>10</option>
+                                            <option value={15}>15</option>
+                                            <option value={25}>25</option>
+                                            <option value={50}>50</option>
+                                            <option value={100}>100</option>
+                                        </select>
+                                        </div>
+                                    </div>
+                                )}
+                                <table id="stock_table" className="table table-hover table-borderless align-middle mb-0">
                                     <thead className="bg-light border-bottom">
                                         <tr>
                                             <th className="ps-4 py-3 text-secondary text-uppercase fs-7 fw-bold">Product</th>
@@ -639,7 +669,7 @@ export default function InventoryManager() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            stockItems.map((item) => (
+                                            stockItems.slice((stockPage - 1) * stockPerPage, stockPage * stockPerPage).map((item) => (
                                                 <tr key={item.id}>
                                                     <td className="ps-4 py-3">
                                                         <div className="d-flex align-items-center">
@@ -718,20 +748,91 @@ export default function InventoryManager() {
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
+                        </div>                   
+                        
+
+                        {/* Stock View Table Pagination Bar */}
+                        {!loading && stockItems.length > 0 && (
+                            <div className="card-footer bg-white border-top py-2 px-4 d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">                               
+                                <span className="text-secondary small">
+                                    Showing <strong>{((stockPage - 1) * stockPerPage) + 1}</strong> to <strong>{Math.min(stockPage * stockPerPage, stockItems.length)}</strong> of <strong>{stockItems.length}</strong> stock items
+                                </span>
+                                <nav aria-label="Stock Pagination">
+                                    <ul className="pagination pagination-sm mb-0">
+                                        <li className={`page-item ${stockPage === 1 ? 'disabled' : ''}`}>
+                                            <button className="page-link" onClick={() => setStockPage(1)} disabled={stockPage === 1} title="First Page">
+                                                <i className="bi bi-chevron-double-left"></i>
+                                            </button>
+                                        </li>
+                                        <li className={`page-item ${stockPage === 1 ? 'disabled' : ''}`}>
+                                            <button className="page-link" onClick={() => setStockPage(p => Math.max(1, p - 1))} disabled={stockPage === 1}>
+                                                Prev
+                                            </button>
+                                        </li>
+                                        {Array.from({ length: Math.ceil(stockItems.length / stockPerPage) || 1 }, (_, i) => i + 1)
+                                            .filter(p => p === 1 || p === Math.ceil(stockItems.length / stockPerPage) || Math.abs(p - stockPage) <= 2)
+                                            .map((p, idx, arr) => {
+                                                const prev = arr[idx - 1];
+                                                return (
+                                                    <React.Fragment key={p}>
+                                                        {prev && p - prev > 1 && (
+                                                            <li className="page-item disabled"><span className="page-link">...</span></li>
+                                                        )}
+                                                        <li className={`page-item ${stockPage === p ? 'active' : ''}`}>
+                                                            <button className="page-link" onClick={() => setStockPage(p)}>
+                                                                {p}
+                                                            </button>
+                                                        </li>
+                                                    </React.Fragment>
+                                                );
+                                            })}
+                                        <li className={`page-item ${stockPage >= Math.ceil(stockItems.length / stockPerPage) ? 'disabled' : ''}`}>
+                                            <button className="page-link" onClick={() => setStockPage(p => Math.min(Math.ceil(stockItems.length / stockPerPage), p + 1))} disabled={stockPage >= Math.ceil(stockItems.length / stockPerPage)}>
+                                                Next
+                                            </button>
+                                        </li>
+                                        <li className={`page-item ${stockPage >= Math.ceil(stockItems.length / stockPerPage) ? 'disabled' : ''}`}>
+                                            <button className="page-link" onClick={() => setStockPage(Math.max(1, Math.ceil(stockItems.length / stockPerPage)))} disabled={stockPage >= Math.ceil(stockItems.length / stockPerPage)} title="Last Page">
+                                                <i className="bi bi-chevron-double-right"></i>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        )}
                     </div>
                 </>
             ) : (
                 /* STOCK HISTORY LEDGER VIEW */
-                <div className="card border-0 shadow-sm rounded-3 bg-white">
+                <div className="card border-0 shadow-sm rounded-3 bg-white mb-4">
                     <div className="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                         <div>
                             <h5 className="mb-0 fw-bold text-dark fs-6">Stock Movement History</h5>
                             <span className="text-muted fs-7">Audit trail of all receipts, sales, transfers, and adjustments.</span>
                         </div>
-                        <button className="btn btn-sm btn-outline-secondary" onClick={() => loadMovements(1)}>
+                        <button className="btn btn-sm btn-outline-secondary" onClick={() => loadMovements(1, movementsPerPage)}>
                             <i className="bi bi-arrow-clockwise me-1"></i> Refresh History
                         </button>
+                        {!movementsLoading && movements.length > 0 && (
+                        <div className="d-flex align-items-center gap-2">
+                            <label className="text-secondary small text-nowrap mb-0">Per page:</label>
+                            <select
+                                className="form-select form-select-sm border-secondary-subtle font-monospace"
+                                style={{ width: '75px' }}
+                                value={movementsPerPage}
+                                onChange={(e) => {
+                                    const newPerPage = Number(e.target.value);
+                                    setMovementsPerPage(newPerPage);
+                                    loadMovements(1, newPerPage);
+                                }}
+                            >
+                                <option value={10}>10</option>
+                                <option value={25}>25</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                        </div>
+                        )}
                     </div>
                     <div className="card-body p-0">
                         <div className="table-responsive">
@@ -802,6 +903,59 @@ export default function InventoryManager() {
                             </table>
                         </div>
                     </div>
+
+                    {/* Stock Movement History Pagination Bar */}
+                    {!movementsLoading && movements.length > 0 && (
+                        <div className="card-footer bg-white border-top py-3 px-4 d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
+                            <div className="d-flex align-items-center gap-3">
+                                <span className="text-secondary small">
+                                    Showing <strong>{((movementsPagination.current_page - 1) * movementsPerPage) + 1}</strong> to <strong>{Math.min(movementsPagination.current_page * movementsPerPage, movementsPagination.total)}</strong> of <strong>{movementsPagination.total}</strong> movements
+                                </span>                                
+                            </div>
+
+                            <nav aria-label="Movements Pagination">
+                                <ul className="pagination pagination-sm mb-0">
+                                    <li className={`page-item ${movementsPagination.current_page === 1 ? 'disabled' : ''}`}>
+                                        <button className="page-link" onClick={() => loadMovements(1, movementsPerPage)} disabled={movementsPagination.current_page === 1} title="First Page">
+                                            <i className="bi bi-chevron-double-left"></i>
+                                        </button>
+                                    </li>
+                                    <li className={`page-item ${movementsPagination.current_page === 1 ? 'disabled' : ''}`}>
+                                        <button className="page-link" onClick={() => loadMovements(movementsPagination.current_page - 1, movementsPerPage)} disabled={movementsPagination.current_page === 1}>
+                                            Prev
+                                        </button>
+                                    </li>
+                                    {Array.from({ length: movementsPagination.last_page || 1 }, (_, i) => i + 1)
+                                        .filter(p => p === 1 || p === movementsPagination.last_page || Math.abs(p - movementsPagination.current_page) <= 2)
+                                        .map((p, idx, arr) => {
+                                            const prev = arr[idx - 1];
+                                            return (
+                                                <React.Fragment key={p}>
+                                                    {prev && p - prev > 1 && (
+                                                        <li className="page-item disabled"><span className="page-link">...</span></li>
+                                                    )}
+                                                    <li className={`page-item ${movementsPagination.current_page === p ? 'active' : ''}`}>
+                                                        <button className="page-link" onClick={() => loadMovements(p, movementsPerPage)}>
+                                                            {p}
+                                                        </button>
+                                                    </li>
+                                                </React.Fragment>
+                                            );
+                                        })}
+                                    <li className={`page-item ${movementsPagination.current_page >= movementsPagination.last_page ? 'disabled' : ''}`}>
+                                        <button className="page-link" onClick={() => loadMovements(movementsPagination.current_page + 1, movementsPerPage)} disabled={movementsPagination.current_page >= movementsPagination.last_page}>
+                                            Next
+                                        </button>
+                                    </li>
+                                    <li className={`page-item ${movementsPagination.current_page >= movementsPagination.last_page ? 'disabled' : ''}`}>
+                                        <button className="page-link" onClick={() => loadMovements(movementsPagination.last_page, movementsPerPage)} disabled={movementsPagination.current_page >= movementsPagination.last_page} title="Last Page">
+                                            <i className="bi bi-chevron-double-right"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    )}
                 </div>
             )}
 
