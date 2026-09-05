@@ -460,7 +460,7 @@ export default function InventoryManager() {
                         <div className="card-body p-3">
                             <div className="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <span className="text-secondary small fw-semibold text-uppercase tracking-wider">Total Stock</span>
+                                    <span className="text-secondary small fw-semibold text-uppercase tracking-wider">Total Product Variants In Stock</span>
                                     <h3 className="h2 fw-bold text-dark mb-0 mt-1">{summaryCards.total_stock}</h3>
                                     <span className="text-muted fs-7">Unique stock entries</span>
                                 </div>
@@ -619,8 +619,7 @@ export default function InventoryManager() {
                         <div className="card-body p-0">
                             <div className="table-responsive">
                                 {!loading && stockItems.length > 0 && (
-                                    <div className="d-flex align-items-end justify-content-end">
-                                        
+                                    <div className="d-flex align-items-end justify-content-end">                                        
                                         <div className="d-flex align-items-center gap-2">
                                             <label className="text-secondary small text-nowrap mb-0">Per page:</label>
                                             <select
