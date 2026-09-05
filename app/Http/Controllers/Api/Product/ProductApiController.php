@@ -18,6 +18,7 @@ use App\Domains\Product\Models\Product;
 use App\Domains\Product\Models\ProductAttribute;
 use App\Domains\Product\Models\ProductAttributeValue;
 use App\Domains\Product\Models\UnitConversion;
+use App\Domains\Product\Services\TileDimensionService;
 
 class ProductApiController extends Controller
 {
@@ -112,6 +113,9 @@ class ProductApiController extends Controller
                 }
             }
         }
+
+        // Process and normalize tile dimensions (Length, Width, Unit -> mm, Sq.Ft., Sq.M.)
+        $this->processTileDimensions($normalizedAttributes, $orgId);
 
         // Validate required category specifications & tile pieces_per_box
         $category = Category::find($validated['category_id']);
@@ -428,28 +432,44 @@ class ProductApiController extends Controller
             }
         }
 
-        DB::transaction(function () use ($variant, $validated, $piecesPerBox, $orgId) {
+        // Normalize attributes dictionary and process dimension calculations
+        $rawAttributes = $request->input('attributes', []);
+        $normalizedAttributes = [];
+        if (is_array($rawAttributes)) {
+            foreach ($rawAttributes as $key => $item) {
+                if (is_array($item) && isset($item['attribute_id'])) {
+                    $normalizedAttributes[$item['attribute_id']] = $item['value'] ?? null;
+                } else if (!is_array($item)) {
+                    $normalizedAttributes[$key] = $item;
+                }
+            }
+        }
+        $this->processTileDimensions($normalizedAttributes, $orgId);
+
+        DB::transaction(function () use ($variant, $validated, $normalizedAttributes, $piecesPerBox, $orgId) {
             $variantData = collect($validated)->except(['attributes', 'pieces_per_box'])->toArray();
             $variantData['pieces_per_box'] = $piecesPerBox;
             $variant->update($variantData);
 
-            if (isset($validated['attributes'])) {
-                $submittedAttrIds = collect($validated['attributes'])->pluck('attribute_id')->toArray();
+            if (!empty($normalizedAttributes)) {
+                $submittedAttrIds = array_keys($normalizedAttributes);
                 ProductAttributeValue::where('product_variant_id', $variant->id)
                     ->whereNotIn('product_attribute_id', $submittedAttrIds)
                     ->delete();
 
-                foreach ($validated['attributes'] as $attr) {
-                    ProductAttributeValue::updateOrCreate(
-                        [
-                            'organization_id' => $orgId,
-                            'product_variant_id' => $variant->id,
-                            'product_attribute_id' => $attr['attribute_id']
-                        ],
-                        [
-                            'value' => $attr['value']
-                        ]
-                    );
+                foreach ($normalizedAttributes as $attrId => $val) {
+                    if ($val !== null && $val !== '') {
+                        ProductAttributeValue::updateOrCreate(
+                            [
+                                'organization_id' => $orgId,
+                                'product_variant_id' => $variant->id,
+                                'product_attribute_id' => $attrId
+                            ],
+                            [
+                                'value' => (string) $val
+                            ]
+                        );
+                    }
                 }
             }
 
@@ -681,6 +701,52 @@ class ProductApiController extends Controller
             $firstTaxProfile = TaxProfile::where('is_active', true)->first();
             if ($firstTaxProfile) {
                 $request->merge(['tax_profile_id' => $firstTaxProfile->id]);
+            }
+        }
+    }
+
+    /**
+     * Helper to process tile dimensions, normalize length & width to millimetres, and calculate coverage area attributes.
+     */
+    private function processTileDimensions(array &$normalizedAttributes, ?int $orgId): void
+    {
+        $lengthAttr = ProductAttribute::withoutGlobalScopes()->where('slug', 'length')->first();
+        $widthAttr = ProductAttribute::withoutGlobalScopes()->where('slug', 'width')->first();
+        $unitAttr = ProductAttribute::withoutGlobalScopes()->where('slug', 'dimension-unit')->first();
+        $tileSizeAttr = ProductAttribute::withoutGlobalScopes()->where('slug', 'tile-size')->first();
+
+        $lengthMmAttr = ProductAttribute::withoutGlobalScopes()->where('slug', 'length-mm')->first();
+        $widthMmAttr = ProductAttribute::withoutGlobalScopes()->where('slug', 'width-mm')->first();
+        $areaSqftAttr = ProductAttribute::withoutGlobalScopes()->where('slug', 'coverage-area-sqft')->first();
+        $areaSqmAttr = ProductAttribute::withoutGlobalScopes()->where('slug', 'coverage-area-sqm')->first();
+
+        $length = $lengthAttr ? ($normalizedAttributes[$lengthAttr->id] ?? null) : null;
+        $width = $widthAttr ? ($normalizedAttributes[$widthAttr->id] ?? null) : null;
+        $unit = $unitAttr ? ($normalizedAttributes[$unitAttr->id] ?? null) : null;
+        $tileSize = $tileSizeAttr ? ($normalizedAttributes[$tileSizeAttr->id] ?? null) : null;
+
+        if (($length === null || $width === null) && !empty($tileSize) && $tileSize !== 'Custom Size') {
+            $parsed = TileDimensionService::parsePresetSize($tileSize);
+            if ($parsed) {
+                $length = $parsed['raw_length'];
+                $width = $parsed['raw_width'];
+                $unit = $parsed['unit_symbol'];
+                if ($lengthAttr) $normalizedAttributes[$lengthAttr->id] = (string) $length;
+                if ($widthAttr) $normalizedAttributes[$widthAttr->id] = (string) $width;
+                if ($unitAttr) $normalizedAttributes[$unitAttr->id] = $unit;
+            }
+        }
+
+        if ($length !== null && $width !== null && is_numeric($length) && is_numeric($width)) {
+            $unitSymbol = !empty($unit) ? (string) $unit : 'ft';
+            $normalized = TileDimensionService::normalizeDimensions((float) $length, (float) $width, $unitSymbol);
+
+            if ($lengthMmAttr) $normalizedAttributes[$lengthMmAttr->id] = (string) $normalized['length_mm'];
+            if ($widthMmAttr) $normalizedAttributes[$widthMmAttr->id] = (string) $normalized['width_mm'];
+            if ($areaSqftAttr) $normalizedAttributes[$areaSqftAttr->id] = (string) $normalized['coverage_area_sqft'];
+            if ($areaSqmAttr) $normalizedAttributes[$areaSqmAttr->id] = (string) $normalized['coverage_area_sqm'];
+            if ($unitAttr && empty($normalizedAttributes[$unitAttr->id])) {
+                $normalizedAttributes[$unitAttr->id] = $unitSymbol;
             }
         }
     }

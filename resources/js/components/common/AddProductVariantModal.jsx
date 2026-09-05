@@ -65,6 +65,14 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
         return isTile(cat);
     };
 
+    const [showCategoryModal, setShowCategoryModal] = useState(false);
+    const [categoryModalError, setCategoryModalError] = useState(null);
+    const [categoryForm, setCategoryForm] = useState({
+        name: '',
+        parent_id: '',
+        description: ''
+    });
+
     const [showBrandModal, setShowBrandModal] = useState(false);
     const [brandForm, setBrandForm] = useState({
         name: '',
@@ -222,6 +230,50 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
         }
     };
 
+
+    // Inline Category Quick Add
+    const handleQuickAddCategorySubmit = async (e) => {
+        e.preventDefault();
+        setCategoryModalError(null);
+        setSaving(true);
+        try {
+            const token = localStorage.getItem('auth_token');
+            const payload = {
+                name: categoryForm.name,
+                parent_id: categoryForm.parent_id || null,
+                description: categoryForm.description || null,
+                is_active: true
+            };
+            const response = await axios.post('/api/categories-crud', payload, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const newCategory = response.data.category || response.data.data;
+            await loadFormData();
+
+            const isTile = checkIsTileCategory(newCategory.id);
+            const defaultBase = newCategory?.default_base_unit_id || newCategory?.parent?.default_base_unit_id || '';
+            const defaultPurchase = newCategory?.default_purchase_unit_id || newCategory?.parent?.default_purchase_unit_id || '';
+            const defaultSales = newCategory?.default_sales_unit_id || newCategory?.parent?.default_sales_unit_id || '';
+
+            setProductForm(prev => ({
+                ...prev,
+                category_id: newCategory.id.toString(),
+                pieces_per_box: isTile ? prev.pieces_per_box : '',
+                base_unit_id: defaultBase ? defaultBase.toString() : prev.base_unit_id,
+                purchase_unit_id: defaultPurchase ? defaultPurchase.toString() : prev.purchase_unit_id,
+                sales_unit_id: defaultSales ? defaultSales.toString() : prev.sales_unit_id,
+                attributes: {}
+            }));
+
+            setShowCategoryModal(false);
+            setCategoryForm({ name: '', parent_id: '', description: '' });
+            setSuccess('Category created successfully!');
+        } catch (err) {
+            setCategoryModalError(err.response?.data?.message || 'Failed to create category.');
+        } finally {
+            setSaving(false);
+        }
+    };
 
     // Inline Brand Quick Add
     const handleQuickAddBrandSubmit = async (e) => {
@@ -394,43 +446,55 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
                                 <div className="row mb-3 align-items-end">
                                     <div className="col-md-6">
                                         <label className="form-label small fw-semibold">Category *</label>
-                                        <select
-                                            className="form-select form-select-sm"
-                                            value={productForm.category_id}
-                                             onChange={(e) => {
-                                                const newCatId = e.target.value;
-                                                const isTile = checkIsTileCategory(newCatId);
-                                                const catObj = categories.find(c => c.id.toString() === newCatId.toString());
-                                                const defaultBase = catObj?.default_base_unit_id || catObj?.parent?.default_base_unit_id || '';
-                                                const defaultPurchase = catObj?.default_purchase_unit_id || catObj?.parent?.default_purchase_unit_id || '';
-                                                const defaultSales = catObj?.default_sales_unit_id || catObj?.parent?.default_sales_unit_id || '';
+                                        <div className="input-group input-group-sm">
+                                            <select
+                                                className="form-select form-select-sm"
+                                                value={productForm.category_id}
+                                                onChange={(e) => {
+                                                    const newCatId = e.target.value;
+                                                    const isTile = checkIsTileCategory(newCatId);
+                                                    const catObj = categories.find(c => c.id.toString() === newCatId.toString());
+                                                    const defaultBase = catObj?.default_base_unit_id || catObj?.parent?.default_base_unit_id || '';
+                                                    const defaultPurchase = catObj?.default_purchase_unit_id || catObj?.parent?.default_purchase_unit_id || '';
+                                                    const defaultSales = catObj?.default_sales_unit_id || catObj?.parent?.default_sales_unit_id || '';
 
-                                                setProductForm(prev => ({
-                                                    ...prev,
-                                                    category_id: newCatId,
-                                                    pieces_per_box: isTile ? prev.pieces_per_box : '',
-                                                    base_unit_id: defaultBase ? defaultBase.toString() : prev.base_unit_id,
-                                                    purchase_unit_id: defaultPurchase ? defaultPurchase.toString() : prev.purchase_unit_id,
-                                                    sales_unit_id: defaultSales ? defaultSales.toString() : prev.sales_unit_id,
-                                                    attributes: {}
-                                                }));
-                                            }}
-                                            required
-                                            disabled={loading}
-                                        >
-                                            <option value="">-- Select Category --</option>
-                                            {categories.map(c => (
-                                                <option key={c.id} value={c.id}>
-                                                    {c.parent_id || c.parent ? `\u00A0\u00A0\u00A0\u00A0── ${c.name}` : c.name}
-                                                </option>
-                                            ))}
-                                        </select>
+                                                    setProductForm(prev => ({
+                                                        ...prev,
+                                                        category_id: newCatId,
+                                                        pieces_per_box: isTile ? prev.pieces_per_box : '',
+                                                        base_unit_id: defaultBase ? defaultBase.toString() : prev.base_unit_id,
+                                                        purchase_unit_id: defaultPurchase ? defaultPurchase.toString() : prev.purchase_unit_id,
+                                                        sales_unit_id: defaultSales ? defaultSales.toString() : prev.sales_unit_id,
+                                                        attributes: {}
+                                                    }));
+                                                }}
+                                                required
+                                                disabled={loading}
+                                            >
+                                                <option value="">-- Select Category --</option>
+                                                {categories.map(c => (
+                                                    <option key={c.id} value={c.id}>
+                                                        {c.parent_id || c.parent ? `\u00A0\u00A0\u00A0\u00A0── ${c.name}` : c.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {/* Add Category Button */}
+                                            <button
+                                                type="button"
+                                                className="btn btn-outline-primary"
+                                                onClick={() => setShowCategoryModal(true)}
+                                                title="Quick add Category"
+                                            >
+                                                <i className="fa-solid fa-plus"></i>
+                                            </button>
+                                        </div>
+
                                     </div>
                                     <div className="col-md-6">
                                         <label className="form-label small fw-semibold">Brand *</label>
                                         <div className="input-group input-group-sm">
                                             <select
-                                                className="form-select"
+                                                className="form-select form-select-sm"
                                                 value={productForm.brand_id}
                                                 onChange={(e) => setProductForm({ ...productForm, brand_id: e.target.value })}
                                                 required
@@ -661,6 +725,74 @@ export default function AddProductVariantModal({ show, onClose, onSave, productT
             </div>
 
             {/* Quick Add Sub-Modals */}
+
+            {/* 1. Quick Add Category Modal */}
+            {showCategoryModal && (
+                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1080 }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '12px' }}>
+                            <div className="modal-header border-bottom bg-light">
+                                <h6 className="modal-title fw-bold text-dark">Quick Add Category</h6>
+                                <button type="button" className="btn-close" onClick={() => setShowCategoryModal(false)}></button>
+                            </div>
+                            <form onSubmit={handleQuickAddCategorySubmit}>
+                                <div className="modal-body">
+                                    {categoryModalError && (
+                                        <div className="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between mb-3" role="alert">
+                                            <div className="d-flex align-items-center">
+                                                <i className="fa-solid fa-circle-exclamation me-2 fs-5 text-danger"></i>
+                                                <div className="small">{categoryModalError}</div>
+                                            </div>
+                                            <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setCategoryModalError(null)} aria-label="Close"></button>
+                                        </div>
+                                    )}
+
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Category Name *</label>
+                                        <input
+                                            type="text"
+                                            className="form-control form-control-sm"
+                                            value={categoryForm.name}
+                                            onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                                            placeholder="e.g. Vitrified Tiles, Wall Tiles"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Parent Category</label>
+                                        <select
+                                            className="form-select form-select-sm"
+                                            value={categoryForm.parent_id}
+                                            onChange={(e) => setCategoryForm({ ...categoryForm, parent_id: e.target.value })}
+                                        >
+                                            <option value="">None (Top-Level Category)</option>
+                                            {categories.filter(c => !c.parent_id).map(c => (
+                                                <option key={c.id} value={c.id}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label small fw-semibold">Description</label>
+                                        <textarea
+                                            className="form-control form-control-sm"
+                                            rows="2"
+                                            value={categoryForm.description}
+                                            onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
+                                            placeholder="Optional category description"
+                                        ></textarea>
+                                    </div>
+                                </div>
+                                <div className="modal-footer border-top bg-light">
+                                    <button type="button" className="btn btn-sm btn-secondary" onClick={() => setShowCategoryModal(false)}>Cancel</button>
+                                    <button type="submit" className="btn btn-sm btn-primary" disabled={saving}>Save Category</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
 
 
             {/* 2. Quick Add Brand Modal */}

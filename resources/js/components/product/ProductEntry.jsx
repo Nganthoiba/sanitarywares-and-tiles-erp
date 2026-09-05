@@ -638,7 +638,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                     --------------------------------------------------------- */}
                 {(view === "list" || view === "create" || view === "edit") && (
                     <div>
-                        {/* Concept Introductions */}
+                        {/* Concept Introductions 
                         <div className="p-3 bg-white border border-light rounded-3 mb-4 shadow-sm">
                             <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
                                 <div className="d-flex align-items-center gap-2">
@@ -647,6 +647,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                 </div>
                             </div>
                         </div>
+                        */}
 
                         {/* Search and Filters panel */}
                         <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3 bg-white p-3 border border-light rounded-3 shadow-sm">

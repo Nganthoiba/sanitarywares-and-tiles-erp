@@ -199,11 +199,23 @@ class CategoryApiController extends Controller
             ];
         })->values();
 
+        $lengthUnits = \App\Domains\Master\Models\Unit::where('is_active', true)
+            ->get()
+            ->filter(fn($u) => $u->dimension_category === 'LENGTH')
+            ->map(fn($u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'symbol' => strtolower($u->symbol),
+                'display_name' => $u->display_name
+            ])
+            ->values();
+
         return response()->json([
             'category_id' => $category->id,
             'category_name' => $category->name,
             'category_slug' => $category->slug,
-            'specifications' => $formatted
+            'specifications' => $formatted,
+            'length_units' => $lengthUnits
         ]);
     }
 

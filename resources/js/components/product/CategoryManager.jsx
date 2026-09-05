@@ -32,8 +32,6 @@ export default function CategoryManager() {
         default_sales_unit_id: ''
     });
 
-    const [showInfo, setShowInfo] = useState(true);
-
     const fetchCategories = async () => {
         setLoading(true);
         setError(null);
@@ -344,25 +342,19 @@ export default function CategoryManager() {
         <div className="animate__animated animate__fadeIn">
             {/* Header Banner */}
             <div className="d-flex align-items-center justify-content-between mb-4">
-                <div>
+                <div className="col-md-10">
                     <h3 className="fw-bold text-dark">
                         <i className="fa-solid fa-folder-tree me-2 text-primary"></i>Product Category Registry
                     </h3>
-                    <p className="text-muted small mb-0">Define, edit, and group your catalog products by categories and subcategories.</p>
-                </div>
-                <button className="btn btn-primary px-4 shadow-sm" onClick={handleOpenCreate}>
-                    <i className="fa-solid fa-plus me-2"></i> Add Product Category
-                </button>
-            </div>
-
-            {showInfo && (
-                <div className="alert alert-primary text-dark border-0 p-3 mb-4 small animate__animated animate__fadeIn d-flex align-items-center justify-content-between">
                     <div>
                         <strong>What is a Product Category?</strong> Product categories organize your inventory hierarchically (e.g., <i>Tiles &gt; Ceramic Tiles</i>). Categories define logical classification, tax configurations, and properties structure, helping group similar items together for catalog browsing, sales analysis, and stock reporting.
                     </div>
-                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setShowInfo(false)} aria-label="Close"></button>
+                    <p className="text-muted small mb-0">Define, edit, and group your catalog products by categories and subcategories.</p>
                 </div>
-            )}
+                <button className="btn btn-primary shadow-sm" onClick={handleOpenCreate}>
+                    <i className="fa-solid fa-plus me-2"></i> Add Category
+                </button>
+            </div>
 
             {error && (
                 <div className="alert alert-danger d-flex align-items-center justify-content-between mb-4 animate__animated animate__shakeX" role="alert">
@@ -387,7 +379,7 @@ export default function CategoryManager() {
             {/* Category Table Card */}
             <div className="card border-0 shadow-sm p-4" style={{ borderRadius: '12px' }}>
                 {/* Search, Filter & Per-Page Controls */}
-                <div className="row g-3 align-items-center mb-4">
+                <div className="row g-3 align-items-center mb-2">
                     <div className="col-md-5">
                         <div className="input-group">
                             <span className="input-group-text bg-white border-end-0 text-muted">
