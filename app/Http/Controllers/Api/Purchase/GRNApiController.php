@@ -66,7 +66,7 @@ class GRNApiController extends Controller
     {
         try {
             $grn = $this->grnService->createDraft($request->validated());
-            $grn->load(['items.variant', 'items.unit', 'items.slabs', 'warehouse', 'storageLocation', 'supplier', 'order']);
+            $grn->load(['items.variant.attributeValues.attribute', 'items.unit', 'items.slabs', 'warehouse', 'storageLocation', 'supplier', 'order']);
             return new GoodsReceiptNoteResource($grn);
         } catch (Exception $e) {
             return response()->json([
@@ -81,7 +81,7 @@ class GRNApiController extends Controller
      */
     public function show($id)
     {
-        $grn = GoodsReceiptNote::with(['items.variant', 'items.unit', 'items.slabs', 'warehouse', 'storageLocation', 'supplier', 'order'])
+        $grn = GoodsReceiptNote::with(['items.variant.attributeValues.attribute', 'items.unit', 'items.slabs', 'warehouse', 'storageLocation', 'supplier', 'order'])
             ->findOrFail($id);
         return new GoodsReceiptNoteResource($grn);
     }
@@ -109,7 +109,7 @@ class GRNApiController extends Controller
     {
         try {
             $grn = $this->grnService->approveGRN($id);
-            $grn->load(['items.variant', 'items.unit', 'items.slabs', 'warehouse', 'storageLocation', 'supplier', 'order']);
+            $grn->load(['items.variant.attributeValues.attribute', 'items.unit', 'items.slabs', 'warehouse', 'storageLocation', 'supplier', 'order']);
             return response()->json([
                 'success' => true,
                 'message' => 'Goods Receipt Note approved and posted to inventory successfully.',
@@ -130,7 +130,7 @@ class GRNApiController extends Controller
     {
         try {
             $grn = $this->grnService->cancelGRN($id);
-            $grn->load(['items.variant', 'items.unit', 'items.slabs', 'warehouse', 'storageLocation', 'supplier', 'order']);
+            $grn->load(['items.variant.attributeValues.attribute', 'items.unit', 'items.slabs', 'warehouse', 'storageLocation', 'supplier', 'order']);
             return response()->json([
                 'success' => true,
                 'message' => 'Goods Receipt Note cancelled and inventory reversed successfully.',
@@ -154,7 +154,7 @@ class GRNApiController extends Controller
             'warehouses' => Warehouse::where('is_active', true)->orderBy('name')->get(),
             'storage_locations' => StorageLocation::orderBy('code')->get(),
             'units' => Unit::where('is_active', true)->orderBy('name')->get(),
-            'product_variants' => Product::where('is_active', true)->with(['baseUnit', 'purchaseUnit'])->orderBy('name')->get(),
+            'product_variants' => Product::where('is_active', true)->with(['baseUnit', 'purchaseUnit', 'attributeValues.attribute'])->orderBy('name')->get(),
             'purchase_orders' => PurchaseOrder::with(['items.variant', 'items.unit', 'supplier'])
                 ->whereIn('status', ['APPROVED', 'OPEN', 'PARTIAL'])
                 ->orderBy('po_number', 'desc')

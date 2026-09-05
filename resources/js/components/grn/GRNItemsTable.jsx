@@ -7,18 +7,56 @@ export default function GRNItemsTable({ items, onChange, products, units, purcha
     const [showQuickProductModal, setShowQuickProductModal] = useState(false);
     const [quickAddIndex, setQuickAddIndex] = useState(null);
 
+    const getSlabDetailsFromProduct = (product) => {
+        let length = '';
+        let width = '';
+        let thickness = '';
+        let finish = 'POLISHED';
+        let origin = 'IMPORT';
+
+        if (product) {
+            const values = product.attribute_values || product.attributeValues || [];
+            values.forEach(av => {
+                const attrName = (av.attribute?.name || '').toLowerCase();
+                const attrSlug = (av.attribute?.slug || attrName).toLowerCase();
+                const val = av.value;
+
+                if ((attrSlug === 'length' || attrName === 'length') && val !== null && val !== undefined && val !== '') {
+                    length = parseFloat(val) || val;
+                }
+                if ((attrSlug === 'width' || attrName === 'width') && val !== null && val !== undefined && val !== '') {
+                    width = parseFloat(val) || val;
+                }
+                if ((attrSlug === 'thickness' || attrName === 'thickness') && val !== null && val !== undefined && val !== '') {
+                    thickness = parseFloat(val) || val;
+                }
+                if ((attrSlug === 'finish' || attrName === 'finish') && val) {
+                    finish = String(val).toUpperCase();
+                }
+                if ((attrSlug === 'origin' || attrName === 'origin') && val) {
+                    origin = String(val).toUpperCase();
+                }
+            });
+        }
+
+        return { length, width, thickness, finish, origin };
+    };
+
     const handleItemChange = (index, field, value) => {
         const updated = [...items];
         
         if (field === 'product_variant_id') {
             const product = products.find(p => p.id === parseInt(value));
+            const isSlab = product?.inventory_behavior === 'SLAB';
+            const initialSlabs = isSlab ? [{ ...getSlabDetailsFromProduct(product) }] : [];
+
             updated[index] = {
                 product_variant_id: value,
                 quantity_received: 1,
                 quantity_accepted: 1,
                 quantity_rejected: 0,
                 unit_id: product?.purchase_unit_id || product?.base_unit_id || '',
-                slabs: [],
+                slabs: initialSlabs,
                 purchase_order_item_id: null
             };
         } else {
@@ -27,6 +65,22 @@ export default function GRNItemsTable({ items, onChange, products, units, purcha
             if (field === 'quantity_received') {
                 updated[index].quantity_accepted = value;
                 updated[index].quantity_rejected = 0;
+
+                const product = products.find(p => p.id === parseInt(updated[index].product_variant_id));
+                if (product?.inventory_behavior === 'SLAB') {
+                    const reqQty = parseInt(value || 0);
+                    let slabs = updated[index].slabs || [];
+                    const defaults = getSlabDetailsFromProduct(product);
+                    if (slabs.length < reqQty) {
+                        const newSlabs = [...slabs];
+                        for (let i = slabs.length; i < reqQty; i++) {
+                            newSlabs.push({ ...defaults });
+                        }
+                        updated[index].slabs = newSlabs;
+                    } else if (slabs.length > reqQty) {
+                        updated[index].slabs = slabs.slice(0, reqQty);
+                    }
+                }
             }
         }
         

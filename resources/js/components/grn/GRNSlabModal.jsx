@@ -9,9 +9,9 @@ export default function GRNSlabModal({ show, onClose, quantity, initialSlabs, on
             for (let i = 0; i < quantity; i++) {
                 const existing = initialSlabs && initialSlabs[i] ? initialSlabs[i] : {};
                 list.push({
-                    length: existing.length || 120,
-                    width: existing.width || 60,
-                    thickness: existing.thickness || 20,
+                    length: existing.length !== undefined && existing.length !== null ? existing.length : '',
+                    width: existing.width !== undefined && existing.width !== null ? existing.width : '',
+                    thickness: existing.thickness !== undefined && existing.thickness !== null ? existing.thickness : '',
                     finish: existing.finish || 'POLISHED',
                     origin: existing.origin || 'IMPORT'
                 });

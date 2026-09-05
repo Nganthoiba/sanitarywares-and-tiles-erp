@@ -146,12 +146,63 @@ export default function GRNForm({ grnId, onBack, onSaveSuccess }) {
             return;
         }
 
+        const getSlabDetailsFromProduct = (variant) => {
+            let length = '';
+            let width = '';
+            let thickness = '';
+            let finish = 'POLISHED';
+            let origin = 'IMPORT';
+
+            if (variant) {
+                const values = variant.attribute_values || variant.attributeValues || [];
+                values.forEach(av => {
+                    const attrName = (av.attribute?.name || '').toLowerCase();
+                    const attrSlug = (av.attribute?.slug || attrName).toLowerCase();
+                    const val = av.value;
+
+                    if ((attrSlug === 'length' || attrName === 'length') && val !== null && val !== undefined && val !== '') {
+                        length = parseFloat(val) || val;
+                    }
+                    if ((attrSlug === 'width' || attrName === 'width') && val !== null && val !== undefined && val !== '') {
+                        width = parseFloat(val) || val;
+                    }
+                    if ((attrSlug === 'thickness' || attrName === 'thickness') && val !== null && val !== undefined && val !== '') {
+                        thickness = parseFloat(val) || val;
+                    }
+                    if ((attrSlug === 'finish' || attrName === 'finish') && val) {
+                        finish = String(val).toUpperCase();
+                    }
+                    if ((attrSlug === 'origin' || attrName === 'origin') && val) {
+                        origin = String(val).toUpperCase();
+                    }
+                });
+            }
+
+            return { length, width, thickness, finish, origin };
+        };
+
         for (let item of formData.items) {
             const variant = contexts.product_variants.find(p => p.id === parseInt(item.product_variant_id));
             if (variant?.inventory_behavior === 'SLAB') {
                 const reqCount = parseInt(item.quantity_received || 0);
-                if ((item.slabs || []).length !== reqCount) {
-                    setError(`Slab detail entries count (${(item.slabs || []).length}) must match received quantity (${reqCount}) for: ${variant.name}`);
+                let slabs = item.slabs || [];
+                const serverDetails = getSlabDetailsFromProduct(variant);
+                
+                if (slabs.length !== reqCount) {
+                    const newSlabs = [...slabs];
+                    if (newSlabs.length < reqCount) {
+                        for (let i = newSlabs.length; i < reqCount; i++) {
+                            newSlabs.push({ ...serverDetails });
+                        }
+                    } else {
+                        newSlabs.splice(reqCount);
+                    }
+                    item.slabs = newSlabs;
+                }
+
+                const missingDimensionIndex = item.slabs.findIndex(s => !s.length || !s.width || parseFloat(s.length) <= 0 || parseFloat(s.width) <= 0);
+                if (missingDimensionIndex !== -1) {
+                    setError(`Slab details (Length & Width) must be entered for slab #${missingDimensionIndex + 1} of product: ${variant.name}`);
                     setSaving(false);
                     return;
                 }
