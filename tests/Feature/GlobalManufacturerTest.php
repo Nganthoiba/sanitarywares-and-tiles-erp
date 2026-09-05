@@ -336,4 +336,29 @@ class GlobalManufacturerTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonPath('message', 'Cannot delete manufacturer because it is referenced by active products. Deactivate instead.');
     }
+
+    public function test_manufacturer_index_supports_pagination_and_all_parameter()
+    {
+        for ($i = 1; $i <= 20; $i++) {
+            Manufacturer::create([
+                'legal_name' => "Manufacturer {$i} Ltd",
+                'is_active' => true
+            ]);
+        }
+
+        Sanctum::actingAs($this->superAdmin);
+
+        // 1. Paginated Request (default per_page=15)
+        $paginatedResponse = $this->getJson('/api/manufacturers-crud?page=1&per_page=10');
+        $paginatedResponse->assertStatus(200)
+            ->assertJsonPath('total', 20)
+            ->assertJsonPath('per_page', 10)
+            ->assertJsonPath('current_page', 1)
+            ->assertJsonCount(10, 'data');
+
+        // 2. Unpaginated Request (all=true)
+        $allResponse = $this->getJson('/api/manufacturers-crud?all=true');
+        $allResponse->assertStatus(200)
+            ->assertJsonCount(20);
+    }
 }

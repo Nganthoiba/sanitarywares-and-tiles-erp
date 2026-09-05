@@ -90,9 +90,18 @@ class ManufacturerApiController extends Controller
             $query->where('verification_status', $request->input('verification_status'));
         }
 
-        $manufacturers = $query->orderBy('name')->orderBy('legal_name')->get();
+        $query->orderBy('name')->orderBy('legal_name');
 
-        return response()->json($manufacturers);
+        if ($request->boolean('all') || $request->query('paginate') === 'false') {
+            return response()->json($query->get());
+        }
+
+        $perPage = (int) $request->input('per_page', 15);
+        if ($perPage <= 0) {
+            $perPage = 15;
+        }
+
+        return response()->json($query->paginate($perPage));
     }
 
     /**

@@ -8,6 +8,16 @@ export default function ManufacturerManager() {
     const [success, setSuccess] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [perPage, setPerPage] = useState(15);
+    const [paginationMeta, setPaginationMeta] = useState({
+        total: 0,
+        from: 0,
+        to: 0,
+        last_page: 1,
+    });
+
     // Determine if current user is Super Admin
     const [isSuperAdmin, setIsSuperAdmin] = useState(() => {
         try {
@@ -49,16 +59,39 @@ export default function ManufacturerManager() {
         verification_status: 'UNVERIFIED'
     });
 
-    const fetchManufacturers = async (query = '') => {
+    const fetchManufacturers = async (page = 1, query = '', pageLimit = perPage) => {
         setLoading(true);
         setError(null);
         try {
             const token = localStorage.getItem('auth_token');
             const res = await axios.get('/api/manufacturers-crud', {
                 headers: { Authorization: `Bearer ${token}` },
-                params: { query: query || undefined }
+                params: {
+                    page: page,
+                    per_page: pageLimit,
+                    query: query || undefined
+                }
             });
-            setManufacturers(res.data || []);
+
+            if (res.data && Array.isArray(res.data.data)) {
+                setManufacturers(res.data.data);
+                setPaginationMeta({
+                    total: res.data.total || 0,
+                    from: res.data.from || 0,
+                    to: res.data.to || 0,
+                    last_page: res.data.last_page || 1,
+                });
+                setCurrentPage(res.data.current_page || page);
+            } else if (Array.isArray(res.data)) {
+                setManufacturers(res.data);
+                setPaginationMeta({
+                    total: res.data.length,
+                    from: res.data.length > 0 ? 1 : 0,
+                    to: res.data.length,
+                    last_page: 1,
+                });
+                setCurrentPage(1);
+            }
         } catch (err) {
             setError('Failed to fetch global manufacturers registry.');
         } finally {
@@ -67,8 +100,23 @@ export default function ManufacturerManager() {
     };
 
     useEffect(() => {
-        fetchManufacturers(searchQuery);
+        setCurrentPage(1);
+        fetchManufacturers(1, searchQuery, perPage);
     }, [searchQuery]);
+
+    const handlePageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= paginationMeta.last_page) {
+            setCurrentPage(newPage);
+            fetchManufacturers(newPage, searchQuery, perPage);
+        }
+    };
+
+    const handlePerPageChange = (e) => {
+        const newLimit = parseInt(e.target.value, 10);
+        setPerPage(newLimit);
+        setCurrentPage(1);
+        fetchManufacturers(1, searchQuery, newLimit);
+    };
 
     const handleOpenCreate = () => {
         setModalMode('create');
@@ -133,7 +181,7 @@ export default function ManufacturerManager() {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setSuccess('Manufacturer successfully removed from global master.');
-            fetchManufacturers(searchQuery);
+            fetchManufacturers(currentPage, searchQuery, perPage);
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to delete manufacturer.');
         }
@@ -200,7 +248,7 @@ export default function ManufacturerManager() {
             // Display success message inside modal directly
             setModalSuccess(successMessage);
             setSuccess(successMessage);
-            fetchManufacturers(searchQuery);
+            fetchManufacturers(currentPage, searchQuery, perPage);
 
             // Keep modal open briefly to show the success response before auto-closing
             setTimeout(() => {
@@ -233,22 +281,6 @@ export default function ManufacturerManager() {
     const handleChange = (field, value) => {
         setForm(prev => ({ ...prev, [field]: value }));
     };
-
-    const filteredManufacturers = manufacturers.filter(m => {
-        if (!searchQuery || !searchQuery.trim()) return true;
-        const q = searchQuery.trim().toLowerCase();
-        return (
-            (m.legal_name && m.legal_name.toLowerCase().includes(q)) ||
-            (m.name && m.name.toLowerCase().includes(q)) ||
-            (m.trade_name && m.trade_name.toLowerCase().includes(q)) ||
-            (m.cin && m.cin.toLowerCase().includes(q)) ||
-            (m.registration_number && m.registration_number.toLowerCase().includes(q)) ||
-            (m.registered_address && m.registered_address.toLowerCase().includes(q)) ||
-            (m.address && m.address.toLowerCase().includes(q)) ||
-            (m.email && m.email.toLowerCase().includes(q)) ||
-            (m.phone && m.phone.toLowerCase().includes(q))
-        );
-    });
 
     return (
         <div className="animate__animated animate__fadeIn">
@@ -305,9 +337,24 @@ export default function ManufacturerManager() {
                             )}
                         </div>
                     </div>
-                    <div className="col-md-6 text-end">
+                    <div className="col-md-6 text-end d-flex align-items-center justify-content-end gap-3">
+                        <div className="d-flex align-items-center gap-2">
+                            <label className="text-muted small mb-0 font-monospace">Per page:</label>
+                            <select
+                                className="form-select form-select-sm font-monospace"
+                                style={{ width: '80px' }}
+                                value={perPage}
+                                onChange={handlePerPageChange}
+                            >
+                                <option value={10}>10</option>
+                                <option value={15}>15</option>
+                                <option value={25}>25</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                        </div>
                         <span className="badge bg-light text-secondary border font-monospace py-2 px-3">
-                            Total Records: {manufacturers.length}
+                            Total Records: {paginationMeta.total}
                         </span>
                     </div>
                 </div>
@@ -321,105 +368,161 @@ export default function ManufacturerManager() {
                         <span className="ms-2 font-monospace">Fetching global manufacturers directory...</span>
                     </div>
                 ) : (
-                    <div className="table-responsive">
-                        <table className="table table-hover align-middle">
-                            <thead>
-                                <tr className="text-secondary font-monospace" style={{ fontSize: '0.8rem' }}>
-                                    <th>Legal / Company Name</th>
-                                    <th>CIN / Reg No.</th>
-                                    <th>Registered Address</th>
-                                    <th>Contact Details</th>
-                                    <th>Verification</th>
-                                    <th>Status</th>
-                                    <th className="text-end">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredManufacturers.map((m) => (
-                                    <tr key={m.id}>
-                                        <td>
-                                            <div className="fw-bold text-dark">{m.legal_name || m.name}</div>
-                                            {m.trade_name && m.trade_name !== m.legal_name && (
-                                                <div className="text-muted small">Trade: {m.trade_name}</div>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <div className="small font-monospace fw-semibold text-dark">{m.cin || m.registration_number || <span className="text-muted font-normal italic">-</span>}</div>
-                                            {m.registration_number && m.cin && (
-                                                <div className="text-secondary small font-monospace">Reg: {m.registration_number}</div>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <div className="small text-secondary">{m.registered_address || m.address || <span className="text-muted small italic">-</span>}</div>
-                                        </td>
-                                        <td>
-                                            <div className="small">{m.phone || <span className="text-muted small italic">-</span>}</div>
-                                            <div className="text-secondary small">{m.email}</div>
-                                        </td>
-                                        <td>
-                                            {m.verification_status === 'VERIFIED' ? (
-                                                <span className="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
-                                                    <i className="fa-solid fa-shield-check me-1"></i> VERIFIED
-                                                </span>
-                                            ) : m.verification_status === 'REJECTED' ? (
-                                                <span className="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
-                                                    <i className="fa-solid fa-shield-xmark me-1"></i> REJECTED
-                                                </span>
-                                            ) : (
-                                                <span className="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
-                                                    <i className="fa-solid fa-clock me-1"></i> UNVERIFIED
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            {m.is_active === 1 || m.is_active === true ? (
-                                                <span className="badge bg-success-subtle text-success px-2 py-1">
-                                                    <i className="fa-solid fa-circle-check me-1"></i> ACTIVE
-                                                </span>
-                                            ) : (
-                                                <span className="badge bg-danger-subtle text-danger px-2 py-1">
-                                                    <i className="fa-solid fa-circle-xmark me-1"></i> INACTIVE
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="text-end">
-                                            {isSuperAdmin ? (
-                                                <div className="d-flex justify-content-end gap-1">
-                                                    <button
-                                                        className="btn btn-xs btn-outline-primary px-2"
-                                                        onClick={() => handleOpenEdit(m)}
-                                                        style={{ fontSize: '0.75rem' }}
-                                                        title="Edit Global Manufacturer"
-                                                    >
-                                                        <i className="fa-solid fa-pen me-1"></i> Edit
-                                                    </button>
-                                                    <button
-                                                        className="btn btn-xs btn-outline-danger px-2"
-                                                        onClick={() => handleDelete(m)}
-                                                        style={{ fontSize: '0.75rem' }}
-                                                        title="Delete Global Manufacturer"
-                                                    >
-                                                        <i className="fa-solid fa-trash me-1"></i> Delete
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <span className="text-muted small font-monospace opacity-75" title="Shared Master Record — Only Super Admin can edit or delete">
-                                                    <i className="fa-solid fa-lock me-1"></i> Shared Master
-                                                </span>
-                                            )}
-                                        </td>
+                    <>
+                        <div className="table-responsive">
+                            <table className="table table-hover align-middle">
+                                <thead>
+                                    <tr className="text-secondary font-monospace" style={{ fontSize: '0.8rem' }}>
+                                        <th>#</th>
+                                        <th>Legal / Company Name</th>
+                                        <th>CIN / Reg No.</th>
+                                        <th>Registered Address</th>
+                                        <th>Contact Details</th>
+                                        <th>Verification</th>
+                                        <th>Status</th>
+                                        <th className="text-end">Actions</th>
                                     </tr>
-                                ))}
-                                {filteredManufacturers.length === 0 && (
-                                    <tr>
-                                        <td colSpan="7" className="text-center py-5 text-muted font-monospace">
-                                            No manufacturers found in global master matching search query. Click 'Add Manufacturer to Master' to add one.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    {manufacturers.map((m, index) => (
+                                        <tr key={m.id}>
+                                            <td>{index + 1}</td>
+                                            <td>
+                                                <div className="fw-bold text-dark">{m.legal_name || m.name}</div>
+                                                {m.trade_name && m.trade_name !== m.legal_name && (
+                                                    <div className="text-muted small">Trade: {m.trade_name}</div>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <div className="small font-monospace fw-semibold text-dark">{m.cin || m.registration_number || <span className="text-muted font-normal italic">-</span>}</div>
+                                                {m.registration_number && m.cin && (
+                                                    <div className="text-secondary small font-monospace">Reg: {m.registration_number}</div>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <div className="small text-secondary">{m.registered_address || m.address || <span className="text-muted small italic">-</span>}</div>
+                                            </td>
+                                            <td>
+                                                <div className="small">{m.phone || <span className="text-muted small italic">-</span>}</div>
+                                                <div className="text-secondary small">{m.email}</div>
+                                            </td>
+                                            <td>
+                                                {m.verification_status === 'VERIFIED' ? (
+                                                    <span className="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                                        <i className="fa-solid fa-shield-check me-1"></i> VERIFIED
+                                                    </span>
+                                                ) : m.verification_status === 'REJECTED' ? (
+                                                    <span className="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                                        <i className="fa-solid fa-shield-xmark me-1"></i> REJECTED
+                                                    </span>
+                                                ) : (
+                                                    <span className="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                                        <i className="fa-solid fa-clock me-1"></i> UNVERIFIED
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td>
+                                                {m.is_active === 1 || m.is_active === true ? (
+                                                    <span className="badge bg-success-subtle text-success px-2 py-1">
+                                                        <i className="fa-solid fa-circle-check me-1"></i> ACTIVE
+                                                    </span>
+                                                ) : (
+                                                    <span className="badge bg-danger-subtle text-danger px-2 py-1">
+                                                        <i className="fa-solid fa-circle-xmark me-1"></i> INACTIVE
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="text-end">
+                                                {isSuperAdmin ? (
+                                                    <div className="d-flex justify-content-end gap-1">
+                                                        <button
+                                                            className="btn btn-xs btn-outline-primary px-2"
+                                                            onClick={() => handleOpenEdit(m)}
+                                                            style={{ fontSize: '0.75rem' }}
+                                                            title="Edit Global Manufacturer"
+                                                        >
+                                                            <i className="fa-solid fa-pen me-1"></i> Edit
+                                                        </button>
+                                                        <button
+                                                            className="btn btn-xs btn-outline-danger px-2"
+                                                            onClick={() => handleDelete(m)}
+                                                            style={{ fontSize: '0.75rem' }}
+                                                            title="Delete Global Manufacturer"
+                                                        >
+                                                            <i className="fa-solid fa-trash me-1"></i> Delete
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-muted small font-monospace opacity-75" title="Shared Master Record — Only Super Admin can edit or delete">
+                                                        <i className="fa-solid fa-lock me-1"></i> Shared Master
+                                                    </span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {manufacturers.length === 0 && (
+                                        <tr>
+                                            <td colSpan="7" className="text-center py-5 text-muted font-monospace">
+                                                No manufacturers found in global master matching search query. Click 'Add Manufacturer to Master' to add one.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Pagination & Summary Footer */}
+                        {paginationMeta.total > 0 && (
+                            <div className="d-flex flex-column flex-md-row align-items-center justify-content-between pt-3 border-top gap-3">
+                                <div className="text-muted small font-monospace">
+                                    Showing <span className="fw-bold text-dark">{paginationMeta.from || 0}</span> to <span className="fw-bold text-dark">{paginationMeta.to || 0}</span> of <span className="fw-bold text-dark">{paginationMeta.total || 0}</span> manufacturers
+                                </div>
+
+                                <nav aria-label="Manufacturer pagination">
+                                    <ul className="pagination pagination-sm mb-0">
+                                        <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                                            <button className="page-link" onClick={() => handlePageChange(1)} disabled={currentPage === 1} title="First Page">
+                                                <i className="fa-solid fa-angles-left"></i>
+                                            </button>
+                                        </li>
+                                        <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                                            <button className="page-link" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>
+                                                Previous
+                                            </button>
+                                        </li>
+
+                                        {Array.from({ length: paginationMeta.last_page }, (_, i) => i + 1)
+                                            .filter(page => page === 1 || page === paginationMeta.last_page || Math.abs(page - currentPage) <= 1)
+                                            .map((page, idx, arr) => {
+                                                const prevPage = arr[idx - 1];
+                                                const showEllipsis = prevPage && page - prevPage > 1;
+                                                return (
+                                                    <React.Fragment key={page}>
+                                                        {showEllipsis && <li className="page-item disabled"><span className="page-link">...</span></li>}
+                                                        <li className={`page-item ${currentPage === page ? 'active' : ''}`}>
+                                                            <button className="page-link" onClick={() => handlePageChange(page)}>
+                                                                {page}
+                                                            </button>
+                                                        </li>
+                                                    </React.Fragment>
+                                                );
+                                            })}
+
+                                        <li className={`page-item ${currentPage === paginationMeta.last_page ? 'disabled' : ''}`}>
+                                            <button className="page-link" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === paginationMeta.last_page}>
+                                                Next
+                                            </button>
+                                        </li>
+                                        <li className={`page-item ${currentPage === paginationMeta.last_page ? 'disabled' : ''}`}>
+                                            <button className="page-link" onClick={() => handlePageChange(paginationMeta.last_page)} disabled={currentPage === paginationMeta.last_page} title="Last Page">
+                                                <i className="fa-solid fa-angles-right"></i>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 
