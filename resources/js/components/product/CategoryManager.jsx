@@ -100,12 +100,74 @@ export default function CategoryManager() {
     const [availableSystemAttrs, setAvailableSystemAttrs] = useState([]);
     const [selectedNewAttrId, setSelectedNewAttrId] = useState('');
 
+    // Inline custom attribute definition state
+    const [showDefineAttrModal, setShowDefineAttrModal] = useState(false);
+    const [newAttrForm, setNewAttrForm] = useState({
+        name: '',
+        type: 'string',
+        unit_id: ''
+    });
+    const [definingAttr, setDefiningAttr] = useState(false);
+
+    const handleCreateCustomAttribute = async (e) => {
+        e.preventDefault();
+        if (!newAttrForm.name.trim()) return;
+
+        setDefiningAttr(true);
+        setAttrError(null);
+        try {
+            const token = localStorage.getItem('auth_token');
+            const payload = {
+                name: newAttrForm.name.trim(),
+                type: newAttrForm.type,
+                unit_id: newAttrForm.unit_id ? parseInt(newAttrForm.unit_id, 10) : null
+            };
+            const res = await axios.post('/api/product/attributes', payload, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (res.data?.success && res.data?.data) {
+                const newAttr = res.data.data;
+                setAttrSuccess(`Custom attribute "${newAttr.name}" defined successfully.`);
+                setNewAttrForm({ name: '', type: 'string', unit_id: '' });
+                setShowDefineAttrModal(false);
+
+                // Re-fetch system attributes and auto-attach newly created attribute
+                if (selectedCategoryForAttrs) {
+                    const attrRes = await axios.get(`/api/categories/${selectedCategoryForAttrs.id}/category-attributes-management`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    const data = attrRes.data || {};
+                    const latestAvailable = data.available_attributes || [];
+                    setAvailableSystemAttrs(latestAvailable);
+
+                    const newDirectAttr = {
+                        attribute_id: newAttr.id,
+                        name: newAttr.name,
+                        slug: newAttr.slug,
+                        type: newAttr.type,
+                        unit_symbol: newAttr.unit?.symbol || null,
+                        is_required: false,
+                        sort_order: directAttrs.length + 1,
+                        allowed_values: []
+                    };
+                    setDirectAttrs(prev => [...prev, newDirectAttr]);
+                }
+            }
+        } catch (err) {
+            setAttrError(err.response?.data?.message || 'Failed to create custom attribute definition.');
+        } finally {
+            setDefiningAttr(false);
+        }
+    };
+
     const handleOpenAttributesModal = async (category) => {
         setSelectedCategoryForAttrs(category);
         setAttrError(null);
         setAttrSuccess(null);
         setAttrLoading(true);
         setSelectedNewAttrId('');
+        setShowDefineAttrModal(false);
         setShowAttrModal(true);
 
         try {
@@ -897,9 +959,82 @@ export default function CategoryManager() {
 
                                         {/* Add New Attribute Control */}
                                         <div className="card bg-light border-0 p-3 mb-4 rounded-3">
-                                            <label className="form-label small fw-bold text-dark mb-2">
-                                                Add Product Specification Attribute
-                                            </label>
+                                            <div className="d-flex align-items-center justify-content-between mb-2">
+                                                <label className="form-label small fw-bold text-dark mb-0">
+                                                    Add Product Specification Attribute
+                                                </label>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-xs btn-outline-info"
+                                                    onClick={() => setShowDefineAttrModal(!showDefineAttrModal)}
+                                                >
+                                                    <i className="fa-solid fa-plus-circle me-1"></i> {showDefineAttrModal ? 'Close Creator' : 'Define New Attribute'}
+                                                </button>
+                                            </div>
+
+                                            {showDefineAttrModal && (
+                                                <div className="card border border-info-subtle p-3 mb-3 rounded-3 bg-white shadow-sm">
+                                                    <div className="d-flex align-items-center justify-content-between mb-2.5 border-bottom pb-2">
+                                                        <h6 className="fw-bold text-dark mb-0 small">
+                                                            <i className="fa-solid fa-plus-circle text-info me-2"></i> Define New Custom Product Attribute
+                                                        </h6>
+                                                        <button type="button" className="btn-close btn-sm" onClick={() => setShowDefineAttrModal(false)}></button>
+                                                    </div>
+                                                    <form onSubmit={handleCreateCustomAttribute}>
+                                                        <div className="row g-2 align-items-end">
+                                                            <div className="col-md-4">
+                                                                <label className="form-label extra-small fw-semibold text-secondary mb-1">
+                                                                    Attribute Name <span className="text-danger">*</span>
+                                                                </label>
+                                                                <input
+                                                                    type="text"
+                                                                    className="form-control form-control-sm"
+                                                                    placeholder="e.g. Thickness, Water Absorption"
+                                                                    value={newAttrForm.name}
+                                                                    onChange={(e) => setNewAttrForm({ ...newAttrForm, name: e.target.value })}
+                                                                    required
+                                                                />
+                                                            </div>
+                                                            <div className="col-md-3">
+                                                                <label className="form-label extra-small fw-semibold text-secondary mb-1">
+                                                                    Data Type <span className="text-danger">*</span>
+                                                                </label>
+                                                                <select
+                                                                    className="form-select form-select-sm"
+                                                                    value={newAttrForm.type}
+                                                                    onChange={(e) => setNewAttrForm({ ...newAttrForm, type: e.target.value })}
+                                                                >
+                                                                    <option value="string">String (Text)</option>
+                                                                    <option value="decimal">Decimal (Numeric)</option>
+                                                                    <option value="number">Integer Number</option>
+                                                                    <option value="selection">Selection (Dropdown)</option>
+                                                                </select>
+                                                            </div>
+                                                            <div className="col-md-3">
+                                                                <label className="form-label extra-small fw-semibold text-secondary mb-1">
+                                                                    Default Unit (Optional)
+                                                                </label>
+                                                                <select
+                                                                    className="form-select form-select-sm"
+                                                                    value={newAttrForm.unit_id}
+                                                                    onChange={(e) => setNewAttrForm({ ...newAttrForm, unit_id: e.target.value })}
+                                                                >
+                                                                    <option value="">-- No Default Unit --</option>
+                                                                    {units.map(u => (
+                                                                        <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                            <div className="col-md-2 d-flex gap-1">
+                                                                <button type="submit" className="btn btn-sm btn-info text-white flex-grow-1" disabled={definingAttr}>
+                                                                    {definingAttr ? <span className="spinner-border spinner-border-sm"></span> : <><i className="fa-solid fa-check me-1"></i> Create</>}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            )}
+
                                             <div className="input-group input-group-sm">
                                                 <select
                                                     className="form-select"

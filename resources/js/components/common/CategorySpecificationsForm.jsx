@@ -30,6 +30,7 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
     const [isCustomTileSize, setIsCustomTileSize] = useState(false);
     const [lengthUnits, setLengthUnits] = useState(DEFAULT_LENGTH_UNITS);
     const [selectedUnitState, setSelectedUnitState] = useState('cm');
+    const [thicknessUnitState, setThicknessUnitState] = useState('mm');
 
     useEffect(() => {
         if (!categoryId) {
@@ -57,18 +58,27 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
                     slug: data.category_slug
                 });
 
-                // Detect initial tile size and unit from values
+                // Detect initial tile size and units from values
                 const tileSizeAttr = specs.find(s => s.slug === 'tile-size');
                 const lengthAttr = specs.find(s => s.slug === 'length');
                 const widthAttr = specs.find(s => s.slug === 'width');
                 const dimUnitAttr = specs.find(s => s.slug === 'dimension-unit');
+                const thickUnitAttr = specs.find(s => s.slug === 'thickness-unit');
 
-                // Determine initial unit if available
+                // Determine initial length/width unit if available
                 const existingUnit = (dimUnitAttr && values[dimUnitAttr.attribute_id])
                     ? values[dimUnitAttr.attribute_id]
                     : (values['dimension-unit'] || values['dimension_unit']);
                 if (existingUnit) {
                     setSelectedUnitState(existingUnit.toLowerCase());
+                }
+
+                // Determine initial thickness unit if available
+                const existingThickUnit = (thickUnitAttr && values[thickUnitAttr.attribute_id])
+                    ? values[thickUnitAttr.attribute_id]
+                    : (values['thickness-unit'] || values['thickness_unit']);
+                if (existingThickUnit) {
+                    setThicknessUnitState(existingThickUnit.toLowerCase());
                 }
 
                 if (tileSizeAttr && values[tileSizeAttr.attribute_id]) {
@@ -140,6 +150,7 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
     const lengthAttr = specifications.find(s => s.slug === 'length');
     const widthAttr = specifications.find(s => s.slug === 'width');
     const thicknessAttr = specifications.find(s => s.slug === 'thickness');
+    const thicknessUnitAttr = specifications.find(s => s.slug === 'thickness-unit');
     const dimensionUnitAttr = specifications.find(s => s.slug === 'dimension-unit');
 
     const isTileCategory = !!tileSizeAttr || (categoryInfo?.slug && (
@@ -150,10 +161,15 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
     const isSlabCategory = (categoryInfo?.slug === 'granite-slabs' || categoryInfo?.slug === 'marble-slabs') ||
         (!tileSizeAttr && lengthAttr && widthAttr);
 
-    // Current Unit Selection (reads from attribute ID, fallback keys, or local state)
+    // Length & Width Unit Selection
     const currentUnit = (dimensionUnitAttr && values[dimensionUnitAttr.attribute_id])
         ? values[dimensionUnitAttr.attribute_id].toLowerCase()
         : (values['dimension-unit'] || values['dimension_unit'] || selectedUnitState || 'cm').toLowerCase();
+
+    // Independent Thickness Unit Selection
+    const currentThicknessUnit = (thicknessUnitAttr && values[thicknessUnitAttr.attribute_id])
+        ? values[thicknessUnitAttr.attribute_id].toLowerCase()
+        : (values['thickness-unit'] || values['thickness_unit'] || thicknessUnitState || 'mm').toLowerCase();
 
     // Handle Tile Size Preset Change
     const handleTileSizeChange = (e) => {
@@ -194,7 +210,7 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
         onChange(newBatch);
     };
 
-    // Handle Unit Change in Custom Mode (Synchronizes Length, Width, and Thickness unit dropdowns)
+    // Handle Length & Width Unit Change (Synchronizes Length and Width unit dropdowns only)
     const handleUnitChange = (e) => {
         const targetUnit = e.target.value.toLowerCase();
         setSelectedUnitState(targetUnit);
@@ -206,7 +222,7 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
             newBatch['dimension-unit'] = targetUnit;
         }
 
-        // Convert existing length, width, and thickness if present
+        // Convert existing length and width if present
         const oldMult = UNIT_TO_MM[currentUnit] || 10.0;
         const newMult = UNIT_TO_MM[targetUnit] || 10.0;
 
@@ -221,6 +237,25 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
             const convertedWid = (oldWid * oldMult) / newMult;
             newBatch[widthAttr.attribute_id] = Number.isInteger(convertedWid) ? convertedWid.toString() : convertedWid.toFixed(2);
         }
+
+        onChange(newBatch);
+    };
+
+    // Handle Independent Thickness Unit Change
+    const handleThicknessUnitChange = (e) => {
+        const targetUnit = e.target.value.toLowerCase();
+        setThicknessUnitState(targetUnit);
+        const newBatch = {};
+
+        if (thicknessUnitAttr) {
+            newBatch[thicknessUnitAttr.attribute_id] = targetUnit;
+        } else {
+            newBatch['thickness-unit'] = targetUnit;
+        }
+
+        // Convert existing thickness value if present
+        const oldMult = UNIT_TO_MM[currentThicknessUnit] || 1.0;
+        const newMult = UNIT_TO_MM[targetUnit] || 1.0;
 
         if (thicknessAttr && values[thicknessAttr.attribute_id] && !isNaN(parseFloat(values[thicknessAttr.attribute_id]))) {
             const oldThick = parseFloat(values[thicknessAttr.attribute_id]);
@@ -342,8 +377,8 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
                                             <select
                                                 className="form-select bg-light text-secondary border-secondary-subtle font-monospace"
                                                 style={{ maxWidth: '80px' }}
-                                                value={currentUnit}
-                                                onChange={handleUnitChange}
+                                                value={currentThicknessUnit}
+                                                onChange={handleThicknessUnitChange}
                                                 title="Thickness Unit"
                                             >
                                                 {lengthUnits.map((u, idx) => (
@@ -455,8 +490,8 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
                                     <select
                                         className="form-select bg-light text-secondary border-secondary-subtle font-monospace"
                                         style={{ maxWidth: '85px' }}
-                                        value={currentUnit}
-                                        onChange={handleUnitChange}
+                                        value={currentThicknessUnit}
+                                        onChange={handleThicknessUnitChange}
                                         title="Thickness Unit"
                                     >
                                         {lengthUnits.map((u, idx) => (
@@ -485,9 +520,9 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
             {/* General Category Specifications List */}
             <div className="row g-3">
                 {specifications.map((spec) => {
-                    // Skip Tile Size/Length/Width/Thickness/Dimension Unit if already rendered in special layout
-                    if (isTileCategory && ['tile-size', 'length', 'width', 'thickness', 'dimension-unit', 'length-mm', 'width-mm', 'coverage-area-sqft', 'coverage-area-sqm'].includes(spec.slug)) return null;
-                    if (isSlabCategory && !isTileCategory && ['length', 'width', 'thickness', 'dimension-unit', 'length-mm', 'width-mm', 'coverage-area-sqft', 'coverage-area-sqm'].includes(spec.slug)) return null;
+                    // Skip Tile Size/Length/Width/Thickness/Thickness Unit/Dimension Unit if already rendered in special layout
+                    if (isTileCategory && ['tile-size', 'length', 'width', 'thickness', 'thickness-unit', 'dimension-unit', 'length-mm', 'width-mm', 'coverage-area-sqft', 'coverage-area-sqm'].includes(spec.slug)) return null;
+                    if (isSlabCategory && !isTileCategory && ['length', 'width', 'thickness', 'thickness-unit', 'dimension-unit', 'length-mm', 'width-mm', 'coverage-area-sqft', 'coverage-area-sqm'].includes(spec.slug)) return null;
 
                     const currentValue = values[spec.attribute_id] !== undefined ? values[spec.attribute_id] : '';
 
