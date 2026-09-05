@@ -13,7 +13,7 @@ use App\Domains\Master\Models\Warehouse;
 class Dispatch extends Model {
     use BelongsToOrganization;
     use SoftDeletes;
-    protected $fillable = ['organization_id', 'warehouse_id', 'sales_order_id', 'dispatch_number', 'dispatch_date', 'status', 'remarks'];
+    protected $fillable = ['organization_id', 'warehouse_id', 'sales_order_id', 'invoice_id', 'dispatch_number', 'dispatch_date', 'status', 'remarks'];
     protected $casts = ['dispatch_date' => 'date'];
 
     public function organization(): BelongsTo {
@@ -24,6 +24,9 @@ class Dispatch extends Model {
     }
     public function order(): BelongsTo {
         return $this->belongsTo(SalesOrder::class, 'sales_order_id');
+    }
+    public function invoice(): BelongsTo {
+        return $this->belongsTo(Invoice::class);
     }
     public function items(): HasMany {
         return $this->hasMany(DispatchItem::class);

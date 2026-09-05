@@ -116,6 +116,58 @@ class MenuSeeder extends Seeder
             ]
         );
 
+        // 2.5. Sales & Billing (GROUP)
+        $salesGroup = Menu::updateOrCreate(
+            ['menu_name' => 'Sales & Billing', 'parent_id' => null],
+            [
+                'menu_type'     => 'GROUP',
+                'route_uri'     => null,
+                'icon'          => 'fa-solid fa-cash-register',
+                'permission_id' => null,
+                'order'         => 25,
+                'enabled'       => true,
+            ]
+        );
+
+        Menu::updateOrCreate(
+            ['route_uri' => '/sales'],
+            [
+                'menu_name'     => 'Sales & Invoices',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-receipt',
+                'parent_id'     => $salesGroup->id,
+                'permission_id' => null,
+                'order'         => 1,
+                'enabled'       => true,
+            ]
+        );
+
+        Menu::updateOrCreate(
+            ['route_uri' => '/sales/new'],
+            [
+                'menu_name'     => 'Counter Direct Sale',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-cart-plus',
+                'parent_id'     => $salesGroup->id,
+                'permission_id' => null,
+                'order'         => 2,
+                'enabled'       => true,
+            ]
+        );
+
+        Menu::updateOrCreate(
+            ['route_uri' => '/customers'],
+            [
+                'menu_name'     => 'Customers',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-users-between-lines',
+                'parent_id'     => $salesGroup->id,
+                'permission_id' => null,
+                'order'         => 3,
+                'enabled'       => true,
+            ]
+        );
+
         // 3. Inventory (GROUP)
         $inventoryGroup = Menu::updateOrCreate(
             ['menu_name' => 'Inventory', 'parent_id' => null],

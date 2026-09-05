@@ -62,6 +62,10 @@ class Product extends Model {
         return $this->hasMany(OrganizationProductPricing::class, 'product_variant_id');
     }
 
+    public function pricings(): HasMany {
+        return $this->commercialPricings();
+    }
+
     public function currentCommercialPricing(): \Illuminate\Database\Eloquent\Relations\HasOne {
         return $this->hasOne(OrganizationProductPricing::class, 'product_variant_id')
             ->where('is_current', true);

@@ -21,6 +21,8 @@ use App\Http\Controllers\Api\Master\StorageLocationApiController;
 use App\Http\Controllers\Api\Master\CategoryApiController;
 use App\Http\Controllers\Api\Master\BrandApiController;
 use App\Http\Controllers\Api\Master\ManufacturerApiController;
+use App\Http\Controllers\Api\Master\CustomerApiController;
+use App\Http\Controllers\Api\Sales\SalesApiController;
 use App\Http\Controllers\Api\Platform\PlatformOrganizationController;
 use App\Http\Controllers\Api\Platform\PlatformPermissionController;
 use App\Http\Controllers\Api\Platform\PlatformMenuController;
@@ -176,10 +178,17 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::post('/purchase-orders/{id}/cancel', [PurchaseOrderApiController::class, 'cancel']);
     Route::post('/purchase-orders/{id}/close', [PurchaseOrderApiController::class, 'close'])->middleware('permission:purchase.orders.create');
 
-    // Warehouse CRUD Routes
+    // Core Sales Routes
+    Route::get('/sales/form-data', [SalesApiController::class, 'getFormData']);
+    Route::get('/sales', [SalesApiController::class, 'index']);
+    Route::post('/sales/direct', [SalesApiController::class, 'storeDirectSale']);
+    Route::get('/sales/{id}', [SalesApiController::class, 'show']);
+
+    // Master CRUD Routes
     Route::apiResource('branches-crud', BranchApiController::class);
     Route::apiResource('warehouses-crud', WarehouseApiController::class);
     Route::apiResource('suppliers-crud', SupplierApiController::class);
+    Route::apiResource('customers-crud', CustomerApiController::class);
     Route::apiResource('storage-locations-crud', StorageLocationApiController::class);
     Route::get('categories/{id}/specifications', [CategoryApiController::class, 'getSpecifications']);
     Route::get('product-categories/{id}/specifications', [CategoryApiController::class, 'getSpecifications']);

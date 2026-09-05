@@ -29,6 +29,7 @@ import OrganizationManagement from './components/platform/OrganizationManagement
 import PermissionManagement from './components/platform/PermissionManagement';
 import ImageCropperModal from './components/common/ImageCropperModal';
 import NavigationLayout from './components/layouts/NavigationLayout';
+import SalesManager from './components/sales/SalesManager';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
@@ -497,6 +498,11 @@ function App() {
 
                         <Route path="/bookkeeping" element={<LedgerReports />} />
                         <Route path="/reporting" element={<ReportingHub />} />
+
+                        {/* Sales & Billing Routes */}
+                        <Route path="/sales" element={<SalesManager key="sales-list" initialTab="invoices" />} />
+                        <Route path="/sales/new" element={<SalesManager key="sales-new" initialTab="new-sale" />} />
+                        <Route path="/customers" element={<SalesManager key="sales-cust" initialTab="invoices" />} />
                             
                         <Route path="/platform/menus" element={
                             hasPermission('platform.menus.manage') ? (

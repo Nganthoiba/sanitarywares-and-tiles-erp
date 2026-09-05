@@ -12,7 +12,7 @@ use App\Domains\Inventory\Models\InventoryObject;
 class DispatchItem extends Model {
     use BelongsToOrganization;
     use SoftDeletes;
-    protected $fillable = ['organization_id', 'dispatch_id', 'sales_order_item_id', 'inventory_object_id', 'quantity'];
+    protected $fillable = ['organization_id', 'dispatch_id', 'sales_order_item_id', 'product_variant_id', 'unit_id', 'inventory_object_id', 'quantity'];
     protected $casts = ['quantity' => 'decimal:4'];
 
     public function organization(): BelongsTo {
