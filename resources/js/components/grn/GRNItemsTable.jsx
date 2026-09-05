@@ -149,14 +149,13 @@ export default function GRNItemsTable({ items, onChange, products, units, purcha
                 <table className="table table-hover align-middle">
                     <thead>
                         <tr className="text-secondary font-monospace" style={{ fontSize: '0.8rem' }}>
-                            <th style={{ width: '25%' }}>Product Variant</th>
+                            <th style={{ width: '30%' }}>Product Variant</th>
                             {purchaseOrder && <th style={{ width: '15%' }}>PO Item / Ordered Qty</th>}
                             <th style={{ width: '10%' }}>Recv Qty</th>
                             <th style={{ width: '10%' }}>Unit</th>
                             <th style={{ width: '10%' }}>Accepted</th>
                             <th style={{ width: '10%' }}>Rejected</th>
-                            <th style={{ width: '10%' }}>Unit Price</th>
-                            <th style={{ width: '12%' }}>Action / Slabs</th>
+                            <th style={{ width: '15%' }}>Action / Slabs</th>
                             {!readOnly && <th style={{ width: '5%' }}></th>}
                         </tr>
                     </thead>
@@ -189,21 +188,7 @@ export default function GRNItemsTable({ items, onChange, products, units, purcha
                                                             </option>
                                                         ))}
                                                     </select>
-                                                    {/* <button
-                                                        type="button"
-                                                        className="btn btn-outline-primary"
-                                                        onClick={() => {
-                                                            setQuickAddIndex(index);
-                                                            setShowQuickProductModal(true);
-                                                        }}
-                                                        title="Quick add new product variant"
-                                                    >
-                                                        <i className="fa-solid fa-plus"></i>
-                                                    </button> */}
                                                 </div>
-                                                {/* {item.product_variant_id && (
-                                                    <span className="badge bg-light text-secondary font-monospace mt-1 px-2">{behavior}</span>
-                                                )} */}
                                             </div>
                                         )}
                                     </td>
@@ -288,20 +273,6 @@ export default function GRNItemsTable({ items, onChange, products, units, purcha
                                         )}
                                     </td>
                                     <td>
-                                        {readOnly ? (
-                                            <span className="font-monospace">{item.unit_price ? Number(item.unit_price).toFixed(2) : '-'}</span>
-                                        ) : (
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                className="form-control form-control-sm font-monospace"
-                                                placeholder="0.00"
-                                                value={item.unit_price || ''}
-                                                onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
-                                            />
-                                        )}
-                                    </td>
-                                    <td>
                                         {behavior === 'SLAB' ? (
                                             <button
                                                 type="button"
@@ -332,7 +303,7 @@ export default function GRNItemsTable({ items, onChange, products, units, purcha
                         })}
                         {items.length === 0 && (
                             <tr>
-                                <td colSpan={purchaseOrder ? 8 : 7} className="text-center py-4 text-muted font-monospace">
+                                <td colSpan={purchaseOrder ? 7 : 6} className="text-center py-4 text-muted font-monospace">
                                     No products added. Click 'Add Product' or 'Quick Add New Variant' to begin receiving.
                                 </td>
                             </tr>
