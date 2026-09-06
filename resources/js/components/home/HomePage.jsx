@@ -15,7 +15,7 @@ export default function HomePage() {
             bgSubtle: '#ecfdf5',
             badgeText: 'Procurement',
             description: 'Streamline vendor POs, Goods Receipt Notes (GRN), item quality inspection, and supplier ledgers.',
-            features: ['Purchase Orders & Line Sync', 'Goods Receipt Notes (GRN)', 'Supplier Ledger & GST'],
+            features: [], //['Purchase Orders & Line Sync', 'Goods Receipt Notes (GRN)', 'Supplier Ledger & GST'],
             route: '/grn/new',
             linkText: 'New GRN Receipt'
         },
@@ -28,7 +28,7 @@ export default function HomePage() {
             bgSubtle: '#eef2ff',
             badgeText: 'Billing Active',
             description: 'Generate estimates, convert quotes into Tax Invoices, manage customer balances, and reserve stock.',
-            features: ['Quotation to Invoice Pipeline', 'Instant Stock Allocation', 'Multi-Unit Pricing Engine'],
+            features: [],//['Quotation to Invoice Pipeline', 'Instant Stock Allocation', 'Multi-Unit Pricing Engine'],
             route: '/sales',
             linkText: 'Launch Sales Console'
         },
@@ -40,8 +40,8 @@ export default function HomePage() {
             accentColor: '#f59e0b',
             bgSubtle: '#fffbeb',
             badgeText: 'Multi-Warehouse',
-            description: 'Real-time stock monitoring, granite slab physical dimensions (L × W), and box-to-sqft unit conversions.',
-            features: ['Slab-by-Slab Measurement', 'Warehouse Rack & Location', 'UOM Unit Conversions'],
+            description: 'Real-time stock monitoring, granite slab physical dimensions (L x W), and box-to-sqft unit conversions.',
+            features: [],//['Slab-by-Slab Measurement', 'Warehouse Rack & Location', 'UOM Unit Conversions'],
             route: '/inventory',
             linkText: 'View Inventory Stock'
         },
@@ -54,83 +54,14 @@ export default function HomePage() {
             bgSubtle: '#ecfeff',
             badgeText: 'Real-Time BI',
             description: 'Generate stock valuation, transactional audit trails, HSN tax summaries, and financial ledger reports.',
-            features: ['Financial Audit Log Engine', 'Stock Valuation & COGS', 'GST Tax Summary Export'],
+            features: [], //['Financial Audit Log Engine', 'Stock Valuation & COGS', 'GST Tax Summary Export'],
             route: '/reporting',
             linkText: 'Open BI Reporting'
         }
     ];
 
     return (
-        <div className="container-fluid py-4 px-3 px-md-4 animate__animated animate__fadeIn" style={{ maxWidth: '1440px' }}>
-            {/* Minimalist Hero Section */}
-            <div 
-                className="p-4 p-lg-5 mb-4 rounded-4 text-white position-relative overflow-hidden shadow-sm"
-                style={{
-                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)'
-                }}
-            >
-                {/* Subtle Ambient Backdrop Layer */}
-                <div 
-                    className="position-absolute rounded-circle" 
-                    style={{ 
-                        width: '400px', 
-                        height: '400px', 
-                        background: 'radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(0,0,0,0) 70%)', 
-                        top: '-150px', 
-                        right: '-80px', 
-                        pointerEvents: 'none' 
-                    }} 
-                />
-
-                <div className="row align-items-center position-relative" style={{ zIndex: 2 }}>
-                    <div className="col-lg-8">
-                        <div className="d-inline-flex align-items-center gap-2 px-3 py-1 mb-3 rounded-pill bg-white bg-opacity-10 border border-white border-opacity-10">
-                            <span className="spinner-grow spinner-grow-sm text-success" style={{ width: '7px', height: '7px' }} />
-                            <span className="small text-white-50 font-monospace text-uppercase" style={{ letterSpacing: '0.8px', fontSize: '0.72rem' }}>
-                                Sanitarywares & Tiles ERP Management Hub
-                            </span>
-                        </div>
-                        
-                        <h1 className="fw-bold display-6 text-white mb-2" style={{ letterSpacing: '-0.5px' }}>
-                            Enterprise Resource Overview
-                        </h1>
-                        
-                        <p className="text-white-50 mb-4" style={{ maxWidth: '620px', fontSize: '0.98rem', lineHeight: '1.6' }}>
-                            Integrated multi-branch solution for vendor procurement, physical slab measurements, box-to-sqft inventory conversions, and tax invoicing.
-                        </p>
-                        
-                        <div className="d-flex flex-wrap align-items-center gap-2">
-                            <div className="d-flex align-items-center gap-2 px-3 py-1.5 bg-white bg-opacity-10 rounded-pill border border-white border-opacity-10">
-                                <i className="fa-solid fa-building-circle-check text-emerald small"></i>
-                                <span className="text-white small fw-medium" style={{ fontSize: '0.8rem' }}>Multi-Branch Active</span>
-                            </div>
-                            <div className="d-flex align-items-center gap-2 px-3 py-1.5 bg-white bg-opacity-10 rounded-pill border border-white border-opacity-10">
-                                <i className="fa-solid fa-cubes text-warning small"></i>
-                                <span className="text-white small fw-medium" style={{ fontSize: '0.8rem' }}>Tiles & Slab Conversion</span>
-                            </div>
-                            <div className="d-flex align-items-center gap-2 px-3 py-1.5 bg-white bg-opacity-10 rounded-pill border border-white border-opacity-10">
-                                <i className="fa-solid fa-shield-halved text-info small"></i>
-                                <span className="text-white small fw-medium" style={{ fontSize: '0.8rem' }}>GST Audit Ready</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="col-lg-4 d-none d-lg-block text-end">
-                        <div className="p-4 rounded-4 bg-white bg-opacity-5 border border-white border-opacity-10 backdrop-blur text-start d-inline-block shadow-sm" style={{ width: '280px' }}>
-                            <div className="text-success font-monospace fw-semibold mb-1" style={{ fontSize: '0.75rem' }}>
-                                <i className="fa-solid fa-circle-check me-1"></i> SYSTEM ONLINE
-                            </div>
-                            <div className="text-white fw-bold h6 mb-1">Sanitary & Tiles ERP</div>
-                            <p className="text-white-50 small mb-0" style={{ fontSize: '0.78rem', lineHeight: '1.45' }}>
-                                Real-time inventory tracking, batch allocation, and commercial tax engine.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Section Header */}
+        <div className="container-fluid py-4 px-3 px-md-4 animate__animated animate__fadeIn" style={{ maxWidth: '1440px' }}>            {/* Section Header */}
             <div className="d-flex align-items-center justify-content-between mb-3 px-1">
                 <div>
                     <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
@@ -210,14 +141,14 @@ export default function HomePage() {
                                         </p>
 
                                         {/* Features List */}
-                                        <div className="pt-2 border-top mb-3">
+                                        {/* <div className="pt-2 border-top mb-3">
                                             {mod.features.map((feat, idx) => (
                                                 <div key={idx} className="d-flex align-items-center text-muted mb-1" style={{ fontSize: '0.76rem' }}>
                                                     <i className="fa-solid fa-check text-success me-2" style={{ fontSize: '0.65rem' }}></i>
                                                     <span>{feat}</span>
                                                 </div>
                                             ))}
-                                        </div>
+                                        </div> */}
                                     </div>
 
                                     {/* Action Link Button */}
