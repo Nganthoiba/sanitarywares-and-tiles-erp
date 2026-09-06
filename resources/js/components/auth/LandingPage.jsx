@@ -51,15 +51,15 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
   const [openFaq, setOpenFaq] = useState(0);
 
   const pipelineSteps = [
-    {
-      id: 'po',
-      title: 'Supplier Purchase Order',
-      statusBadge: 'PO Lifecycle: DRAFT ➔ APPROVED ➔ SENT',
-      badgeColor: 'bg-primary-subtle text-primary border-primary',
-      icon: 'fa-file-signature',
-      description: 'Formal commercial request capturing vendor rates, CGST/SGST/IGST tax profiles, item line discounts, and target branch dispatch schedules.',
-      highlights: ['Line-item GST auto-splitting', 'Multi-level PO authorization', 'Expected delivery tracking']
-    },
+    // {
+    //   id: 'po',
+    //   title: 'Supplier Purchase Order',
+    //   statusBadge: 'PO Lifecycle: DRAFT ➔ APPROVED ➔ SENT',
+    //   badgeColor: 'bg-primary-subtle text-primary border-primary',
+    //   icon: 'fa-file-signature',
+    //   description: 'Formal commercial request capturing vendor rates, CGST/SGST/IGST tax profiles, item line discounts, and target branch dispatch schedules.',
+    //   highlights: ['Line-item GST auto-splitting', 'Multi-level PO authorization', 'Expected delivery tracking']
+    // },
     {
       id: 'grn',
       title: 'Goods Receipt Note (GRN)',
@@ -536,69 +536,7 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
           </div>
 
           {/* Active Step Details Banner */}
-          <div className="card border-0 shadow-sm rounded-4 p-4 bg-white animate__animated animate__fadeIn">
-            <div className="row align-items-center g-4">
-              <div className="col-lg-7">
-                <div className="d-flex align-items-center gap-3 mb-3">
-                  <div className="icon-badge-lg icon-badge-blue mb-0">
-                    <i className={`fa-solid ${pipelineSteps[activeStep].icon}`}></i>
-                  </div>
-                  <div>
-                    <span className="text-uppercase fw-bold text-primary small" style={{ letterSpacing: '1px' }}>Operational Stage {activeStep + 1}</span>
-                    <h4 className="fw-bold text-dark mb-0">{pipelineSteps[activeStep].title}</h4>
-                  </div>
-                </div>
-                <p className="text-secondary lead fs-6 mb-3">{pipelineSteps[activeStep].description}</p>
-                <div className="d-flex flex-wrap gap-2">
-                  {pipelineSteps[activeStep].highlights.map((h, i) => (
-                    <span key={i} className="badge bg-light text-dark border px-3 py-2 rounded-pill fw-semibold">
-                      <i className="fa-solid fa-check text-success me-2"></i>{h}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="col-lg-5">
-                <div className="bg-dark text-white rounded-4 p-4 position-relative overflow-hidden">
-                  <div className="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary">
-                    <span className="fw-bold text-info small"><i className="fa-solid fa-terminal me-2"></i>STATE MACHINE SIMULATION</span>
-                    <span className="badge bg-success small">ACTIVE TRANSACTION</span>
-                  </div>
-                  <pre className="text-light mb-0" style={{ fontSize: '0.825rem', fontFamily: 'var(--mono-font)' }}>
-{activeStep === 0 && `PO #PO-2026-0042
-Supplier: Kajaria Direct Logistics
-Status: SUBMITTED ➔ APPROVED
-Items: 400 Box (Vitrified 600x600)
-Tax: CGST (9%) + SGST (9%)
-Dispatch: Scheduled`}
-{activeStep === 1 && `GRN #GRN-2026-018
-Ref PO: #PO-2026-0042
-Ordered: 400 Box | Received: 250 Box
-PO Balance: 150 Box
-Status: PARTIALLY_RECEIVED
-Warehouse: Central WH-01`}
-{activeStep === 2 && `Inventory Engine Update:
-+250 BOX (Vitrified 600x600)
-Coverage Math: 250 x 15.5 SQFT
-Total Added: +3,875 SQ.FT
-Rack Location: R2-C1-S4
-Branch Isolation: Verified`}
-{activeStep === 3 && `Sales Invoice #INV-2026-089
-Customer: Apex Constructions
-Sold: 120 BOX (1,860 SQ.FT)
-Stock Deduction: Real-Time
-Payment: Split Ledger
-Invoice Status: ISSUED`}
-{activeStep === 4 && `AUDIT LOG #AUD-9941
-Timestamp: ${new Date().toISOString().split('T')[0]}
-User: Store Manager
-Action: Stock Deduct (-120 Box)
-Trace: INV-2026-089 ➔ GRN-018
-Security Integrity: VALIDATED`}
-                  </pre>
-                </div>
-              </div>
-            </div>
-          </div>
+          
         </div>
       </section>
 
@@ -856,7 +794,7 @@ Security Integrity: VALIDATED`}
               </p>
             </div>
 
-            <div className="col-6 col-lg-2">
+            <div className="col-6 col-lg-4">
               <h6 className="fw-bold text-white mb-3">Product Domain</h6>
               <ul className="list-unstyled small text-white-50 d-flex flex-column gap-2">
                 <li><a href="#sandbox" className="text-white-50 text-decoration-none">Box & SQFT Engine</a></li>
@@ -866,7 +804,7 @@ Security Integrity: VALIDATED`}
               </ul>
             </div>
 
-            <div className="col-6 col-lg-2">
+            <div className="col-6 col-lg-4">
               <h6 className="fw-bold text-white mb-3">Target Formats</h6>
               <ul className="list-unstyled small text-white-50 d-flex flex-column gap-2">
                 <li><span className="text-white-50">Retail Showrooms</span></li>
@@ -876,7 +814,7 @@ Security Integrity: VALIDATED`}
               </ul>
             </div>
 
-            <div className="col-lg-4">
+            {/* <div className="col-lg-4">
               <h6 className="fw-bold text-white mb-3">Technical Stack</h6>
               <p className="text-white-50 small mb-2">Powered by Laravel 11, React 18, Bootstrap 5, and MySQL with unalterable audit trails.</p>
               <div className="d-flex gap-2">
@@ -885,7 +823,7 @@ Security Integrity: VALIDATED`}
                 <span className="badge bg-secondary text-light">React 18</span>
                 <span className="badge bg-secondary text-light">Multi-Tenant RBAC</span>
               </div>
-            </div>
+            </div> */}
           </div>
 
           <div className="pt-4 border-top border-secondary d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
