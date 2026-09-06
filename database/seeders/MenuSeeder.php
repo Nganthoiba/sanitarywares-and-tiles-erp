@@ -150,7 +150,7 @@ class MenuSeeder extends Seeder
                 'menu_type'     => 'PAGE',
                 'icon'          => 'fa-solid fa-receipt',
                 'parent_id'     => $salesGroup->id,
-                'permission_id' => null,
+                'permission_id' => $perm('sales.orders.manage'),
                 'order'         => 1,
                 'enabled'       => true,
             ]
@@ -163,7 +163,7 @@ class MenuSeeder extends Seeder
                 'menu_type'     => 'PAGE',
                 'icon'          => 'fa-solid fa-cart-plus',
                 'parent_id'     => $salesGroup->id,
-                'permission_id' => null,
+                'permission_id' => $perm('sales.orders.manage'),
                 'order'         => 2,
                 'enabled'       => true,
             ]
