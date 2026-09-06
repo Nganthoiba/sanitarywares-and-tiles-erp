@@ -11,11 +11,21 @@ export default function PurchaseOrderPdf({ po }) {
                     <h2 className="fw-bold mb-1 uppercase tracking-wide text-dark">PURCHASE ORDER</h2>
                     <div className="text-secondary small">Ref: <strong>{po.po_number}</strong></div>
                     <div className="mt-3">
-                        <div className="fw-bold text-uppercase fs-6">Apex Building Materials Ltd</div>
-                        <div>123 Industrial Area, Phase-I</div>
-                        <div>Mumbai, Maharashtra - 400001</div>
-                        <div>GSTIN: 27APEXC1234A1Z1</div>
-                        <div>Email: procurement@apex.com</div>
+                        <div className="fw-bold text-uppercase fs-6">
+                            {po.organization?.legal_name || po.organization?.name || 'ORGANIZATION'}
+                        </div>
+                        {po.organization?.address && <div>{po.organization.address}</div>}
+                        {(po.organization?.city || po.organization?.state || po.organization?.postal_code) && (
+                            <div>
+                                {[
+                                    po.organization?.city,
+                                    po.organization?.state ? (po.organization?.postal_code ? `${po.organization.state} - ${po.organization.postal_code}` : po.organization.state) : po.organization?.postal_code
+                                ].filter(Boolean).join(', ')}
+                            </div>
+                        )}
+                        {po.organization?.gstin && <div>GSTIN: {po.organization.gstin}</div>}
+                        {po.organization?.email && <div>Email: {po.organization.email}</div>}
+                        {po.organization?.phone && <div>Phone: {po.organization.phone}</div>}
                     </div>
                 </div>
                 <div className="col-5 text-end fs-7">
@@ -35,17 +45,25 @@ export default function PurchaseOrderPdf({ po }) {
                 <div className="col-6">
                     <div className="card p-3 border-dark bg-light" style={{ borderRadius: '0px' }}>
                         <div className="text-muted text-uppercase fw-bold border-bottom pb-1 mb-2 font-monospace" style={{ fontSize: '0.75rem', letterSpacing: '1px' }}>Supplier / Vendor</div>
-                        <div className="fw-bold text-uppercase">{po.supplier_name}</div>
-                        <div className="small">Supplier Reference Profile Code</div>
-                        <div className="small text-muted mt-2">Check system supplier directory for contact address & phone details.</div>
+                        <div className="fw-bold text-uppercase">{po.supplier?.name || po.supplier_name || 'SUPPLIER'}</div>
+                        {po.supplier?.address && <div>{po.supplier.address}</div>}
+                        {po.supplier?.gstin && <div>GSTIN: {po.supplier.gstin}</div>}
+                        {po.supplier?.email && <div>Email: {po.supplier.email}</div>}
+                        {po.supplier?.phone && <div>Phone: {po.supplier.phone}</div>}
+                        {!po.supplier?.address && <div className="small text-muted mt-2">Check system supplier directory for contact address & phone details.</div>}
                     </div>
                 </div>
                 <div className="col-6">
                     <div className="card p-3 border-dark bg-light" style={{ borderRadius: '0px' }}>
                         <div className="text-muted text-uppercase fw-bold border-bottom pb-1 mb-2 font-monospace" style={{ fontSize: '0.75rem', letterSpacing: '1px' }}>Delivery Address</div>
-                        <div className="fw-bold text-uppercase">Apex Central Warehouse</div>
-                        <div>F-Block, Logistics Hub, Taloja</div>
-                        <div>Navi Mumbai, Maharashtra - 410208</div>
+                        <div className="fw-bold text-uppercase">{po.branch?.name || po.branch_name || po.organization?.name || 'CENTRAL WAREHOUSE'}</div>
+                        {po.branch?.address ? (
+                            <div>{po.branch.address}</div>
+                        ) : po.organization?.address ? (
+                            <div>{po.organization.address}</div>
+                        ) : null}
+                        {po.branch?.email && <div>Email: {po.branch.email}</div>}
+                        {po.branch?.phone && <div>Phone: {po.branch.phone}</div>}
                         <div className="small text-muted mt-2">Mark all incoming GRNs against purchase order reference code.</div>
                     </div>
                 </div>
