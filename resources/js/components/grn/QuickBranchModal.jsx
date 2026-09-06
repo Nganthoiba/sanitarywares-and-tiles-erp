@@ -8,6 +8,9 @@ export default function QuickBranchModal({ show, onClose, onSave }) {
     const [form, setForm] = useState({
         name: '',
         code: '',
+        email: '',
+        phone: '',
+        address: '',
         is_active: true
     });
 
@@ -16,6 +19,9 @@ export default function QuickBranchModal({ show, onClose, onSave }) {
             setForm({
                 name: '',
                 code: '',
+                email: '',
+                phone: '',
+                address: '',
                 is_active: true
             });
             setError(null);
@@ -49,7 +55,7 @@ export default function QuickBranchModal({ show, onClose, onSave }) {
 
     return (
         <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1080 }}>
-            <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-dialog modal-dialog-centered modal-lg">
                 <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '16px' }}>
                     <div className="modal-header border-bottom-0 pb-0 pt-4 px-4">
                         <h5 className="modal-title fw-bold text-dark">
@@ -66,28 +72,64 @@ export default function QuickBranchModal({ show, onClose, onSave }) {
                                 </div>
                             )}
 
-                            <div className="mb-3">
-                                <label className="form-label small fw-semibold">Branch Location Name</label>
-                                <input
-                                    type="text"
-                                    className="form-control form-control-sm"
-                                    value={form.name}
-                                    onChange={(e) => handleChange('name', e.target.value)}
-                                    placeholder="e.g. Kodompokpi Mayai Leikai"
-                                    required
-                                />
+                            <div className="row g-3 mb-3">
+                                <div className="col-md-6">
+                                    <label className="form-label small fw-semibold">Branch Location Name <span className="text-danger">*</span></label>
+                                    <input
+                                        type="text"
+                                        className="form-control form-control-sm"
+                                        value={form.name}
+                                        onChange={(e) => handleChange('name', e.target.value)}
+                                        placeholder="e.g. Kodompokpi Mayai Leikai"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="col-md-6">
+                                    <label className="form-label small fw-semibold">Branch Location Code <span className="text-danger">*</span></label>
+                                    <input
+                                        type="text"
+                                        className="form-control form-control-sm font-monospace"
+                                        value={form.code}
+                                        onChange={(e) => handleChange('code', e.target.value.toUpperCase())}
+                                        placeholder="e.g. BR-GUJ-MRB"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="row g-3 mb-3">
+                                <div className="col-md-6">
+                                    <label className="form-label small fw-semibold">Contact Email</label>
+                                    <input
+                                        type="email"
+                                        className="form-control form-control-sm"
+                                        value={form.email}
+                                        onChange={(e) => handleChange('email', e.target.value)}
+                                        placeholder="e.g. branch.imphal@company.com"
+                                    />
+                                </div>
+                                <div className="col-md-6">
+                                    <label className="form-label small fw-semibold">Phone Number</label>
+                                    <input
+                                        type="text"
+                                        className="form-control form-control-sm"
+                                        value={form.phone}
+                                        onChange={(e) => handleChange('phone', e.target.value)}
+                                        placeholder="e.g. +91 9876543210"
+                                    />
+                                </div>
                             </div>
 
                             <div className="mb-3">
-                                <label className="form-label small fw-semibold">Branch Location Code</label>
-                                <input
-                                    type="text"
-                                    className="form-control form-control-sm font-monospace"
-                                    value={form.code}
-                                    onChange={(e) => handleChange('code', e.target.value.toUpperCase())}
-                                    placeholder="e.g. BR-GUJ-MRB"
-                                    required
-                                />
+                                <label className="form-label small fw-semibold">Physical Address</label>
+                                <textarea
+                                    className="form-control form-control-sm"
+                                    rows="2"
+                                    value={form.address}
+                                    onChange={(e) => handleChange('address', e.target.value)}
+                                    placeholder="Full street address, city, state & postal code..."
+                                ></textarea>
                             </div>
 
                             <div className="form-check form-switch">

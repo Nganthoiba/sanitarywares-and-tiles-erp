@@ -15,7 +15,7 @@ class BranchApiController extends Controller
      */
     public function index(Request $request)
     {
-        $branches = Branch::orderBy('name')->get();
+        $branches = Branch::withCount('warehouses')->orderBy('name')->get();
         return response()->json($branches);
     }
 
@@ -36,6 +36,9 @@ class BranchApiController extends Controller
                     return $query->where('organization_id', $orgId);
                 })
             ],
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:50',
+            'address' => 'nullable|string',
             'is_active' => 'nullable|boolean'
         ]);
 
@@ -55,7 +58,7 @@ class BranchApiController extends Controller
      */
     public function show($id)
     {
-        $branch = Branch::findOrFail($id);
+        $branch = Branch::withCount('warehouses')->findOrFail($id);
         return response()->json($branch);
     }
 
@@ -78,6 +81,9 @@ class BranchApiController extends Controller
                     return $query->where('organization_id', $orgId);
                 })->ignore($branch->id)
             ],
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:50',
+            'address' => 'nullable|string',
             'is_active' => 'nullable|boolean'
         ]);
 
