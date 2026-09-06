@@ -8,231 +8,188 @@ export default function HomePage() {
     const modules = [
         {
             id: 'purchase',
-            title: 'Purchase',
+            title: 'Purchase & GRN',
             tagline: 'Procurement & Vendor Supply Chain',
             icon: 'fa-cart-shopping',
-            gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            bgGlow: 'rgba(16, 185, 129, 0.08)',
-            borderColor: 'rgba(16, 185, 129, 0.25)',
-            badgeBg: 'bg-emerald-subtle text-emerald',
-            badgeText: 'Procurement Ready',
-            description: 'Manage vendor procurement lifecycle, Purchase Orders (PO), Goods Receipt Notes (GRN), quality approvals, and supplier invoices.',
-            features: ['Purchase Orders & PO Line Sync', 'Goods Receipt Notes (GRN)', 'Supplier Ledger & GST Tracking'],
-            metrics: [
-                { label: 'Active POs', value: '18' },
-                { label: 'Pending GRNs', value: '4' }
-            ],
-            dummyLinkText: 'Explore Purchase Module',
-            route: '/grn/new'
+            accentColor: '#10b981',
+            bgSubtle: '#ecfdf5',
+            badgeText: 'Procurement',
+            description: 'Streamline vendor POs, Goods Receipt Notes (GRN), item quality inspection, and supplier ledgers.',
+            features: ['Purchase Orders & Line Sync', 'Goods Receipt Notes (GRN)', 'Supplier Ledger & GST'],
+            route: '/grn/new',
+            linkText: 'New GRN Receipt'
         },
         {
             id: 'sales',
-            title: 'Sales',
-            tagline: 'Billing, Quotations & Billing Allocation',
+            title: 'Sales & Billing',
+            tagline: 'Quotations, Estimates & Invoicing',
             icon: 'fa-cash-register',
-            gradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-            bgGlow: 'rgba(99, 102, 241, 0.08)',
-            borderColor: 'rgba(99, 102, 241, 0.25)',
-            badgeBg: 'bg-indigo-subtle text-indigo',
+            accentColor: '#6366f1',
+            bgSubtle: '#eef2ff',
             badgeText: 'Billing Active',
-            description: 'Draft customer estimates, convert approved quotes into Tax Invoices, handle customer balances, and reserve stock in real-time.',
+            description: 'Generate estimates, convert quotes into Tax Invoices, manage customer balances, and reserve stock.',
             features: ['Quotation to Invoice Pipeline', 'Instant Stock Allocation', 'Multi-Unit Pricing Engine'],
-            metrics: [
-                { label: 'Daily Quotes', value: '32' },
-                { label: 'Invoices Issued', value: '142' }
-            ],
-            dummyLinkText: 'Launch Sales Console',
-            route: '/sales'
+            route: '/sales',
+            linkText: 'Launch Sales Console'
         },
         {
             id: 'inventory',
-            title: 'Inventory',
-            tagline: 'Stock, Warehouse & Slab Measurement',
+            title: 'Inventory Hub',
+            tagline: 'Stock, Warehouse & Slab Tracking',
             icon: 'fa-boxes-stacked',
-            gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-            bgGlow: 'rgba(245, 158, 11, 0.08)',
-            borderColor: 'rgba(245, 158, 11, 0.25)',
-            badgeBg: 'bg-amber-subtle text-amber',
+            accentColor: '#f59e0b',
+            bgSubtle: '#fffbeb',
             badgeText: 'Multi-Warehouse',
-            description: 'Real-time multi-branch stock levels, granite slab length x width physical dimensional tracking, and packaging box-to-sqft conversions.',
-            features: ['Slab-by-Slab Measurement', 'Warehouse Rack & Shelf Mapping', 'UOM Unit Conversions'],
-            metrics: [
-                { label: 'Total Variants', value: '450+' },
-                { label: 'Yards & Stores', value: '3' }
-            ],
-            dummyLinkText: 'Open Inventory Hub',
-            route: '/inventory'
+            description: 'Real-time stock monitoring, granite slab physical dimensions (L × W), and box-to-sqft unit conversions.',
+            features: ['Slab-by-Slab Measurement', 'Warehouse Rack & Location', 'UOM Unit Conversions'],
+            route: '/inventory',
+            linkText: 'View Inventory Stock'
         },
         {
             id: 'reports',
-            title: 'Reports',
-            tagline: 'Financial Audits & Executive Analytics',
+            title: 'Reports & Audit',
+            tagline: 'Financial Audits & Executive BI',
             icon: 'fa-chart-pie',
-            gradient: 'linear-gradient(135deg, #06b6d4 0%, #0284c7 100%)',
-            bgGlow: 'rgba(6, 182, 212, 0.08)',
-            borderColor: 'rgba(6, 182, 212, 0.25)',
-            badgeBg: 'bg-cyan-subtle text-cyan',
-            badgeText: 'Real-time Analytics',
-            description: 'Generate stock valuation statements, transactional audit trails, HSN tax summaries, and financial ledger reconciliation reports.',
+            accentColor: '#06b6d4',
+            bgSubtle: '#ecfeff',
+            badgeText: 'Real-Time BI',
+            description: 'Generate stock valuation, transactional audit trails, HSN tax summaries, and financial ledger reports.',
             features: ['Financial Audit Log Engine', 'Stock Valuation & COGS', 'GST Tax Summary Export'],
-            metrics: [
-                { label: 'Audit Records', value: '100%' },
-                { label: 'Ledger Status', value: 'Balanced' }
-            ],
-            dummyLinkText: 'View Analytics & Reports',
-            route: '/reporting'
+            route: '/reporting',
+            linkText: 'Open BI Reporting'
         }
     ];
 
     return (
-        <div className="container-fluid py-4 px-4 animate__animated animate__fadeIn">
-            {/* Header Hero Section */}
+        <div className="container-fluid py-4 px-3 px-md-4 animate__animated animate__fadeIn" style={{ maxWidth: '1440px' }}>
+            {/* Minimalist Hero Section */}
             <div 
-                className="p-4 p-md-5 mb-5 rounded-4 shadow-sm text-white position-relative overflow-hidden"
+                className="p-4 p-lg-5 mb-4 rounded-4 text-white position-relative overflow-hidden shadow-sm"
                 style={{
-                    background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #0f172a 100%)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)'
                 }}
             >
-                {/* Decorative background ambient glows */}
+                {/* Subtle Ambient Backdrop Layer */}
                 <div 
                     className="position-absolute rounded-circle" 
                     style={{ 
-                        width: '350px', 
-                        height: '350px', 
-                        background: 'radial-gradient(circle, rgba(99,102,241,0.2) 0%, rgba(0,0,0,0) 70%)', 
-                        top: '-100px', 
-                        right: '-50px', 
-                        pointerEvents: 'none' 
-                    }} 
-                />
-                <div 
-                    className="position-absolute rounded-circle" 
-                    style={{ 
-                        width: '300px', 
-                        height: '300px', 
-                        background: 'radial-gradient(circle, rgba(16,185,129,0.15) 0%, rgba(0,0,0,0) 70%)', 
-                        bottom: '-100px', 
-                        left: '20%', 
+                        width: '400px', 
+                        height: '400px', 
+                        background: 'radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(0,0,0,0) 70%)', 
+                        top: '-150px', 
+                        right: '-80px', 
                         pointerEvents: 'none' 
                     }} 
                 />
 
                 <div className="row align-items-center position-relative" style={{ zIndex: 2 }}>
                     <div className="col-lg-8">
-                        <div className="d-inline-flex align-items-center gap-2 px-3 py-1.5 mb-3 rounded-pill bg-white bg-opacity-10 border border-white border-opacity-10 backdrop-blur">
-                            <span className="spinner-grow spinner-grow-sm text-emerald" style={{ width: '8px', height: '8px' }} />
-                            <span className="small text-white-50 font-monospace text-uppercase" style={{ letterSpacing: '1px', fontSize: '0.75rem' }}>
+                        <div className="d-inline-flex align-items-center gap-2 px-3 py-1 mb-3 rounded-pill bg-white bg-opacity-10 border border-white border-opacity-10">
+                            <span className="spinner-grow spinner-grow-sm text-success" style={{ width: '7px', height: '7px' }} />
+                            <span className="small text-white-50 font-monospace text-uppercase" style={{ letterSpacing: '0.8px', fontSize: '0.72rem' }}>
                                 Sanitarywares & Tiles ERP Management Hub
                             </span>
                         </div>
-                        <h1 className="fw-extrabold display-6 text-white mb-2" style={{ letterSpacing: '-0.5px' }}>
+                        
+                        <h1 className="fw-bold display-6 text-white mb-2" style={{ letterSpacing: '-0.5px' }}>
                             Enterprise Resource Overview
                         </h1>
-                        <p className="lead text-white-50 mb-4" style={{ maxWidth: '650px', fontSize: '1.05rem', lineHeight: '1.6' }}>
-                            Seamless multi-branch operations for procurement, inventory conversions, sales invoicing, and compliance reporting.
+                        
+                        <p className="text-white-50 mb-4" style={{ maxWidth: '620px', fontSize: '0.98rem', lineHeight: '1.6' }}>
+                            Integrated multi-branch solution for vendor procurement, physical slab measurements, box-to-sqft inventory conversions, and tax invoicing.
                         </p>
                         
-                        <div className="d-flex flex-wrap align-items-center gap-3">
-                            <div className="d-flex align-items-center gap-2 px-3 py-2 bg-white bg-opacity-10 rounded-3 border border-white border-opacity-10">
-                                <i className="fa-solid fa-building-circle-check text-emerald fs-5"></i>
-                                <div>
-                                    <div className="text-white-50 text-uppercase font-monospace" style={{ fontSize: '0.65rem' }}>Multi-Branch Status</div>
-                                    <div className="fw-bold text-white small">All Systems Operational</div>
-                                </div>
+                        <div className="d-flex flex-wrap align-items-center gap-2">
+                            <div className="d-flex align-items-center gap-2 px-3 py-1.5 bg-white bg-opacity-10 rounded-pill border border-white border-opacity-10">
+                                <i className="fa-solid fa-building-circle-check text-emerald small"></i>
+                                <span className="text-white small fw-medium" style={{ fontSize: '0.8rem' }}>Multi-Branch Active</span>
                             </div>
-                            <div className="d-flex align-items-center gap-2 px-3 py-2 bg-white bg-opacity-10 rounded-3 border border-white border-opacity-10">
-                                <i className="fa-solid fa-boxes-packing text-amber fs-5"></i>
-                                <div>
-                                    <div className="text-white-50 text-uppercase font-monospace" style={{ fontSize: '0.65rem' }}>Inventory Engine</div>
-                                    <div className="fw-bold text-white small">Tiles & Slabs Active</div>
-                                </div>
+                            <div className="d-flex align-items-center gap-2 px-3 py-1.5 bg-white bg-opacity-10 rounded-pill border border-white border-opacity-10">
+                                <i className="fa-solid fa-cubes text-warning small"></i>
+                                <span className="text-white small fw-medium" style={{ fontSize: '0.8rem' }}>Tiles & Slab Conversion</span>
+                            </div>
+                            <div className="d-flex align-items-center gap-2 px-3 py-1.5 bg-white bg-opacity-10 rounded-pill border border-white border-opacity-10">
+                                <i className="fa-solid fa-shield-halved text-info small"></i>
+                                <span className="text-white small fw-medium" style={{ fontSize: '0.8rem' }}>GST Audit Ready</span>
                             </div>
                         </div>
                     </div>
+
                     <div className="col-lg-4 d-none d-lg-block text-end">
-                        <div 
-                            className="p-4 rounded-4 bg-white bg-opacity-5 border border-white border-opacity-10 backdrop-blur text-start d-inline-block shadow-lg"
-                            style={{ maxWidth: '320px' }}
-                        >
-                            <div className="text-emerald font-monospace fw-bold mb-1" style={{ fontSize: '0.8rem' }}>
-                                <i className="fa-solid fa-shield-halved me-1"></i> ENTERPRISE SUITE
+                        <div className="p-4 rounded-4 bg-white bg-opacity-5 border border-white border-opacity-10 backdrop-blur text-start d-inline-block shadow-sm" style={{ width: '280px' }}>
+                            <div className="text-success font-monospace fw-semibold mb-1" style={{ fontSize: '0.75rem' }}>
+                                <i className="fa-solid fa-circle-check me-1"></i> SYSTEM ONLINE
                             </div>
-                            <div className="text-white fw-bold h5 mb-2">Sanitary & Tiles ERP</div>
-                            <p className="text-white-50 small mb-0" style={{ fontSize: '0.82rem' }}>
-                                Fully integrated multi-unit commercial engine with automated tax profile allocation and stock ledger auditing.
+                            <div className="text-white fw-bold h6 mb-1">Sanitary & Tiles ERP</div>
+                            <p className="text-white-50 small mb-0" style={{ fontSize: '0.78rem', lineHeight: '1.45' }}>
+                                Real-time inventory tracking, batch allocation, and commercial tax engine.
                             </p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Modules Grid Section Title */}
-            <div className="d-flex align-items-center justify-content-between mb-4">
+            {/* Section Header */}
+            <div className="d-flex align-items-center justify-content-between mb-3 px-1">
                 <div>
-                    <h4 className="fw-bold text-dark mb-1">Core Modules & Operations</h4>
-                    <p className="text-muted small mb-0">Select an operational domain to launch console or view reports.</p>
+                    <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                        <i className="fa-solid fa-grid-2 text-primary" style={{ fontSize: '0.95rem' }}></i>
+                        Operational Modules
+                    </h5>
+                    <p className="text-muted small mb-0" style={{ fontSize: '0.82rem' }}>Quick navigation across core business functions</p>
                 </div>
-                <span className="badge bg-light text-secondary border px-3 py-2 font-monospace" style={{ fontSize: '0.75rem' }}>
-                    4 Modules Configured
+                <span className="badge bg-light text-secondary border fw-medium px-2.5 py-1.5 font-monospace" style={{ fontSize: '0.72rem' }}>
+                    4 Core Modules
                 </span>
             </div>
 
-            {/* 4 Cards Grid */}
-            <div className="row g-4 mb-5">
+            {/* Minimalist 4 Modules Cards Grid */}
+            <div className="row g-3 mb-4">
                 {modules.map((mod) => {
                     const isHovered = hoveredCard === mod.id;
                     return (
                         <div key={mod.id} className="col-12 col-md-6 col-xl-3">
                             <div
-                                className="card h-100 border-0 shadow-sm position-relative overflow-hidden"
+                                className="card h-100 border-0 shadow-sm position-relative"
                                 onMouseEnter={() => setHoveredCard(mod.id)}
                                 onMouseLeave={() => setHoveredCard(null)}
                                 style={{
-                                    borderRadius: '16px',
-                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    transform: isHovered ? 'translateY(-6px)' : 'translateY(0)',
+                                    borderRadius: '14px',
+                                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
+                                    backgroundColor: '#ffffff',
+                                    border: isHovered ? `1px solid ${mod.accentColor}` : '1px solid #e2e8f0',
                                     boxShadow: isHovered 
-                                        ? '0 20px 30px -10px rgba(0,0,0,0.12), 0 10px 15px -5px rgba(0,0,0,0.04)' 
-                                        : '0 4px 12px rgba(0,0,0,0.05)',
-                                    border: isHovered ? `1px solid ${mod.borderColor}` : '1px solid #e2e8f0',
-                                    backgroundColor: '#ffffff'
+                                        ? '0 12px 24px -8px rgba(0,0,0,0.08)' 
+                                        : '0 2px 6px rgba(0,0,0,0.03)'
                                 }}
                             >
-                                {/* Top Accent Gradient Bar */}
-                                <div 
-                                    style={{ 
-                                        height: '5px', 
-                                        background: mod.gradient,
-                                        transition: 'height 0.3s ease'
-                                    }} 
-                                />
-
                                 <div className="card-body p-4 d-flex flex-column justify-content-between">
                                     <div>
                                         {/* Card Header: Icon & Badge */}
                                         <div className="d-flex align-items-center justify-content-between mb-3">
                                             <div
-                                                className="d-flex align-items-center justify-content-center text-white shadow-sm"
+                                                className="d-flex align-items-center justify-content-center rounded-3"
                                                 style={{
-                                                    width: '52px',
-                                                    height: '52px',
-                                                    borderRadius: '14px',
-                                                    background: mod.gradient,
-                                                    fontSize: '1.35rem',
-                                                    transition: 'transform 0.3s ease',
-                                                    transform: isHovered ? 'scale(1.08)' : 'scale(1)'
+                                                    width: '46px',
+                                                    height: '46px',
+                                                    backgroundColor: mod.bgSubtle,
+                                                    color: mod.accentColor,
+                                                    fontSize: '1.2rem',
+                                                    transition: 'transform 0.25s ease',
+                                                    transform: isHovered ? 'scale(1.06)' : 'scale(1)'
                                                 }}
                                             >
                                                 <i className={`fa-solid ${mod.icon}`}></i>
                                             </div>
                                             <span 
-                                                className="badge px-2.5 py-1.5 rounded-pill font-monospace"
+                                                className="badge px-2.5 py-1 rounded-pill font-monospace"
                                                 style={{ 
-                                                    backgroundColor: mod.bgGlow, 
-                                                    color: mod.borderColor.replace('0.25', '1'),
-                                                    border: `1px solid ${mod.borderColor}`,
-                                                    fontSize: '0.7rem'
+                                                    backgroundColor: mod.bgSubtle, 
+                                                    color: mod.accentColor,
+                                                    fontSize: '0.68rem',
+                                                    fontWeight: 600
                                                 }}
                                             >
                                                 {mod.badgeText}
@@ -240,58 +197,45 @@ export default function HomePage() {
                                         </div>
 
                                         {/* Module Title & Tagline */}
-                                        <h4 className="fw-bold text-dark mb-1 d-flex align-items-center justify-content-between">
-                                            <span>{mod.title}</span>
-                                            <i 
-                                                className="fa-solid fa-chevron-right text-muted fs-6" 
-                                                style={{ 
-                                                    transition: 'transform 0.3s ease',
-                                                    transform: isHovered ? 'translateX(4px)' : 'translateX(0)',
-                                                    opacity: isHovered ? 1 : 0.4
-                                                }}
-                                            />
-                                        </h4>
-                                        <p className="text-primary fw-semibold small mb-2" style={{ fontSize: '0.82rem' }}>
+                                        <h5 className="fw-bold text-dark mb-1" style={{ fontSize: '1.05rem' }}>
+                                            {mod.title}
+                                        </h5>
+                                        <p className="fw-medium small mb-2" style={{ color: mod.accentColor, fontSize: '0.78rem' }}>
                                             {mod.tagline}
                                         </p>
 
                                         {/* Description */}
-                                        <p className="text-muted small mb-3" style={{ fontSize: '0.84rem', lineHeight: '1.5' }}>
+                                        <p className="text-secondary small mb-3" style={{ fontSize: '0.82rem', lineHeight: '1.5' }}>
                                             {mod.description}
                                         </p>
 
-                                        {/* Key Features List */}
-                                        <div className="mb-4 pt-2 border-top">
+                                        {/* Features List */}
+                                        <div className="pt-2 border-top mb-3">
                                             {mod.features.map((feat, idx) => (
-                                                <div key={idx} className="d-flex align-items-center text-secondary mb-1.5" style={{ fontSize: '0.78rem' }}>
-                                                    <i className="fa-solid fa-circle-check text-emerald me-2" style={{ fontSize: '0.7rem' }}></i>
+                                                <div key={idx} className="d-flex align-items-center text-muted mb-1" style={{ fontSize: '0.76rem' }}>
+                                                    <i className="fa-solid fa-check text-success me-2" style={{ fontSize: '0.65rem' }}></i>
                                                     <span>{feat}</span>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
 
-                                    {/* Footer Section: Dummy Link */}
-                                    <div className="pt-3 border-top">
+                                    {/* Action Link Button */}
+                                    <div className="pt-2">
                                         <Link 
                                             to={mod.route}
-                                            className="d-flex align-items-center justify-content-between text-decoration-none fw-bold small p-2.5 rounded-3"
+                                            className="btn w-100 btn-sm d-flex align-items-center justify-content-between fw-semibold px-3 py-2 rounded-3 text-decoration-none"
                                             style={{
-                                                backgroundColor: isHovered ? mod.bgGlow : '#f8fafc',
-                                                color: isHovered ? '#0f172a' : '#475569',
+                                                backgroundColor: isHovered ? mod.bgSubtle : '#f8fafc',
+                                                color: isHovered ? mod.accentColor : '#475569',
+                                                border: `1px solid ${isHovered ? mod.accentColor + '40' : '#e2e8f0'}`,
                                                 transition: 'all 0.2s ease',
-                                                fontSize: '0.85rem'
-                                            }}
-                                            onClick={(e) => {
-                                                if (mod.route === '#') e.preventDefault();
+                                                fontSize: '0.8rem'
                                             }}
                                         >
-                                            <span className="d-flex align-items-center gap-1.5">
-                                                <i className={`fa-solid ${mod.icon} opacity-75 me-1`}></i>
-                                                {mod.dummyLinkText}
-                                            </span>
+                                            <span>{mod.linkText}</span>
                                             <i 
-                                                className="fa-solid fa-arrow-right"
+                                                className="fa-solid fa-arrow-right-long"
                                                 style={{
                                                     transition: 'transform 0.2s ease',
                                                     transform: isHovered ? 'translateX(3px)' : 'translateX(0)'
@@ -306,30 +250,32 @@ export default function HomePage() {
                 })}
             </div>
 
-            {/* Interactive Tile & Granite/Marble Calculator Section */}
-            <TileGraniteCalculator />
+            {/* Standalone Calculator Section */}
+            <div className="mb-4">
+                <TileGraniteCalculator />
+            </div>
 
-            {/* Quick Workflow Stepper Footer Banner */}
-            <div className="p-4 rounded-4 bg-white border shadow-sm mb-4">
+            {/* Minimalist Workflow Stepper Banner */}
+            <div className="p-4 rounded-4 bg-white border shadow-sm">
                 <div className="row align-items-center">
                     <div className="col-md-8">
                         <div className="d-flex align-items-center gap-3">
-                            <div className="p-3 bg-primary-subtle text-primary rounded-3">
-                                <i className="fa-solid fa-diagram-project fs-3"></i>
+                            <div className="p-3 bg-light text-primary rounded-3 border">
+                                <i className="fa-solid fa-diagram-project fs-4"></i>
                             </div>
                             <div>
                                 <h6 className="fw-bold text-dark mb-1">Integrated Supply Chain Workflow</h6>
-                                <p className="text-muted small mb-0">
-                                    From Purchase Order (PO) ➔ Goods Receipt Note (GRN) ➔ Multi-Warehouse Inventory ➔ Sales Billing & Audit.
+                                <p className="text-secondary small mb-0" style={{ fontSize: '0.82rem' }}>
+                                    Purchase Orders ➔ GRN Verification ➔ Multi-Warehouse Inventory ➔ Sales & Tax Invoices
                                 </p>
                             </div>
                         </div>
                     </div>
                     <div className="col-md-4 text-md-end mt-3 mt-md-0">
-                        <Link to="/grn/new" className="btn btn-sm btn-outline-primary px-3 me-2">
-                            <i className="fa-solid fa-file-invoice me-1"></i> New GRN Receipt
+                        <Link to="/grn/new" className="btn btn-sm btn-outline-secondary rounded-pill px-3 me-2 fw-medium" style={{ fontSize: '0.8rem' }}>
+                            <i className="fa-solid fa-plus me-1"></i> New GRN
                         </Link>
-                        <Link to="/inventory" className="btn btn-sm btn-primary px-3 text-white">
+                        <Link to="/inventory" className="btn btn-sm btn-primary rounded-pill px-3 text-white fw-medium" style={{ fontSize: '0.8rem' }}>
                             <i className="fa-solid fa-boxes-stacked me-1"></i> View Inventory
                         </Link>
                     </div>
