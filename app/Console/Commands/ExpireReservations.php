@@ -3,21 +3,19 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Domains\Inventory\Models\InventoryReservation;
 use App\Domains\Inventory\Services\ReservationService;
-use Carbon\Carbon;
 
 class ExpireReservations extends Command
 {
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'inventory:expire-reservations {--hours=24 : Expiry threshold in hours}';
+    protected $signature = 'inventory:expire-reservations {--hours=24 : Expiry threshold in hours for reservations without explicit expiry date}';
 
     /**
      * The console command description.
      */
-    protected $description = 'Expire pending inventory reservations that exceed the time threshold';
+    protected $description = 'Expire active inventory reservations that exceed the time threshold or explicit expiry date';
 
     /**
      * Execute the console command.
@@ -25,24 +23,9 @@ class ExpireReservations extends Command
     public function handle(ReservationService $reservationService): int
     {
         $hours = (int) $this->option('hours');
-        $checkTime = Carbon::now()->subHours($hours);
+        $count = $reservationService->expireOldReservations($hours);
 
-        $expiredReservations = InventoryReservation::where('status', 'PENDING')
-            ->where('created_at', '<', $checkTime)
-            ->get();
-
-        $count = 0;
-        foreach ($expiredReservations as $res) {
-            try {
-                $reservationService->release($res->id);
-                $this->info("Reservation ID {$res->id} expired and released successfully.");
-                $count++;
-            } catch (\Exception $e) {
-                $this->error("Failed to release reservation ID {$res->id}: {$e->getMessage()}");
-            }
-        }
-
-        $this->info("Expired reservations cleanup complete. Released {$count} reservations.");
+        $this->info("Expired reservations cleanup complete. Marked {$count} reservations as EXPIRED.");
         return Command::SUCCESS;
     }
 }

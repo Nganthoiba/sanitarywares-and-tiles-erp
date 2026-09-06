@@ -107,8 +107,13 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::post('/granite/slabs/new', [InventoryApiController::class, 'createSlab']);
         Route::post('/granite/slabs/{id}/cut', [InventoryApiController::class, 'cutSlab']); // override/new handler
 
+        Route::get('/inventory/reservations', [InventoryApiController::class, 'listReservations']);
+        Route::get('/inventory/reservations/{id}', [InventoryApiController::class, 'showReservation']);
         Route::post('/inventory/reserve', [InventoryApiController::class, 'reserve']);
         Route::post('/inventory/reservations/{id}/release', [InventoryApiController::class, 'releaseReservation']);
+        Route::post('/inventory/reservations/{id}/cancel', [InventoryApiController::class, 'releaseReservation']);
+        Route::post('/inventory/reservations/{id}/fulfill', [InventoryApiController::class, 'fulfillReservation']);
+        Route::put('/product/variants/{id}/low-stock-settings', [InventoryApiController::class, 'updateLowStockSettings']);
         Route::post('/inventory/allocate', [InventoryApiController::class, 'allocate']);
         Route::post('/inventory/allocations/{id}/complete', [InventoryApiController::class, 'completeAllocation']);
         Route::post('/inventory/transfers', [InventoryApiController::class, 'initiateTransfer']);

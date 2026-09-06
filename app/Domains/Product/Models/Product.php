@@ -22,12 +22,13 @@ class Product extends Model {
 
     protected $fillable = [
         'organization_id', 'category_id', 'purchase_unit_id', 'sales_unit_id', 'base_unit_id',
-        'name', 'sku', 'gtin', 'barcode', 'inventory_behavior', 'pieces_per_box', 'tax_profile_id', 'brand_id',
+        'name', 'sku', 'gtin', 'barcode', 'inventory_behavior', 'pieces_per_box', 'low_stock_warning_level', 'tax_profile_id', 'brand_id',
         'manufacturer_id', 'is_active'
     ];
     protected $casts = [
         'is_active' => 'boolean',
-        'pieces_per_box' => 'integer'
+        'pieces_per_box' => 'integer',
+        'low_stock_warning_level' => 'decimal:4',
     ];
 
     public function organization(): BelongsTo {

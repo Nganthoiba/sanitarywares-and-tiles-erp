@@ -22,8 +22,10 @@ use App\Domains\Inventory\Models\InventoryMovement;
 use App\Domains\Master\Models\Warehouse;
 use App\Domains\Master\Models\Category;
 use App\Domains\Master\Models\StorageLocation;
+use App\Domains\Master\Models\Customer;
 use App\Domains\Product\Models\Product;
 use App\Http\Resources\InventoryObjectResource;
+use Carbon\Carbon;
 
 class InventoryApiController extends Controller
 {
@@ -79,12 +81,17 @@ class InventoryApiController extends Controller
 
         $inventoryObjects = $query->get();
 
-        // Fetch active reservations
-        $reservationQuery = InventoryReservation::where('status', 'PENDING');
+        // Fetch active/pending non-expired reservations
+        $reservationQuery = InventoryReservation::whereIn('status', ['ACTIVE', 'PENDING'])
+            ->where(function ($q) {
+                $q->whereNull('expires_at')
+                  ->orWhere('expires_at', '>=', Carbon::now());
+            });
+
         if ($orgId) {
             $reservationQuery->where('organization_id', $orgId);
         }
-        $reservations = $reservationQuery->get()->groupBy('inventory_object_id');
+        $activeReservations = $reservationQuery->get();
 
         $grouped = [];
 
@@ -154,6 +161,7 @@ class InventoryApiController extends Controller
                     'product_specs' => $productSpecs,
                     'packaging_info' => $packagingInfo,
                     'unit_symbol' => $unitSymbol,
+                    'low_stock_warning_level' => (float) ($variant->low_stock_warning_level ?? 0),
                     'warehouse_id' => $obj->warehouse_id,
                     'warehouse_name' => $obj->warehouse?->name ?? 'Main Warehouse',
                     'storage_location_id' => $obj->storage_location_id,
@@ -180,20 +188,10 @@ class InventoryApiController extends Controller
             $qty = (float) $obj->quantity;
             $area = (float) $obj->area;
 
-            $objReservations = $reservations->get($obj->id, collect());
-            $objReservedQty = (float) $objReservations->sum('quantity');
-            $objReservedArea = (float) $objReservations->sum('area');
-            if ($obj->status === 'RESERVED' && $objReservedQty == 0) {
-                $objReservedQty = $qty;
-                $objReservedArea = $area;
-            }
-
             $grouped[$key]['on_hand_qty'] += $qty;
             $grouped[$key]['quantity'] += $qty;
             $grouped[$key]['on_hand_area'] += $area;
             $grouped[$key]['area'] += $area;
-            $grouped[$key]['reserved_qty'] += $objReservedQty;
-            $grouped[$key]['reserved_area'] += $objReservedArea;
             $grouped[$key]['inventory_object_ids'][] = $obj->id;
 
             if ($variant->inventory_behavior === 'SLAB' && $obj->slabDetail) {
@@ -213,6 +211,29 @@ class InventoryApiController extends Controller
             }
         }
 
+        // Compute reserved quantities per stock entry
+        foreach ($grouped as $key => &$item) {
+            $matchingReservations = $activeReservations->filter(function ($res) use ($item) {
+                if ($res->product_variant_id != $item['product_variant_id']) {
+                    return false;
+                }
+                if ($res->warehouse_id && $res->warehouse_id != $item['warehouse_id']) {
+                    return false;
+                }
+                if ($res->storage_location_id && $res->storage_location_id != $item['storage_location_id']) {
+                    return false;
+                }
+                if ($res->inventory_object_id && !in_array($res->inventory_object_id, $item['inventory_object_ids'])) {
+                    return false;
+                }
+                return true;
+            });
+
+            $item['reserved_qty'] = (float) $matchingReservations->sum('quantity');
+            $item['reserved_area'] = (float) $matchingReservations->sum('area');
+        }
+        unset($item);
+
         $stockItems = [];
         $totalOnHand = 0;
         $totalAvailable = 0;
@@ -227,13 +248,22 @@ class InventoryApiController extends Controller
             $item['available_area'] = max(0, $item['on_hand_area'] - $item['reserved_area']);
             $item['slabs_count'] = count($item['slabs']);
 
+            $lowLevel = (float) ($item['low_stock_warning_level'] ?? 0);
+
             if ($item['available_qty'] <= 0) {
                 $item['status'] = 'OUT_OF_STOCK';
                 $item['stock_status'] = 'Out of Stock';
+                $item['is_low_stock'] = true;
+                $lowStockCount++;
+            } elseif ($lowLevel > 0 && $item['available_qty'] <= $lowLevel) {
+                $item['status'] = 'LOW_STOCK';
+                $item['stock_status'] = 'Low Stock';
+                $item['is_low_stock'] = true;
                 $lowStockCount++;
             } else {
-                $item['status'] = 'AVAILABLE';
-                $item['stock_status'] = 'In Stock';
+                $item['status'] = 'NORMAL';
+                $item['stock_status'] = 'Normal';
+                $item['is_low_stock'] = false;
             }
 
             // Search filtering
@@ -249,10 +279,13 @@ class InventoryApiController extends Controller
             }
 
             // Status filtering
-            if ($statusFilter === 'IN_STOCK' && $item['status'] !== 'In Stock') {
+            if (($statusFilter === 'IN_STOCK' || $statusFilter === 'NORMAL') && $item['status'] !== 'NORMAL') {
                 continue;
             }
-            if (($statusFilter === 'OUT_OF_STOCK' || $statusFilter === 'LOW_STOCK') && $item['status'] !== 'Out of Stock' && $item['status'] !== 'Low Stock') {
+            if ($statusFilter === 'LOW_STOCK' && $item['status'] !== 'LOW_STOCK') {
+                continue;
+            }
+            if ($statusFilter === 'OUT_OF_STOCK' && $item['status'] !== 'OUT_OF_STOCK') {
                 continue;
             }
 
@@ -302,6 +335,10 @@ class InventoryApiController extends Controller
             ->when($orgId, fn($q) => $q->where('organization_id', $orgId))
             ->get();
 
+        $customers = Customer::orderBy('name')
+            ->when($orgId, fn($q) => $q->where('organization_id', $orgId))
+            ->get();
+
         $productVariants = Product::where('is_active', true)
             ->when($orgId, fn($q) => $q->where('organization_id', $orgId))
             ->with(['baseUnit', 'salesUnit', 'purchaseUnit', 'category', 'currentCommercialPricing'])
@@ -313,6 +350,7 @@ class InventoryApiController extends Controller
             'warehouses' => $warehouses,
             'categories' => $categories,
             'storage_locations' => $storageLocations,
+            'customers' => $customers,
             'product_variants' => $productVariants,
         ]);
     }
@@ -399,31 +437,155 @@ class InventoryApiController extends Controller
         ]);
     }
 
-    // 1. Reserves
-    public function reserve(Request $request)
+    /**
+     * GET /api/inventory/reservations
+     */
+    public function listReservations(Request $request)
     {
-        $validated = $request->validate([
-            'inventory_object_id' => 'required|exists:inventory_objects,id',
-            'quantity' => 'required|numeric|min:0.0001',
-            'area' => 'nullable|numeric',
-            'reservation_type' => 'required|string',
-            'expires_at' => 'nullable|date'
-        ]);
+        $orgId = $request->user()?->organization_id;
+        if (!$orgId) {
+            return response()->json(['message' => 'Platform users without an organization are not authorized.'], 403);
+        }
 
-        $res = $this->reservationService->reserve(array_merge($validated, [
-            'organization_id' => $request->header('X-Organization-Id', 1)
-        ]));
+        $query = InventoryReservation::with([
+            'product.baseUnit',
+            'product.salesUnit',
+            'warehouse',
+            'storageLocation',
+            'customer',
+            'creator'
+        ])->where('organization_id', $orgId);
+
+        if ($request->filled('status') && $request->input('status') !== 'ALL') {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('product_variant_id')) {
+            $query->where('product_variant_id', $request->input('product_variant_id'));
+        }
+
+        if ($request->filled('warehouse_id')) {
+            $query->where('warehouse_id', $request->input('warehouse_id'));
+        }
+
+        if ($request->filled('search')) {
+            $search = strtolower(trim($request->input('search')));
+            $query->where(function ($q) use ($search) {
+                $q->where('reservation_number', 'like', "%{$search}%")
+                  ->orWhere('reference_number', 'like', "%{$search}%")
+                  ->orWhereHas('product', fn($pq) => $pq->where('name', 'like', "%{$search}%")->orWhere('sku', 'like', "%{$search}%"))
+                  ->orWhereHas('customer', fn($cq) => $cq->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        $reservations = $query->orderBy('created_at', 'desc')->paginate($request->query('per_page', 25));
+
+        return response()->json([
+            'success' => true,
+            'data' => $reservations->items(),
+            'pagination' => [
+                'current_page' => $reservations->currentPage(),
+                'last_page' => $reservations->lastPage(),
+                'per_page' => $reservations->perPage(),
+                'total' => $reservations->total(),
+            ]
+        ]);
+    }
+
+    /**
+     * GET /api/inventory/reservations/{id}
+     */
+    public function showReservation(Request $request, $id)
+    {
+        $orgId = $request->user()?->organization_id;
+        $res = InventoryReservation::with([
+            'product.baseUnit',
+            'product.salesUnit',
+            'warehouse',
+            'storageLocation',
+            'customer',
+            'creator'
+        ])->where('organization_id', $orgId)->findOrFail($id);
 
         return response()->json(['success' => true, 'data' => $res]);
     }
 
+    /**
+     * POST /api/inventory/reserve
+     */
+    public function reserve(Request $request)
+    {
+        $validated = $request->validate([
+            'product_variant_id' => 'required_without:inventory_object_id|nullable|exists:product_variants,id',
+            'inventory_object_id' => 'nullable|exists:inventory_objects,id',
+            'warehouse_id' => 'nullable|exists:warehouses,id',
+            'storage_location_id' => 'nullable|exists:storage_locations,id',
+            'customer_id' => 'nullable|exists:customers,id',
+            'quantity' => 'required|numeric|min:0.0001',
+            'area' => 'nullable|numeric',
+            'reservation_date' => 'nullable|date',
+            'expires_at' => 'nullable|date',
+            'reference_number' => 'nullable|string|max:255',
+            'remarks' => 'nullable|string|max:1000',
+            'source_type' => 'nullable|string',
+            'source_id' => 'nullable|integer',
+        ]);
+
+        $res = $this->reservationService->reserve(array_merge($validated, [
+            'organization_id' => $request->user()->organization_id ?? 1,
+            'created_by' => $request->user()?->id,
+        ]));
+
+        return response()->json([
+            'success' => true,
+            'data' => $res,
+            'message' => 'Stock reserved successfully.'
+        ]);
+    }
+
+    /**
+     * POST /api/inventory/reservations/{id}/release (or cancel)
+     */
     public function releaseReservation($id)
     {
         $this->reservationService->release($id);
-        return response()->json(['success' => true, 'message' => 'Reservation successfully released.']);
+        return response()->json(['success' => true, 'message' => 'Reservation successfully cancelled and released.']);
     }
 
-    // 2. Allocations
+    /**
+     * POST /api/inventory/reservations/{id}/fulfill
+     */
+    public function fulfillReservation($id)
+    {
+        $this->reservationService->fulfill($id);
+        return response()->json(['success' => true, 'message' => 'Reservation successfully marked as fulfilled.']);
+    }
+
+    /**
+     * PUT /api/product/variants/{id}/low-stock-settings
+     */
+    public function updateLowStockSettings(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'low_stock_warning_level' => 'required|numeric|min:0',
+        ]);
+
+        $orgId = $request->user()?->organization_id;
+        $product = Product::where('id', $id)
+            ->when($orgId, fn($q) => $q->where('organization_id', $orgId))
+            ->firstOrFail();
+
+        $product->low_stock_warning_level = $validated['low_stock_warning_level'];
+        $product->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Low stock warning level updated successfully.',
+            'data' => $product
+        ]);
+    }
+
+    // Allocations
     public function allocate(Request $request)
     {
         $validated = $request->validate([
@@ -447,7 +609,7 @@ class InventoryApiController extends Controller
         return response()->json(['success' => true, 'message' => 'Allocation completed, items dispatched.']);
     }
 
-    // 3. Transfers
+    // Transfers
     public function initiateTransfer(Request $request)
     {
         $validated = $request->validate([
@@ -472,7 +634,7 @@ class InventoryApiController extends Controller
         return response()->json(['success' => true, 'message' => 'Transfer items successfully received.']);
     }
 
-    // 4. Adjustments
+    // Adjustments
     public function initiateAdjustment(Request $request)
     {
         $validated = $request->validate([
@@ -500,7 +662,7 @@ class InventoryApiController extends Controller
         return response()->json(['success' => true, 'message' => 'Stock adjustment approved and posted.']);
     }
 
-    // 5. Physical counts
+    // Physical counts
     public function initiateCount(Request $request)
     {
         $validated = $request->validate([
@@ -535,7 +697,7 @@ class InventoryApiController extends Controller
         return response()->json(['success' => true, 'message' => 'Physical stock count verified, variations adjusted.']);
     }
 
-    // 6. Granite slabs cuts
+    // Granite slabs cuts
     public function createSlab(Request $request)
     {
         $validated = $request->validate([
@@ -570,7 +732,7 @@ class InventoryApiController extends Controller
         return response()->json(['success' => true, 'data' => $result]);
     }
 
-    // 7. Valuation
+    // Valuation
     public function getValuation(Request $request, $id)
     {
         $method = $request->query('method', 'SPECIFIC_ID');

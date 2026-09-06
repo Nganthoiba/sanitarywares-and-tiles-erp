@@ -32,9 +32,9 @@ class GRNApiController extends Controller
         if ($request->filled('supplier_id')) {
             $query->where(function ($q) use ($request) {
                 $q->where('supplier_id', $request->supplier_id)
-                  ->orWhereHas('order', function ($poQuery) use ($request) {
-                      $poQuery->where('supplier_id', $request->supplier_id);
-                  });
+                    ->orWhereHas('order', function ($poQuery) use ($request) {
+                        $poQuery->where('supplier_id', $request->supplier_id);
+                    });
             });
         }
 

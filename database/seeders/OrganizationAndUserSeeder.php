@@ -21,9 +21,14 @@ class OrganizationAndUserSeeder extends Seeder
             ['code' => 'ACME001'],
             [
                 'name' => 'Acme Sanitary & Tiles Ltd',
+                'legal_name' => 'Acme Sanitary & Tiles Private Limited',
                 'is_active' => true,
-                'address' => '123 Industrial Estate, Mumbai, Maharashtra 400001',
+                'address' => '123 Industrial Estate, Thoubal, Manipur 795138',
                 'gstin' => '27AAACA1234A1Z5',
+                'country' => 'India',
+                'state' => 'Manipur',
+                'city' => 'Thoubal',
+                'postal_code' => '795138',
             ]
         );
 
