@@ -140,7 +140,14 @@ function NavigationLayout({ user, handleLogout, hasPermission, fontSize, setFont
                                                     <NavLink 
                                                         to={child.route_uri}
                                                         end={child.route_uri === item.route_uri}
-                                                        className={({ isActive }) => `sidebar-submenu-link ${isActive ? 'active' : ''}`}
+                                                        className={({ /*isActive*/ }) => {
+                                                            // Read the current url from the browser address bar
+                                                            const currentUrl = window.location.href.replace(window.location.origin, '').replace(window.location.hash, '').replace(window.location.search, '');
+
+                                                            const activeClass = currentUrl === child.route_uri?'active':'';
+
+                                                            return `sidebar-submenu-link ${activeClass}`;
+                                                        }}
                                                         title={child.menu_name}
                                                     >
                                                         <i className={`${child.icon || 'fa-solid fa-angle-right'} me-2`} style={{ fontSize: '0.8rem' }}></i>
