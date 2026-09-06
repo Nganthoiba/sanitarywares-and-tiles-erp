@@ -67,7 +67,13 @@ export default function NewSaleForm({ onSaleCompleted }) {
                 customer_id: walkInCust?.id || ''
             }));
         } catch (err) {
-            setError('Failed to load sales form metadata.');
+            // console.log(err.response.data);
+            // setError(err.response.data.message || 'Failed to load sales form metadata. Please try again later.');
+            if (err.response && err.response.data) {
+                setError(err.response.data.message);
+            } else {
+                setError('Failed to load sales form metadata. Please try again later.');
+            }
         } finally {
             setLoading(false);
         }

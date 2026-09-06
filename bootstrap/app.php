@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant' => \App\Http\Middleware\ResolveTenantContext::class,
             'permission' => \App\Http\Middleware\CheckPermission::class,
+            'require.org' => \App\Http\Middleware\RequireOrganization::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

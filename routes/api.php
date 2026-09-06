@@ -97,27 +97,29 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     });
 
     // Core Inventory Routes
-    Route::get('/inventory', [InventoryApiController::class, 'index']);
-    Route::get('/inventory/form-data', [InventoryApiController::class, 'getFormData']);
-    Route::get('/inventory/movements', [InventoryApiController::class, 'getMovements']);
-    Route::get('/granite/slabs', [GraniteSlabApiController::class, 'index']);
-    Route::get('/granite/slabs/{id}', [GraniteSlabApiController::class, 'show']);
-    Route::post('/granite/slabs/{id}/cut', [GraniteSlabApiController::class, 'cut']);
-    Route::post('/granite/slabs/new', [InventoryApiController::class, 'createSlab']);
-    Route::post('/granite/slabs/{id}/cut', [InventoryApiController::class, 'cutSlab']); // override/new handler
+    Route::middleware(['require.org'])->group(function () {
+        Route::get('/inventory', [InventoryApiController::class, 'index']);
+        Route::get('/inventory/form-data', [InventoryApiController::class, 'getFormData']);
+        Route::get('/inventory/movements', [InventoryApiController::class, 'getMovements']);
+        Route::get('/granite/slabs', [GraniteSlabApiController::class, 'index']);
+        Route::get('/granite/slabs/{id}', [GraniteSlabApiController::class, 'show']);
+        Route::post('/granite/slabs/{id}/cut', [GraniteSlabApiController::class, 'cut']);
+        Route::post('/granite/slabs/new', [InventoryApiController::class, 'createSlab']);
+        Route::post('/granite/slabs/{id}/cut', [InventoryApiController::class, 'cutSlab']); // override/new handler
 
-    Route::post('/inventory/reserve', [InventoryApiController::class, 'reserve']);
-    Route::post('/inventory/reservations/{id}/release', [InventoryApiController::class, 'releaseReservation']);
-    Route::post('/inventory/allocate', [InventoryApiController::class, 'allocate']);
-    Route::post('/inventory/allocations/{id}/complete', [InventoryApiController::class, 'completeAllocation']);
-    Route::post('/inventory/transfers', [InventoryApiController::class, 'initiateTransfer']);
-    Route::post('/inventory/transfers/{id}/complete', [InventoryApiController::class, 'completeTransfer']);
-    Route::post('/inventory/adjustments', [InventoryApiController::class, 'initiateAdjustment']);
-    Route::post('/inventory/adjustments/{id}/approve', [InventoryApiController::class, 'approveAdjustment']);
-    Route::post('/inventory/counts', [InventoryApiController::class, 'initiateCount']);
-    Route::post('/inventory/counts/items/{itemId}', [InventoryApiController::class, 'updateCountItem']);
-    Route::post('/inventory/counts/{id}/approve', [InventoryApiController::class, 'approveCount']);
-    Route::get('/inventory/{id}/valuation', [InventoryApiController::class, 'getValuation']);
+        Route::post('/inventory/reserve', [InventoryApiController::class, 'reserve']);
+        Route::post('/inventory/reservations/{id}/release', [InventoryApiController::class, 'releaseReservation']);
+        Route::post('/inventory/allocate', [InventoryApiController::class, 'allocate']);
+        Route::post('/inventory/allocations/{id}/complete', [InventoryApiController::class, 'completeAllocation']);
+        Route::post('/inventory/transfers', [InventoryApiController::class, 'initiateTransfer']);
+        Route::post('/inventory/transfers/{id}/complete', [InventoryApiController::class, 'completeTransfer']);
+        Route::post('/inventory/adjustments', [InventoryApiController::class, 'initiateAdjustment']);
+        Route::post('/inventory/adjustments/{id}/approve', [InventoryApiController::class, 'approveAdjustment']);
+        Route::post('/inventory/counts', [InventoryApiController::class, 'initiateCount']);
+        Route::post('/inventory/counts/items/{itemId}', [InventoryApiController::class, 'updateCountItem']);
+        Route::post('/inventory/counts/{id}/approve', [InventoryApiController::class, 'approveCount']);
+        Route::get('/inventory/{id}/valuation', [InventoryApiController::class, 'getValuation']);
+    });
 
 
     // Core Accounting Routes

@@ -567,7 +567,14 @@ class ProductApiController extends Controller
 
     public function getInventorySummary(Request $request, $id)
     {
-        $orgId = $request->user()->organization_id;
+        $orgId = $request->user()?->organization_id;
+
+        if ($orgId === null) {
+            return response()->json([
+                'message' => 'Platform users without an organization are not authorized to access inventory.'
+            ], 403);
+        }
+
         $variant = Product::where('organization_id', $orgId)->findOrFail($id);
 
         $onHandCount = \App\Domains\Inventory\Models\InventoryObject::where('organization_id', $orgId)

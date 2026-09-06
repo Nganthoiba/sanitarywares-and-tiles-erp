@@ -18,6 +18,14 @@ class SalesApiController extends Controller
     public function getFormData(Request $request)
     {
         $orgId = $request->user()->organization_id;
+
+        // if organization id is null then send unauthorized response
+        if (is_null($orgId)) {
+            return response()->json([
+                'message' => 'You are not authorized to perform this action because you don\'t belong to any organization. Please try again later.',
+            ], 401);
+        }
+
         $formData = $this->salesService->getSalesFormData($orgId);
         return response()->json($formData);
     }
@@ -67,6 +75,13 @@ class SalesApiController extends Controller
     public function index(Request $request)
     {
         $orgId = $request->user()->organization_id;
+        // if organization_id is null then send unauthorize response
+        if ($orgId === null) {
+            return response()->json([
+                'message' => 'You are not authorized to perform this action because you don\'t belong to any organization. Please try again later.',
+            ], 401);
+        }
+
         $filters = $request->only(['status', 'payment_status', 'search', 'per_page']);
         $invoices = $this->salesService->listInvoices($orgId, $filters);
         return response()->json($invoices);

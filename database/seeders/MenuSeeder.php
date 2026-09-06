@@ -25,6 +25,20 @@ class MenuSeeder extends Seeder
             ]
         );
 
+        // Home menu, common for all user types
+        Menu::updateOrCreate(
+            ['route_uri' => '/home'],
+            [
+                'menu_name'     => 'Home',
+                'menu_type'     => 'PAGE',
+                'icon'          => 'fa-solid fa-house',
+                'parent_id'     => null,
+                'permission_id' => null,
+                'order'         => 0,
+                'enabled'       => true,
+            ]
+        );
+
         Menu::updateOrCreate(
             ['route_uri' => '/platform/organizations'],
             [

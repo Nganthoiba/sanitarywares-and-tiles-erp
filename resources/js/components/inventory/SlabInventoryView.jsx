@@ -8,6 +8,8 @@ export default function SlabInventoryView() {
     const [search, setSearch] = useState("");
     const [warehouseFilter, setWarehouseFilter] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
+    const [isForbidden, setIsForbidden] = useState(false);
+    const [forbiddenMessage, setForbiddenMessage] = useState("");
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -44,9 +46,14 @@ export default function SlabInventoryView() {
                 setError(response.data.message || "Failed to fetch inventory.");
             }
         } catch (err) {
-            setError(
-                "Error contacting server. Please verify database connection.",
-            );
+            if (err.response && (err.response.status === 403 || err.response.status === 401)) {
+                setIsForbidden(true);
+                setForbiddenMessage(err.response.data?.message || "Platform users without an organization are not authorized to access inventory.");
+            } else {
+                setError(
+                    "Error contacting server. Please verify database connection.",
+                );
+            }
         } finally {
             setLoading(false);
         }
@@ -119,6 +126,33 @@ export default function SlabInventoryView() {
         setSplits([{ length: "", width: "" }]);
         setSplitResult(null);
     };
+
+    if (isForbidden) {
+        return (
+            <div className="container-fluid py-5">
+                <div className="row justify-content-center">
+                    <div className="col-md-8 col-lg-6">
+                        <div className="card border-0 shadow-sm text-center p-4 p-md-5 rounded-4">
+                            <div className="mb-4">
+                                <div className="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger rounded-circle" style={{ width: '80px', height: '80px' }}>
+                                    <i className="fa-solid fa-shield-halved fs-1"></i>
+                                </div>
+                            </div>
+                            <h3 className="fw-bold text-dark mb-2">Access Denied</h3>
+                            <p className="text-secondary mb-4">
+                                {forbiddenMessage || "Platform users without an organization are not authorized to access inventory."}
+                            </p>
+                            <div className="d-flex justify-content-center gap-2">
+                                <a href="/home" className="btn btn-primary px-4 py-2 fw-medium rounded-3">
+                                    <i className="fa-solid fa-house me-2"></i> Go to Home
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div>

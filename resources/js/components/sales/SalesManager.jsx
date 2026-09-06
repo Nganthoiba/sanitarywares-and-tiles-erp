@@ -68,7 +68,10 @@ export default function SalesManager({ initialTab = 'new-sale' }) {
                 total: res.data.total || 0
             });
         } catch (err) {
-            setError('Failed to fetch sales invoices list.');
+            //setError('Failed to fetch sales invoices list.');
+            // directly print the server response
+            console.log(err.response.data);
+            setError(err.response.data.message);
         } finally {
             setLoading(false);
         }

@@ -43,7 +43,13 @@ class InventoryApiController extends Controller
      */
     public function index(Request $request)
     {
-        $orgId = $request->header('X-Organization-Id') ?? $request->user()?->organization_id;
+        if ($request->user()?->organization_id === null) {
+            return response()->json([
+                'message' => 'Platform users without an organization are not authorized to access inventory.'
+            ], 403);
+        }
+
+        $orgId = $request->user()->organization_id;
 
         $query = InventoryObject::with([
             'variant.baseUnit',
@@ -59,8 +65,6 @@ class InventoryApiController extends Controller
 
         if ($orgId) {
             $query->where('organization_id', $orgId);
-        } elseif ($request->has('organization_id')) {
-            $query->where('organization_id', $request->input('organization_id'));
         }
 
         if ($request->filled('warehouse_id')) {
@@ -277,7 +281,13 @@ class InventoryApiController extends Controller
      */
     public function getFormData(Request $request)
     {
-        $orgId = $request->header('X-Organization-Id') ?? $request->user()?->organization_id;
+        if ($request->user()?->organization_id === null) {
+            return response()->json([
+                'message' => 'Platform users without an organization are not authorized to access inventory.'
+            ], 403);
+        }
+
+        $orgId = $request->user()->organization_id;
 
         $warehouses = Warehouse::where('is_active', true)
             ->when($orgId, fn($q) => $q->where('organization_id', $orgId))

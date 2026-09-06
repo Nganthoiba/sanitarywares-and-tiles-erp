@@ -28,6 +28,12 @@ class ReportingApiController extends Controller
 
     public function getInventoryReports(Request $request)
     {
+        if ($request->user()?->organization_id === null) {
+            return response()->json([
+                'message' => 'Platform users without an organization are not authorized to access inventory.'
+            ], 403);
+        }
+
         $filters = $request->all();
         $filters['user_id'] = $request->user()?->id ?? 1;
 
@@ -60,6 +66,12 @@ class ReportingApiController extends Controller
 
     public function getGraniteReports(Request $request)
     {
+        if ($request->user()?->organization_id === null) {
+            return response()->json([
+                'message' => 'Platform users without an organization are not authorized to access inventory.'
+            ], 403);
+        }
+
         $filters = $request->all();
         $filters['user_id'] = $request->user()?->id ?? 1;
 
