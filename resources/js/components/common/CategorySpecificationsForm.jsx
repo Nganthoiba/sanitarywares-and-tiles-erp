@@ -26,8 +26,6 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
     const [specifications, setSpecifications] = useState([]);
     const [loading, setLoading] = useState(false);
     const [categoryInfo, setCategoryInfo] = useState(null);
-    const [selectedTileSize, setSelectedTileSize] = useState('');
-    const [isCustomTileSize, setIsCustomTileSize] = useState(false);
     const [lengthUnits, setLengthUnits] = useState(DEFAULT_LENGTH_UNITS);
     const [selectedUnitState, setSelectedUnitState] = useState('cm');
     const [thicknessUnitState, setThicknessUnitState] = useState('mm');
@@ -58,10 +56,6 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
                     slug: data.category_slug
                 });
 
-                // Detect initial tile size and units from values
-                const tileSizeAttr = specs.find(s => s.slug === 'tile-size');
-                const lengthAttr = specs.find(s => s.slug === 'length');
-                const widthAttr = specs.find(s => s.slug === 'width');
                 const dimUnitAttr = specs.find(s => s.slug === 'dimension-unit');
                 const thickUnitAttr = specs.find(s => s.slug === 'thickness-unit');
 
@@ -79,35 +73,6 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
                     : (values['thickness-unit'] || values['thickness_unit']);
                 if (existingThickUnit) {
                     setThicknessUnitState(existingThickUnit.toLowerCase());
-                }
-
-                if (tileSizeAttr && values[tileSizeAttr.attribute_id]) {
-                    const currentVal = values[tileSizeAttr.attribute_id];
-                    if (currentVal === 'Custom Size' || !tileSizeAttr.allowed_values?.includes(currentVal)) {
-                        setSelectedTileSize('Custom Size');
-                        setIsCustomTileSize(true);
-                    } else {
-                        setSelectedTileSize(currentVal);
-                        setIsCustomTileSize(false);
-                        const match = currentVal.match(/(\d+(?:\.\d+)?)\s*[×xX]\s*(\d+(?:\.\d+)?)\s*([a-zA-Z\.]+)?/);
-                        if (match && match[3]) {
-                            setSelectedUnitState(match[3].trim().toLowerCase());
-                        }
-                    }
-                } else if (lengthAttr && widthAttr && values[lengthAttr.attribute_id] && values[widthAttr.attribute_id]) {
-                    const l = values[lengthAttr.attribute_id];
-                    const w = values[widthAttr.attribute_id];
-                    const matchedSize = `${l} × ${w} ft`;
-                    if (tileSizeAttr?.allowed_values?.includes(matchedSize)) {
-                        setSelectedTileSize(matchedSize);
-                        setIsCustomTileSize(false);
-                    } else {
-                        setSelectedTileSize('Custom Size');
-                        setIsCustomTileSize(true);
-                    }
-                } else {
-                    setSelectedTileSize('');
-                    setIsCustomTileSize(false);
                 }
             } catch (err) {
                 console.error('Failed to load category specifications:', err);
@@ -161,6 +126,8 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
     const isSlabCategory = (categoryInfo?.slug === 'granite-slabs' || categoryInfo?.slug === 'marble-slabs') ||
         (!tileSizeAttr && lengthAttr && widthAttr);
 
+    const hasDimensions = isTileCategory || isSlabCategory || (lengthAttr && widthAttr);
+
     // Length & Width Unit Selection
     const currentUnit = (dimensionUnitAttr && values[dimensionUnitAttr.attribute_id])
         ? values[dimensionUnitAttr.attribute_id].toLowerCase()
@@ -171,102 +138,104 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
         ? values[thicknessUnitAttr.attribute_id].toLowerCase()
         : (values['thickness-unit'] || values['thickness_unit'] || thicknessUnitState || 'mm').toLowerCase();
 
-    // Handle Tile Size Preset Change
-    const handleTileSizeChange = (e) => {
-        const selected = e.target.value;
-        setSelectedTileSize(selected);
-
-        const newBatch = {};
+    // Handle Length Change
+    const handleLengthChange = (e) => {
+        const val = e.target.value;
+        const updates = {};
+        if (lengthAttr) updates[lengthAttr.attribute_id] = val;
+        
         if (tileSizeAttr) {
-            newBatch[tileSizeAttr.attribute_id] = selected;
+            const w = widthAttr ? (values[widthAttr.attribute_id] || '') : '';
+            updates[tileSizeAttr.attribute_id] = val && w ? `${val} × ${w} ${currentUnit}` : '';
         }
-
-        if (selected === 'Custom Size') {
-            setIsCustomTileSize(true);
-        } else if (selected) {
-            setIsCustomTileSize(false);
-            // Parse preset strings like "60 × 60 cm", "600 × 1200 mm", "2 × 2 ft", "12 × 24 in"
-            const match = selected.match(/(\d+(?:\.\d+)?)\s*[×xX]\s*(\d+(?:\.\d+)?)\s*([a-zA-Z\.]+)?/);
-            if (match && lengthAttr && widthAttr) {
-                const len = match[1];
-                const wid = match[2];
-                const unitStr = (match[3] ? match[3].trim() : 'ft').toLowerCase();
-
-                setSelectedUnitState(unitStr);
-                newBatch[lengthAttr.attribute_id] = len;
-                newBatch[widthAttr.attribute_id] = wid;
-                if (dimensionUnitAttr) {
-                    newBatch[dimensionUnitAttr.attribute_id] = unitStr;
-                } else {
-                    newBatch['dimension-unit'] = unitStr;
-                }
-            }
-        } else {
-            setIsCustomTileSize(false);
-            if (lengthAttr) newBatch[lengthAttr.attribute_id] = '';
-            if (widthAttr) newBatch[widthAttr.attribute_id] = '';
-        }
-
-        onChange(newBatch);
+        onChange(updates);
     };
 
-    // Handle Length & Width Unit Change (Synchronizes Length and Width unit dropdowns only)
+    // Handle Width Change
+    const handleWidthChange = (e) => {
+        const val = e.target.value;
+        const updates = {};
+        if (widthAttr) updates[widthAttr.attribute_id] = val;
+
+        if (tileSizeAttr) {
+            const l = lengthAttr ? (values[lengthAttr.attribute_id] || '') : '';
+            updates[tileSizeAttr.attribute_id] = l && val ? `${l} × ${val} ${currentUnit}` : '';
+        }
+        onChange(updates);
+    };
+
+    // Handle Length & Width Unit Change
     const handleUnitChange = (e) => {
         const targetUnit = e.target.value.toLowerCase();
         setSelectedUnitState(targetUnit);
-        const newBatch = {};
+        const updates = {};
 
         if (dimensionUnitAttr) {
-            newBatch[dimensionUnitAttr.attribute_id] = targetUnit;
+            updates[dimensionUnitAttr.attribute_id] = targetUnit;
         } else {
-            newBatch['dimension-unit'] = targetUnit;
+            updates['dimension-unit'] = targetUnit;
         }
 
-        // Convert existing length and width if present
         const oldMult = UNIT_TO_MM[currentUnit] || 10.0;
         const newMult = UNIT_TO_MM[targetUnit] || 10.0;
 
-        if (lengthAttr && values[lengthAttr.attribute_id] && !isNaN(parseFloat(values[lengthAttr.attribute_id]))) {
-            const oldLen = parseFloat(values[lengthAttr.attribute_id]);
-            const convertedLen = (oldLen * oldMult) / newMult;
-            newBatch[lengthAttr.attribute_id] = Number.isInteger(convertedLen) ? convertedLen.toString() : convertedLen.toFixed(2);
+        let lenVal = lengthAttr ? values[lengthAttr.attribute_id] : '';
+        let widVal = widthAttr ? values[widthAttr.attribute_id] : '';
+
+        if (lengthAttr && lenVal && !isNaN(parseFloat(lenVal))) {
+            // const oldLen = parseFloat(lenVal);
+            // const convertedLen = (oldLen * oldMult) / newMult;
+            // lenVal = Number.isInteger(convertedLen) ? convertedLen.toString() : convertedLen.toFixed(2);
+            updates[lengthAttr.attribute_id] = lenVal;
         }
 
-        if (widthAttr && values[widthAttr.attribute_id] && !isNaN(parseFloat(values[widthAttr.attribute_id]))) {
-            const oldWid = parseFloat(values[widthAttr.attribute_id]);
-            const convertedWid = (oldWid * oldMult) / newMult;
-            newBatch[widthAttr.attribute_id] = Number.isInteger(convertedWid) ? convertedWid.toString() : convertedWid.toFixed(2);
+        if (widthAttr && widVal && !isNaN(parseFloat(widVal))) {
+            //const oldWid = parseFloat(widVal);
+            //const convertedWid = (oldWid * oldMult) / newMult;
+            //widVal = Number.isInteger(convertedWid) ? convertedWid.toString() : convertedWid.toFixed(2);
+            updates[widthAttr.attribute_id] = widVal;
         }
 
-        onChange(newBatch);
+        if (tileSizeAttr && lenVal && widVal) {
+            updates[tileSizeAttr.attribute_id] = `${lenVal} ${targetUnit} x ${widVal} ${targetUnit}`;
+        }
+
+        onChange(updates);
+    };
+
+    // Handle Thickness Change
+    const handleThicknessChange = (e) => {
+        if (thicknessAttr) {
+            onChange({ [thicknessAttr.attribute_id]: e.target.value });
+        }
     };
 
     // Handle Independent Thickness Unit Change
     const handleThicknessUnitChange = (e) => {
         const targetUnit = e.target.value.toLowerCase();
         setThicknessUnitState(targetUnit);
-        const newBatch = {};
+        const updates = {};
 
         if (thicknessUnitAttr) {
-            newBatch[thicknessUnitAttr.attribute_id] = targetUnit;
+            updates[thicknessUnitAttr.attribute_id] = targetUnit;
         } else {
-            newBatch['thickness-unit'] = targetUnit;
+            updates['thickness-unit'] = targetUnit;
         }
 
-        // Convert existing thickness value if present
         const oldMult = UNIT_TO_MM[currentThicknessUnit] || 1.0;
         const newMult = UNIT_TO_MM[targetUnit] || 1.0;
 
         if (thicknessAttr && values[thicknessAttr.attribute_id] && !isNaN(parseFloat(values[thicknessAttr.attribute_id]))) {
-            const oldThick = parseFloat(values[thicknessAttr.attribute_id]);
-            const convertedThick = (oldThick * oldMult) / newMult;
-            newBatch[thicknessAttr.attribute_id] = Number.isInteger(convertedThick) ? convertedThick.toString() : convertedThick.toFixed(2);
+            // const oldThick = parseFloat(values[thicknessAttr.attribute_id]);
+            // const convertedThick = (oldThick * oldMult) / newMult;
+            // updates[thicknessAttr.attribute_id] = Number.isInteger(convertedThick) ? convertedThick.toString() : convertedThick.toFixed(2);
+            updates[thicknessAttr.attribute_id] = values[thicknessAttr.attribute_id];
         }
 
-        onChange(newBatch);
+        onChange(updates);
     };
 
-    // Calculate Slab / Tile Area & Normalization
+    // Calculate Area & Normalization
     const lengthVal = lengthAttr ? parseFloat(values[lengthAttr.attribute_id] || 0) : 0;
     const widthVal = widthAttr ? parseFloat(values[widthAttr.attribute_id] || 0) : 0;
     const unitMultiplier = UNIT_TO_MM[currentUnit] || 10.0;
@@ -279,155 +248,26 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
 
     return (
         <div className="category-specifications-container">
-            {/* Tile Specific Layout */}
-            {isTileCategory && tileSizeAttr && (
-                <div className="card border-0 bg-light p-3 mb-3 rounded-3">
-                    <div className="row g-3 align-items-end">
-                        <div className={isCustomTileSize ? "col-md-4" : "col-md-6"}>
-                            <label className="form-label fw-bold small text-dark mb-1">
-                                Size <span className="text-danger">*</span>
-                            </label>
-                            <select
-                                className="form-select form-select-sm border-secondary-subtle"
-                                value={selectedTileSize}
-                                onChange={handleTileSizeChange}
-                                required={tileSizeAttr.is_required}
-                            >
-                                <option value="">-- Select Tile Size --</option>
-                                {(tileSizeAttr.allowed_values || ['60 × 60 cm', '30 × 60 cm', '600 × 1200 mm', '2 × 2 ft', '2 × 4 ft', '12 × 24 in', 'Custom Size']).map((sz, idx) => (
-                                    <option key={idx} value={sz}>{sz}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {isCustomTileSize && (
-                            <>
-                                <div className={thicknessAttr ? "col-md-3" : "col-md-4"}>
-                                    <label className="form-label fw-bold small text-dark mb-1">
-                                        Length <span className="text-danger">*</span>
-                                    </label>
-                                    <div className="input-group input-group-sm">
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            className="form-control"
-                                            placeholder="e.g. 60"
-                                            value={lengthAttr ? (values[lengthAttr.attribute_id] || '') : ''}
-                                            onChange={(e) => lengthAttr && onChange({ [lengthAttr.attribute_id]: e.target.value })}
-                                            required
-                                        />
-                                        <select
-                                            className="form-select bg-light text-secondary border-secondary-subtle font-monospace"
-                                            style={{ maxWidth: '85px' }}
-                                            value={currentUnit}
-                                            onChange={handleUnitChange}
-                                            title="Length Unit"
-                                            required
-                                        >
-                                            {lengthUnits.map((u, idx) => (
-                                                <option key={idx} value={u.symbol}>{u.symbol.toLowerCase()}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className={thicknessAttr ? "col-md-3" : "col-md-4"}>
-                                    <label className="form-label fw-bold small text-dark mb-1">
-                                        Width <span className="text-danger">*</span>
-                                    </label>
-                                    <div className="input-group input-group-sm">
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            className="form-control"
-                                            placeholder="e.g. 60"
-                                            value={widthAttr ? (values[widthAttr.attribute_id] || '') : ''}
-                                            onChange={(e) => widthAttr && onChange({ [widthAttr.attribute_id]: e.target.value })}
-                                            required
-                                        />
-                                        <select
-                                            className="form-select bg-light text-secondary border-secondary-subtle font-monospace"
-                                            style={{ maxWidth: '85px' }}
-                                            value={currentUnit}
-                                            onChange={handleUnitChange}
-                                            title="Width Unit"
-                                            required
-                                        >
-                                            {lengthUnits.map((u, idx) => (
-                                                <option key={idx} value={u.symbol}>{u.symbol.toLowerCase()}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {thicknessAttr && (
-                                    <div className="col-md-2">
-                                        <label className="form-label fw-bold small text-dark mb-1">
-                                            Thickness
-                                        </label>
-                                        <div className="input-group input-group-sm">
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                className="form-control"
-                                                placeholder="e.g. 10"
-                                                value={values[thicknessAttr.attribute_id] || ''}
-                                                onChange={(e) => onChange({ [thicknessAttr.attribute_id]: e.target.value })}
-                                            />
-                                            <select
-                                                className="form-select bg-light text-secondary border-secondary-subtle font-monospace"
-                                                style={{ maxWidth: '80px' }}
-                                                value={currentThicknessUnit}
-                                                onChange={handleThicknessUnitChange}
-                                                title="Thickness Unit"
-                                            >
-                                                {lengthUnits.map((u, idx) => (
-                                                    <option key={idx} value={u.symbol}>{u.symbol.toLowerCase()}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-
-                    {lengthVal > 0 && widthVal > 0 && (
-                        <div className="mt-3 pt-2 border-top d-flex align-items-center justify-content-between flex-wrap gap-2 small">
-                            <span className="text-muted">
-                                Size: <strong>{lengthVal} × {widthVal} {currentUnit}</strong>
-                                {currentUnit !== 'mm' && (
-                                    <span className="ms-2 text-secondary font-monospace">({lengthMm.toFixed(0)} × {widthMm.toFixed(0)} mm)</span>
-                                )}
-                            </span>
-                            <span className="badge bg-primary-subtle text-primary fw-bold">
-                                Coverage Area: {areaSqm.toFixed(4)} m² ({areaSqft.toFixed(2)} sq.ft.) / tile
-                            </span>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Slab Specific Layout (Granite / Marble) */}
-            {isSlabCategory && !isTileCategory && (
+            {/* Dimensions Section (Manual Entry: Length, Width, Thickness) */}
+            {hasDimensions && (
                 <div className="card border-0 bg-light p-3 mb-3 rounded-3">
                     <h6 className="fw-bold text-dark mb-2.5 small">
-                        <i className="fa-solid fa-ruler-combined text-primary me-2"></i> Slab Dimensions
+                        <i className="fa-solid fa-ruler-combined text-primary me-2"></i> Physical Dimensions
                     </h6>
                     <div className="row g-3 align-items-end">
-                        <div className="col-md-4">
+                        <div className={thicknessAttr ? "col-md-4" : "col-md-6"}>
                             <label className="form-label fw-bold small text-dark mb-1">
-                                Length <span className="text-danger">*</span>
+                                Length {lengthAttr?.is_required && <span className="text-danger">*</span>}
                             </label>
                             <div className="input-group input-group-sm">
                                 <input
                                     type="number"
                                     step="0.01"
                                     className="form-control"
-                                    placeholder="e.g. 8"
+                                    placeholder="e.g. 60"
                                     value={lengthAttr ? (values[lengthAttr.attribute_id] || '') : ''}
-                                    onChange={(e) => lengthAttr && onChange({ [lengthAttr.attribute_id]: e.target.value })}
-                                    required
+                                    onChange={handleLengthChange}
+                                    required={lengthAttr?.is_required}
                                 />
                                 <select
                                     className="form-select bg-light text-secondary border-secondary-subtle font-monospace"
@@ -435,7 +275,6 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
                                     value={currentUnit}
                                     onChange={handleUnitChange}
                                     title="Length Unit"
-                                    required
                                 >
                                     {lengthUnits.map((u, idx) => (
                                         <option key={idx} value={u.symbol}>{u.symbol.toLowerCase()}</option>
@@ -444,19 +283,19 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
                             </div>
                         </div>
 
-                        <div className="col-md-4">
+                        <div className={thicknessAttr ? "col-md-4" : "col-md-6"}>
                             <label className="form-label fw-bold small text-dark mb-1">
-                                Width <span className="text-danger">*</span>
+                                Width {widthAttr?.is_required && <span className="text-danger">*</span>}
                             </label>
                             <div className="input-group input-group-sm">
                                 <input
                                     type="number"
                                     step="0.01"
                                     className="form-control"
-                                    placeholder="e.g. 4"
+                                    placeholder="e.g. 60"
                                     value={widthAttr ? (values[widthAttr.attribute_id] || '') : ''}
-                                    onChange={(e) => widthAttr && onChange({ [widthAttr.attribute_id]: e.target.value })}
-                                    required
+                                    onChange={handleWidthChange}
+                                    required={widthAttr?.is_required}
                                 />
                                 <select
                                     className="form-select bg-light text-secondary border-secondary-subtle font-monospace"
@@ -464,7 +303,6 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
                                     value={currentUnit}
                                     onChange={handleUnitChange}
                                     title="Width Unit"
-                                    required
                                 >
                                     {lengthUnits.map((u, idx) => (
                                         <option key={idx} value={u.symbol}>{u.symbol.toLowerCase()}</option>
@@ -476,16 +314,17 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
                         {thicknessAttr && (
                             <div className="col-md-4">
                                 <label className="form-label fw-bold small text-dark mb-1">
-                                    Thickness
+                                    Thickness {thicknessAttr?.is_required && <span className="text-danger">*</span>}
                                 </label>
                                 <div className="input-group input-group-sm">
                                     <input
                                         type="number"
                                         step="0.01"
                                         className="form-control"
-                                        placeholder="e.g. 18"
+                                        placeholder="e.g. 10"
                                         value={values[thicknessAttr.attribute_id] || ''}
-                                        onChange={(e) => onChange({ [thicknessAttr.attribute_id]: e.target.value })}
+                                        onChange={handleThicknessChange}
+                                        required={thicknessAttr?.is_required}
                                     />
                                     <select
                                         className="form-select bg-light text-secondary border-secondary-subtle font-monospace"
@@ -501,28 +340,29 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
                                 </div>
                             </div>
                         )}
-
-                        <div className="col-md-4">
-                            <label className="form-label fw-bold small text-muted mb-1">
-                                Area <span className="badge bg-secondary-subtle text-secondary ms-1 fw-normal">Calculated</span>
-                            </label>
-                            <input
-                                type="text"
-                                readOnly
-                                className="form-control form-control-sm bg-white fw-bold text-primary"
-                                value={`${areaSqft.toFixed(2)} sq.ft. (${areaSqm.toFixed(2)} m²)`}
-                            />
-                        </div>
                     </div>
+
+                    {lengthVal > 0 && widthVal > 0 && (
+                        <div className="mt-3 pt-2 border-top d-flex align-items-center justify-content-between flex-wrap gap-2 small">
+                            <span className="text-muted">
+                                Dimension: <strong>{lengthVal} × {widthVal} {currentUnit}</strong>
+                                {currentUnit !== 'mm' && (
+                                    <span className="ms-2 text-secondary font-monospace">({lengthMm.toFixed(0)} × {widthMm.toFixed(0)} mm)</span>
+                                )}
+                            </span>
+                            <span className="badge bg-primary-subtle text-primary fw-bold">
+                                Calculated Area: {areaSqm.toFixed(4)} m² ({areaSqft.toFixed(2)} sq.ft.)
+                            </span>
+                        </div>
+                    )}
                 </div>
             )}
 
             {/* General Category Specifications List */}
             <div className="row g-3">
                 {specifications.map((spec) => {
-                    // Skip Tile Size/Length/Width/Thickness/Thickness Unit/Dimension Unit if already rendered in special layout
-                    if (isTileCategory && ['tile-size', 'length', 'width', 'thickness', 'thickness-unit', 'dimension-unit', 'length-mm', 'width-mm', 'coverage-area-sqft', 'coverage-area-sqm'].includes(spec.slug)) return null;
-                    if (isSlabCategory && !isTileCategory && ['length', 'width', 'thickness', 'thickness-unit', 'dimension-unit', 'length-mm', 'width-mm', 'coverage-area-sqft', 'coverage-area-sqm'].includes(spec.slug)) return null;
+                    // Skip dimension attributes if already rendered in special physical dimensions section
+                    if (hasDimensions && ['tile-size', 'length', 'width', 'thickness', 'thickness-unit', 'dimension-unit', 'length-mm', 'width-mm', 'coverage-area-sqft', 'coverage-area-sqm'].includes(spec.slug)) return null;
 
                     const currentValue = values[spec.attribute_id] !== undefined ? values[spec.attribute_id] : '';
 
@@ -575,4 +415,3 @@ export default function CategorySpecificationsForm({ categoryId, values = {}, on
         </div>
     );
 }
-

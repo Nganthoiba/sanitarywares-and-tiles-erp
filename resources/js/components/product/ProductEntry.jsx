@@ -608,6 +608,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
         });
 
         if (tileSize && tileSize !== 'Custom Size') {
+            console.log(['tileSize: '+ tileSize, 'product: ', product]);
             return tileSize;
         }
 
