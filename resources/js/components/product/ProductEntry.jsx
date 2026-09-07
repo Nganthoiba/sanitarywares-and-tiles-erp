@@ -572,14 +572,74 @@ export default function ProductEntry({ initialSubTab = "list" }) {
     };
 
     // -------------------------------------------------------------
-    // Filtering Logic
+    // Helper & Filtering Logic
     // -------------------------------------------------------------
+    const getProductSize = (product) => {
+        if (!product) return null;
+        const values = product.attribute_values || product.attributeValues || [];
+        
+        let tileSize = null;
+        let length = null;
+        let width = null;
+        let unit = null;
+        let lengthMm = null;
+        let widthMm = null;
+
+        values.forEach(av => {
+            const attrName = (av.attribute?.name || '').toLowerCase();
+            const attrSlug = (av.attribute?.slug || attrName).toLowerCase();
+            const val = av.value;
+
+            if (val === null || val === undefined || val === '') return;
+
+            if (attrSlug === 'tile-size' || attrSlug === 'size' || attrSlug === 'dimensions' || attrName.includes('size')) {
+                tileSize = String(val).trim();
+            } else if (attrSlug === 'length' || attrName === 'length') {
+                length = val;
+            } else if (attrSlug === 'width' || attrName === 'width') {
+                width = val;
+            } else if (attrSlug === 'dimension-unit' || attrSlug === 'size-unit' || attrName.includes('dimension unit')) {
+                unit = String(val).trim();
+            } else if (attrSlug === 'length-mm') {
+                lengthMm = val;
+            } else if (attrSlug === 'width-mm') {
+                widthMm = val;
+            }
+        });
+
+        if (tileSize && tileSize !== 'Custom Size') {
+            return tileSize;
+        }
+
+        if (length !== null && length !== undefined && width !== null && width !== undefined && length !== '' && width !== '') {
+            const unitStr = unit || '';
+            const lHasUnit = /[a-zA-Z]/.test(String(length));
+            const wHasUnit = /[a-zA-Z]/.test(String(width));
+            
+            if (lHasUnit && wHasUnit) {
+                return `${length} x ${width}`;
+            }
+            if (unitStr) {
+                return `${length}${unitStr} x ${width}${unitStr}`;
+            }
+            return `${length} x ${width}`;
+        }
+
+        if (lengthMm !== null && lengthMm !== undefined && widthMm !== null && widthMm !== undefined && lengthMm !== '' && widthMm !== '') {
+            return `${lengthMm}mm x ${widthMm}mm`;
+        }
+
+        return null;
+    };
+
     const filteredProducts = products.filter(p => {
+        const sizeStr = getProductSize(p) || '';
         const matchesSearch = !filters.search || 
             p.name.toLowerCase().includes(filters.search.toLowerCase()) ||
             p.sku.toLowerCase().includes(filters.search.toLowerCase()) ||
             (p.gtin && p.gtin.toLowerCase().includes(filters.search.toLowerCase())) ||
-            (p.barcode && p.barcode.toLowerCase().includes(filters.search.toLowerCase()));
+            (p.barcode && p.barcode.toLowerCase().includes(filters.search.toLowerCase())) ||
+            sizeStr.toLowerCase().includes(filters.search.toLowerCase());
 
         const matchesCategory = !filters.category || p.category_id?.toString() === filters.category;
         const matchesBrand = !filters.brand || p.brand_id?.toString() === filters.brand;
@@ -717,13 +777,14 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                     <span className="spinner-border spinner-border-sm text-primary"></span> Loading product catalog...
                                 </div>
                             ) : (
-                                <table className="table table-hover align-middle border-0 mb-0">
+                                <table id="product-list-table" className="table table-hover align-middle border-0 mb-0">
                                     <thead className="bg-light">
                                         <tr>
                                             <th className="border-bottom-0 py-3">Product Name</th>
                                             <th className="border-bottom-0 py-3">Category</th>
                                             <th className="border-bottom-0 py-3">Brand</th>
                                             <th className="border-bottom-0 py-3">SKU</th>
+                                            <th className="border-bottom-0 py-3">Size</th>
                                             <th className="border-bottom-0 py-3">Type</th>
                                             <th className="border-bottom-0 py-3">Status</th>
                                             <th className="text-end border-bottom-0 py-3">Actions</th>
@@ -732,33 +793,44 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                     <tbody>
                                         {filteredProducts.length === 0 ? (
                                             <tr>
-                                                <td colSpan="7" className="text-center text-muted py-4">
+                                                <td colSpan="8" className="text-center text-muted py-4">
                                                     No products found matching filters.
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredProducts.map(p => (
-                                                <tr key={p.id}>
-                                                    <td>
-                                                        <div className="fw-bold text-dark">{p.name}</div>
-                                                    </td>
-                                                    <td>{p.category?.name || <span className="text-muted">-</span>}</td>
-                                                    <td>{p.brand?.name || <span className="text-muted">-</span>}</td>
-                                                    <td>
-                                                        <span className="badge bg-primary-subtle text-primary border-light">{p.sku}</span>
-                                                    </td>
-                                                    <td>
-                                                        <span className="badge bg-secondary-subtle text-secondary" style={{ fontSize: "0.75rem" }}>
-                                                            {p.inventory_behavior === 'SLAB' ? 'Measured Material' : 'Standard'}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        {p.is_active ? (
-                                                            <span className="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Active</span>
-                                                        ) : (
-                                                            <span className="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">Inactive</span>
-                                                        )}
-                                                    </td>
+                                            filteredProducts.map(p => {
+                                                const size = getProductSize(p);
+                                                return (
+                                                    <tr key={p.id}>
+                                                        <td>
+                                                            <div className="fw-bold text-dark">{p.name}</div>
+                                                        </td>
+                                                        <td>{p.category?.name || <span className="text-muted">-</span>}</td>
+                                                        <td>{p.brand?.name || <span className="text-muted">-</span>}</td>
+                                                        <td>
+                                                            <span className="badge bg-primary-subtle text-primary border-light">{p.sku}</span>
+                                                        </td>
+                                                        <td>
+                                                            {size ? (
+                                                                <span className="badge bg-light text-dark border font-monospace" style={{ fontSize: "0.78rem" }}>
+                                                                    {size}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-muted">—</span>
+                                                            )}
+                                                        </td>
+                                                        <td>
+                                                            <span className="badge bg-secondary-subtle text-secondary" style={{ fontSize: "0.75rem" }}>
+                                                                {p.inventory_behavior === 'SLAB' ? 'Measured Material' : 'Standard'}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            {p.is_active ? (
+                                                                <span className="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Active</span>
+                                                            ) : (
+                                                                <span className="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">Inactive</span>
+                                                            )}
+                                                        </td>
                                                     <td className="text-end">
                                                         <div className="btn-group btn-group-sm">
                                                             <button 
@@ -795,7 +867,8 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            ))
+                                            );
+                                        })
                                         )}
                                     </tbody>
                                 </table>
