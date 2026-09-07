@@ -20,6 +20,18 @@ export default function ProductEntry({ initialSubTab = "list" }) {
     // Core List State
     const [products, setProducts] = useState([]);
 
+    // Pagination States
+    const [currentPage, setCurrentPage] = useState(1);
+    const [perPage, setPerPage] = useState(10);
+    const [paginationMeta, setPaginationMeta] = useState({
+        total: 0,
+        last_page: 1,
+        from: 0,
+        to: 0,
+        current_page: 1,
+        per_page: 10
+    });
+
     // UX States
     const [loading, setLoading] = useState(false);
     const [detailLoading, setDetailLoading] = useState(false);
@@ -143,14 +155,44 @@ export default function ProductEntry({ initialSubTab = "list" }) {
         }
     };
 
-    const loadProducts = async () => {
+    const loadProducts = async (page = currentPage, overridePerPage = perPage, currentFilters = filters) => {
         setLoading(true);
         try {
             const token = localStorage.getItem("auth_token");
             const response = await axios.get("/api/product/variants", {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${token}` },
+                params: {
+                    page: page,
+                    per_page: overridePerPage,
+                    search: currentFilters.search || undefined,
+                    category_id: currentFilters.category || undefined,
+                    brand_id: currentFilters.brand || undefined,
+                    product_type: currentFilters.productType || undefined,
+                    status: currentFilters.status || undefined
+                }
             });
-            setProducts(response.data || []);
+            const data = response.data;
+            if (data && Array.isArray(data.data)) {
+                setProducts(data.data || []);
+                setPaginationMeta({
+                    total: data.total || 0,
+                    last_page: data.last_page || 1,
+                    from: data.from || 0,
+                    to: data.to || 0,
+                    current_page: data.current_page || 1,
+                    per_page: data.per_page || overridePerPage
+                });
+            } else if (Array.isArray(data)) {
+                setProducts(data);
+                setPaginationMeta({
+                    total: data.length,
+                    last_page: 1,
+                    from: data.length > 0 ? 1 : 0,
+                    to: data.length,
+                    current_page: 1,
+                    per_page: data.length || overridePerPage
+                });
+            }
         } catch (err) {
             setError(err.response?.data?.message || "Failed to load products list.");
         } finally {
@@ -160,8 +202,14 @@ export default function ProductEntry({ initialSubTab = "list" }) {
 
     useEffect(() => {
         loadFormData();
-        loadProducts();
     }, []);
+
+    // Reload products when page, perPage, or filters change in list view
+    useEffect(() => {
+        if (view === "list") {
+            loadProducts(currentPage, perPage, filters);
+        }
+    }, [currentPage, perPage, filters, view]);
 
     // Sync views when initialSubTab changes from parent router
     useEffect(() => {
@@ -633,26 +681,24 @@ export default function ProductEntry({ initialSubTab = "list" }) {
         return null;
     };
 
-    const filteredProducts = products.filter(p => {
-        const sizeStr = getProductSize(p) || '';
-        const matchesSearch = !filters.search || 
-            p.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-            p.sku.toLowerCase().includes(filters.search.toLowerCase()) ||
-            (p.gtin && p.gtin.toLowerCase().includes(filters.search.toLowerCase())) ||
-            (p.barcode && p.barcode.toLowerCase().includes(filters.search.toLowerCase())) ||
-            sizeStr.toLowerCase().includes(filters.search.toLowerCase());
+    const handleFilterChange = (field, value) => {
+        setFilters(prev => ({ ...prev, [field]: value }));
+        setCurrentPage(1);
+    };
 
-        const matchesCategory = !filters.category || p.category_id?.toString() === filters.category;
-        const matchesBrand = !filters.brand || p.brand_id?.toString() === filters.brand;
-        const matchesType = !filters.productType || 
-            (filters.productType === 'MEASURED_MATERIAL' && p.inventory_behavior === 'SLAB') ||
-            (filters.productType === 'STANDARD' && p.inventory_behavior !== 'SLAB');
-        const matchesStatus = !filters.status || 
-            (filters.status === 'ACTIVE' && p.is_active) ||
-            (filters.status === 'INACTIVE' && !p.is_active);
+    const handlePerPageChange = (e) => {
+        const val = parseInt(e.target.value, 10);
+        setPerPage(val);
+        setCurrentPage(1);
+    };
 
-        return matchesSearch && matchesCategory && matchesBrand && matchesType && matchesStatus;
-    });
+    const handlePageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= paginationMeta.last_page && newPage !== currentPage) {
+            setCurrentPage(newPage);
+        }
+    };
+
+    const filteredProducts = products;
 
     return (
         <>
@@ -667,6 +713,9 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                     <p className="text-muted small mb-0">Manage products, physical specifications, commercial profiles and conversions</p>
                 </div>
                 <div className="d-flex gap-2">
+                    <button className="btn btn-primary btn-sm px-3 d-flex align-items-center gap-1" onClick={navigateToCreate}>
+                        <i className="fa-solid fa-plus"></i> Add New Product Variant
+                    </button>
                     <button className="btn btn-sm btn-secondary d-flex align-items-center gap-1" onClick={() => { loadFormData(); loadProducts(); }}>
                         <i className="fa-solid fa-rotate"></i> Sync
                     </button>
@@ -712,14 +761,27 @@ export default function ProductEntry({ initialSubTab = "list" }) {
 
                         {/* Search and Filters panel */}
                         <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3 bg-white p-3 border border-light rounded-3 shadow-sm">
-                            <div className="d-flex flex-wrap gap-2 flex-grow-1">
-                                <div className="position-relative" style={{ maxWidth: "240px", width: "100%" }}>
+                            <div className="d-flex flex-wrap justify-content-between gap-2 flex-grow-1">
+                                <select 
+                                    className="form-select form-select-sm font-monospace" 
+                                    style={{ maxWidth: "140px" }}
+                                    value={perPage}
+                                    onChange={handlePerPageChange}
+                                    title="Records per page"
+                                >
+                                    <option value={10}>10 per page</option>
+                                    <option value={15}>15 per page</option>
+                                    <option value={25}>25 per page</option>
+                                    <option value={50}>50 per page</option>
+                                    <option value={100}>100 per page</option>
+                                </select>
+                                <div className="position-relative" style={{ maxWidth: "260px", width: "100%" }}>
                                     <input 
                                         type="text" 
                                         className="form-control form-control-sm ps-4" 
                                         placeholder="Search products..." 
                                         value={filters.search}
-                                        onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                                        onChange={(e) => handleFilterChange("search", e.target.value)}
                                     />
                                     <i className="fa-solid fa-magnifying-glass position-absolute text-muted" style={{ left: "10px", top: "8px", fontSize: "0.8rem" }}></i>
                                 </div>
@@ -727,7 +789,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                     className="form-select form-select-sm" 
                                     style={{ maxWidth: "150px" }}
                                     value={filters.category}
-                                    onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+                                    onChange={(e) => handleFilterChange("category", e.target.value)}
                                 >
                                     <option value="">All Categories</option>
                                     {categories.map(c => (
@@ -740,7 +802,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                     className="form-select form-select-sm" 
                                     style={{ maxWidth: "150px" }}
                                     value={filters.brand}
-                                    onChange={(e) => setFilters({ ...filters, brand: e.target.value })}
+                                    onChange={(e) => handleFilterChange("brand", e.target.value)}
                                 >
                                     <option value="">All Brands</option>
                                     {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -749,7 +811,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                     className="form-select form-select-sm" 
                                     style={{ maxWidth: "150px" }}
                                     value={filters.productType}
-                                    onChange={(e) => setFilters({ ...filters, productType: e.target.value })}
+                                    onChange={(e) => handleFilterChange("productType", e.target.value)}
                                 >
                                     <option value="">All Types</option>
                                     <option value="STANDARD">Standard</option>
@@ -759,16 +821,13 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                     className="form-select form-select-sm" 
                                     style={{ maxWidth: "150px" }}
                                     value={filters.status}
-                                    onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                                    onChange={(e) => handleFilterChange("status", e.target.value)}
                                 >
                                     <option value="">All Statuses</option>
                                     <option value="ACTIVE">Active</option>
                                     <option value="INACTIVE">Inactive</option>
-                                </select>
+                                </select>                                
                             </div>
-                            <button className="btn btn-primary btn-sm px-3 d-flex align-items-center gap-1" onClick={navigateToCreate}>
-                                <i className="fa-solid fa-plus"></i> Add New Product Variant
-                            </button>
                         </div>
 
                         {/* Products List Table */}
@@ -781,6 +840,7 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                 <table id="product-list-table" className="table table-hover align-middle border-0 mb-0">
                                     <thead className="bg-light">
                                         <tr>
+                                            <th className="border-bottom-0 py-3 text-center" style={{ width: "50px" }}>#</th>
                                             <th className="border-bottom-0 py-3">Product Name</th>
                                             <th className="border-bottom-0 py-3">Category</th>
                                             <th className="border-bottom-0 py-3">Brand</th>
@@ -794,15 +854,19 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                     <tbody>
                                         {filteredProducts.length === 0 ? (
                                             <tr>
-                                                <td colSpan="8" className="text-center text-muted py-4">
+                                                <td colSpan="9" className="text-center text-muted py-4">
                                                     No products found matching filters.
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredProducts.map(p => {
+                                            filteredProducts.map((p, index) => {
                                                 const size = getProductSize(p);
+                                                const slNo = (paginationMeta.from || 1) + index;
                                                 return (
                                                     <tr key={p.id}>
+                                                        <td className="text-center text-muted font-monospace" style={{ fontSize: "0.8rem" }}>
+                                                            {slNo}
+                                                        </td>
                                                         <td>
                                                             <div className="fw-bold text-dark">{p.name}</div>
                                                         </td>
@@ -875,6 +939,104 @@ export default function ProductEntry({ initialSubTab = "list" }) {
                                 </table>
                             )}
                         </div>
+
+                        {/* Pagination Bar */}
+                        {!loading && paginationMeta.total > 0 && (
+                            <div className="d-flex flex-wrap align-items-center justify-content-between p-3 bg-white border border-top-0 border-light rounded-bottom-3 shadow-sm gap-2 mt-0">
+                                <div className="d-flex align-items-center gap-2 text-muted small">
+                                    <span>
+                                        Showing <strong>{paginationMeta.from}</strong> to <strong>{paginationMeta.to}</strong> of <strong>{paginationMeta.total}</strong> products
+                                    </span>
+                                    <span className="ms-2">|</span>
+                                    <span className="ms-1">Per page:</span>
+                                    <select 
+                                        className="form-select form-select-sm py-0 border-secondary-subtle" 
+                                        style={{ width: "75px", height: "28px", fontSize: "0.8rem" }}
+                                        value={perPage}
+                                        onChange={handlePerPageChange}
+                                    >
+                                        <option value={10}>10</option>
+                                        <option value={15}>15</option>
+                                        <option value={25}>25</option>
+                                        <option value={50}>50</option>
+                                        <option value={100}>100</option>
+                                    </select>
+                                </div>
+
+                                <nav aria-label="Product list pagination">
+                                    <ul className="pagination pagination-sm mb-0">
+                                        <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                                            <button 
+                                                className="page-link" 
+                                                onClick={() => handlePageChange(1)}
+                                                disabled={currentPage === 1}
+                                                title="First Page"
+                                            >
+                                                <i className="fa-solid fa-angles-left"></i>
+                                            </button>
+                                        </li>
+                                        <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                                            <button 
+                                                className="page-link" 
+                                                onClick={() => handlePageChange(currentPage - 1)}
+                                                disabled={currentPage === 1}
+                                            >
+                                                Prev
+                                            </button>
+                                        </li>
+
+                                        {Array.from({ length: paginationMeta.last_page }, (_, i) => i + 1)
+                                            .filter(p => p === 1 || p === paginationMeta.last_page || Math.abs(p - currentPage) <= 1)
+                                            .reduce((acc, p, idx, arr) => {
+                                                if (idx > 0 && p - arr[idx - 1] > 1) {
+                                                    acc.push('...');
+                                                }
+                                                acc.push(p);
+                                                return acc;
+                                            }, [])
+                                            .map((item, idx) => {
+                                                if (item === '...') {
+                                                    return (
+                                                        <li key={`ellipsis-${idx}`} className="page-item disabled">
+                                                            <span className="page-link">...</span>
+                                                        </li>
+                                                    );
+                                                }
+                                                return (
+                                                    <li key={item} className={`page-item ${currentPage === item ? 'active' : ''}`}>
+                                                        <button 
+                                                            className="page-link" 
+                                                            onClick={() => handlePageChange(item)}
+                                                        >
+                                                            {item}
+                                                        </button>
+                                                    </li>
+                                                );
+                                            })}
+
+                                        <li className={`page-item ${currentPage === paginationMeta.last_page ? 'disabled' : ''}`}>
+                                            <button 
+                                                className="page-link" 
+                                                onClick={() => handlePageChange(currentPage + 1)}
+                                                disabled={currentPage === paginationMeta.last_page}
+                                            >
+                                                Next
+                                            </button>
+                                        </li>
+                                        <li className={`page-item ${currentPage === paginationMeta.last_page ? 'disabled' : ''}`}>
+                                            <button 
+                                                className="page-link" 
+                                                onClick={() => handlePageChange(paginationMeta.last_page)}
+                                                disabled={currentPage === paginationMeta.last_page}
+                                                title="Last Page"
+                                            >
+                                                <i className="fa-solid fa-angles-right"></i>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        )}
                     </div>
                 )}
 

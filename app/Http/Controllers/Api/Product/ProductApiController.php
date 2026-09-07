@@ -324,17 +324,76 @@ class ProductApiController extends Controller
     }
 
     /**
-     * Retrieve a list of all product variants.
+     * Retrieve a list of product variants (paginated or full list).
      */
     public function listVariants(Request $request)
     {
         $orgId = $request->user()->organization_id;
-        return response()->json(
-            Product::where('organization_id', $orgId)
-                ->with(['category', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute.unit'])
-                ->orderBy('name')
-                ->get()
-        );
+        $query = Product::where('organization_id', $orgId)
+            ->with(['category', 'purchaseUnit', 'salesUnit', 'baseUnit', 'taxProfile', 'brand', 'manufacturer', 'attributeValues.attribute.unit']);
+
+        // Search filter (Name, SKU, GTIN, Barcode, Brand/Category Name, Attribute values)
+        if ($request->filled('search')) {
+            $search = trim($request->search);
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('sku', 'like', "%{$search}%")
+                  ->orWhere('gtin', 'like', "%{$search}%")
+                  ->orWhere('barcode', 'like', "%{$search}%")
+                  ->orWhereHas('brand', function ($bq) use ($search) {
+                      $bq->where('name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('category', function ($cq) use ($search) {
+                      $cq->where('name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('attributeValues', function ($avq) use ($search) {
+                      $avq->where('value', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Category Filter
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        // Brand Filter
+        if ($request->filled('brand_id')) {
+            $query->where('brand_id', $request->brand_id);
+        }
+
+        // Product Type / Inventory Behavior Filter
+        if ($request->filled('product_type')) {
+            $type = strtoupper($request->product_type);
+            if ($type === 'MEASURED_MATERIAL' || $type === 'SLAB') {
+                $query->where('inventory_behavior', 'SLAB');
+            } else if ($type === 'STANDARD') {
+                $query->where('inventory_behavior', '!=', 'SLAB');
+            }
+        }
+
+        // Status Filter
+        if ($request->filled('status')) {
+            $status = strtoupper($request->status);
+            if ($status === 'ACTIVE') {
+                $query->where('is_active', true);
+            } else if ($status === 'INACTIVE') {
+                $query->where('is_active', false);
+            }
+        }
+
+        // Return unpaginated if explicitly requested via 'all=true' or 'paginate=false'
+        if ($request->boolean('all') || $request->query('paginate') === 'false') {
+            return response()->json($query->orderBy('name')->get());
+        }
+
+        // Paginate by default (or when per_page/page requested)
+        $perPage = (int) $request->query('per_page', 10);
+        if ($perPage <= 0) {
+            $perPage = 15;
+        }
+
+        return response()->json($query->orderBy('name')->paginate($perPage));
     }
 
     public function showVariant(Request $request, $id)
