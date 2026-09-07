@@ -136,7 +136,7 @@ export default function SalesManager({ initialTab = 'new-sale' }) {
                                 <small className="text-muted fw-bold text-uppercase">Total Invoices</small>
                                 <h4 className="fw-bold text-dark mb-0 mt-1">{pagination.total || invoices.length}</h4>
                             </div>
-                            <div className="bg-primary text-white rounded-circle p-3">
+                            <div className="bg-primary text-white text-center rounded-circle p-3" style={{ width: '55px', height: '55px', alignItems: 'center' }}>
                                 <i className="fa-solid fa-file-invoice fs-5"></i>
                             </div>
                         </div>
@@ -150,7 +150,7 @@ export default function SalesManager({ initialTab = 'new-sale' }) {
                                 <small className="text-muted fw-bold text-uppercase">Total Sales Value</small>
                                 <h4 className="fw-bold text-success mb-0 mt-1">₹ {totalSalesAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h4>
                             </div>
-                            <div className="bg-success text-white rounded-circle p-3">
+                            <div className="bg-success text-white text-center rounded-circle p-3" style={{ width: '55px', height: '55px', alignItems: 'center' }}>
                                 <i className="fa-solid fa-indian-rupee-sign fs-5"></i>
                             </div>
                         </div>
