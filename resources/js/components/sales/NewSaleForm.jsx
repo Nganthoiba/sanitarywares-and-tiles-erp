@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import QuickCustomerModal from './QuickCustomerModal';
 import TaxInvoiceModal from './TaxInvoiceModal';
+import SearchableSelect from '../common/SearchableSelect';
 
 export default function NewSaleForm({ onSaleCompleted }) {
     const [formData, setFormData] = useState({
@@ -10,6 +11,7 @@ export default function NewSaleForm({ onSaleCompleted }) {
         invoice_date: new Date().toISOString().split('T')[0],
         payment_method: 'CASH',
         paid_amount: 0,
+        discount_amount: 0,
         notes: '',
         items: []
     });
@@ -37,7 +39,6 @@ export default function NewSaleForm({ onSaleCompleted }) {
 
     // Selected product state for quick adding
     const [selectedProductId, setSelectedProductId] = useState('');
-    const [productSearch, setProductSearch] = useState('');
 
     useEffect(() => {
         fetchFormData();
@@ -200,6 +201,15 @@ export default function NewSaleForm({ onSaleCompleted }) {
         });
     };
 
+    const handleTotalDiscountChange = (e) => {
+        const val = e.target.value;
+        const disc = Math.max(0, parseFloat(val) || 0);
+        setFormData(prev => ({
+            ...prev,
+            discount_amount: disc
+        }));
+    };
+
     // Calculate totals dynamically
     const selectedCustomer = context.customers?.find(c => c.id === parseInt(formData.customer_id));
     const customerState = trimString(selectedCustomer?.state);
@@ -213,7 +223,6 @@ export default function NewSaleForm({ onSaleCompleted }) {
     let totalSGST = 0;
     let totalIGST = 0;
     let totalTax = 0;
-    let grandTotal = 0;
 
     const calculatedItems = formData.items.map(item => {
         const qty = parseFloat(item.quantity || 0);
@@ -244,10 +253,12 @@ export default function NewSaleForm({ onSaleCompleted }) {
         totalSGST += sgst;
         totalIGST += igst;
         totalTax += lineTax;
-        grandTotal += lineTotal;
 
         return { ...item, lineGross, lineTaxable, cgst, sgst, igst, lineTax, lineTotal };
     });
+
+    const overallDiscount = parseFloat(formData.discount_amount || 0);
+    const grandTotal = Math.max(0, (totalTaxable + totalTax) - overallDiscount);
 
     const balanceDue = Math.max(0, grandTotal - parseFloat(formData.paid_amount || 0));
 
@@ -332,12 +343,6 @@ export default function NewSaleForm({ onSaleCompleted }) {
         );
     }
 
-    // Filter products for dropdown search
-    const filteredProducts = context.products.filter(p =>
-        p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-        p.sku.toLowerCase().includes(productSearch.toLowerCase()) ||
-        p.category_name.toLowerCase().includes(productSearch.toLowerCase())
-    );
 
     return (
         <div className="card shadow-sm border-0 mb-4">
@@ -419,41 +424,32 @@ export default function NewSaleForm({ onSaleCompleted }) {
                         </div>
                         <div className="card-body p-3">
                             <div className="row g-2 align-items-center">
-                                <div className="col-md-4">
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        placeholder="Filter products by name or SKU..."
-                                        value={productSearch}
-                                        onChange={(e) => setProductSearch(e.target.value)}
-                                    />
-                                </div>
-                                <div className="col-md-6">
-                                    <select
-                                        className="form-select fw-bold"
-                                        value={selectedProductId}
-                                        onChange={(e) => setSelectedProductId(e.target.value)}
-                                    >
-                                        <option value="">-- Choose Product to Add --</option>
-                                        {filteredProducts.map(p => {
-                                            const stockInfo = p.stock_by_warehouse[formData.warehouse_id];
+                                <div className="col-md-10">
+                                    <SearchableSelect
+                                        options={context.products.map(p => {
+                                            const stockInfo = p.stock_by_warehouse?.[formData.warehouse_id];
                                             const availableQty = stockInfo ? stockInfo.total_qty : 0;
-                                            return (
-                                                <option key={p.id} value={p.id}>
-                                                    {p.name} [{p.sku}] - Stock: {availableQty} {p.base_unit_symbol}
-                                                </option>
-                                            );
+                                            return {
+                                                value: p.id,
+                                                label: `${p.name} [${p.sku}] - Stock: ${availableQty} ${p.base_unit_symbol || ''}`,
+                                                searchText: `${p.name} ${p.sku} ${p.category_name || ''}`,
+                                                sublabel: `SKU: ${p.sku} | Available Stock: ${availableQty} ${p.base_unit_symbol || ''}${p.category_name ? ` | Category: ${p.category_name}` : ''}`
+                                            };
                                         })}
-                                    </select>
+                                        value={selectedProductId}
+                                        onChange={(val) => setSelectedProductId(val)}
+                                        placeholder="-- Search & Choose Product to Add to Bill --"
+                                    />
                                 </div>
                                 <div className="col-md-2">
                                     <button
                                         type="button"
-                                        className="btn btn-success w-100 fw-bold"
+                                        className="btn btn-success w-100 fw-bold d-flex align-items-center justify-content-center"
+                                        style={{ height: '38px' }}
                                         onClick={() => handleAddProductLine(selectedProductId)}
                                         disabled={!selectedProductId}
                                     >
-                                        <i className="fa-solid fa-plus me-1"></i> Add Line
+                                        <i className="fa-solid fa-plus me-1.5"></i> Add Line
                                     </button>
                                 </div>
                             </div>
@@ -631,12 +627,24 @@ export default function NewSaleForm({ onSaleCompleted }) {
                                     <span className="text-muted">Subtotal Gross:</span>
                                     <span className="fw-semibold">₹ {totalSubtotal.toFixed(2)}</span>
                                 </div>
-                                {totalDiscount > 0 && (
-                                    <div className="d-flex justify-content-between mb-2 text-danger">
-                                        <span>Total Discount:</span>
-                                        <span className="fw-semibold">- ₹ {totalDiscount.toFixed(2)}</span>
+                                
+                                <div className="d-flex justify-content-between align-items-center mb-2 text-danger">
+                                    <span>Total Discount:</span>
+                                    <div className="d-flex align-items-center" style={{ maxWidth: '140px' }}>
+                                        <span className="fw-semibold me-1">- ₹</span>
+                                        <input
+                                            id="total-discount"
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            className="form-control form-control-sm text-end fw-bold text-danger"
+                                            value={formData.discount_amount || ''}
+                                            onChange={handleTotalDiscountChange}
+                                            placeholder="0.00"
+                                        />
                                     </div>
-                                )}
+                                </div>
+
                                 <div className="d-flex justify-content-between mb-2">
                                     <span className="text-muted">Taxable Amount:</span>
                                     <span className="fw-semibold">₹ {totalTaxable.toFixed(2)}</span>
