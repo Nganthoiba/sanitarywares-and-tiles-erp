@@ -94,7 +94,7 @@ export default function TaxInvoiceModal({ invoice, show, onClose }) {
         <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
             <div className="modal-dialog modal-xl modal-dialog-scrollable">
                 <div className="modal-content shadow-lg border-0">
-                    <div className="modal-header bg-dark text-white py-2 no-print">
+                    <div className="modal-header bg-dark text-white py-2 no-print d-flex justify-content-between">
                         <h5 className="modal-title fs-6 fw-bold">
                             <i className="fa-solid fa-file-invoice me-2 text-warning"></i>Tax Invoice Preview ({invoice.invoice_number})
                         </h5>
