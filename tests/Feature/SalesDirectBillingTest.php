@@ -242,4 +242,34 @@ class SalesDirectBillingTest extends TestCase
         $this->assertEquals(0.00, (float) $invoice->tax_amount);
         $this->assertEquals(1000.00, (float) $invoice->total_amount);
     }
+
+    public function test_direct_counter_sale_rejects_paid_amount_exceeding_total(): void
+    {
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'invoice_date' => '2026-09-05',
+            'payment_method' => 'CASH',
+            'paid_amount' => 1500.00, // Total is 1000, paid 1500 -> should be rejected
+            'notes' => 'Sale with excess paid amount',
+            'items' => [
+                [
+                    'product_variant_id' => $this->product->id,
+                    'unit_id' => $this->pcsUnit->id,
+                    'price_basis' => 'PCS',
+                    'quantity' => 10,
+                    'unit_price' => 100.00,
+                    'discount_amount' => 0,
+                ]
+            ]
+        ];
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/sales/direct', $payload);
+
+        $response->assertStatus(422);
+        $response->assertJsonFragment([
+            'message' => 'Amount paid (₹1,500.00) cannot be greater than the grand total amount (₹1,000.00).'
+        ]);
+    }
 }

@@ -43,6 +43,8 @@ class SalesApiController extends Controller
             'invoice_date' => 'nullable|date',
             'payment_method' => 'required|string|in:CASH,BANK,UPI,CHEQUE,CREDIT',
             'paid_amount' => 'nullable|numeric|min:0',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'total_discount_amount' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
             'billing_address' => 'nullable|string',
             'shipping_address' => 'nullable|string',

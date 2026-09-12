@@ -271,7 +271,7 @@ export default function TaxInvoiceModal({ invoice, show, onClose }) {
                                             </tr>
                                             {parseFloat(invoice.discount_amount || 0) > 0 && (
                                                 <tr>
-                                                    <td className="text-danger">Total Discount:</td>
+                                                    <td className="text-danger">Total Discount/Less(-):</td>
                                                     <td className="text-end text-danger fw-bold">- ₹ {parseFloat(invoice.discount_amount).toFixed(2)}</td>
                                                 </tr>
                                             )}

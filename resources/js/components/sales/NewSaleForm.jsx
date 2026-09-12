@@ -11,7 +11,7 @@ export default function NewSaleForm({ onSaleCompleted }) {
         invoice_date: new Date().toISOString().split('T')[0],
         payment_method: 'CASH',
         paid_amount: 0,
-        discount_amount: 0,
+        total_discount_amount: 0,
         notes: '',
         items: []
     });
@@ -33,6 +33,7 @@ export default function NewSaleForm({ onSaleCompleted }) {
     const [showCustomerModal, setShowCustomerModal] = useState(false);
     const [createdInvoice, setCreatedInvoice] = useState(null);
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     // GST visibility toggle
     const [showGst, setShowGst] = useState(true);
@@ -177,10 +178,11 @@ export default function NewSaleForm({ onSaleCompleted }) {
     };
 
     const handleRemoveItem = (index) => {
-        setFormData(prev => ({
-            ...prev,
-            items: prev.items.filter((_, i) => i !== index)
-        }));
+        setFormData(prev => {
+            const newItems = prev.items.filter((_, i) => i !== index);
+            const newItemDiscountSum = newItems.reduce((acc, item) => acc + (parseFloat(item.discount_amount) || 0), 0);
+            return { ...prev, items: newItems, total_discount_amount: newItemDiscountSum };
+        });
     };
 
     const handleItemChange = (index, field, value) => {
@@ -196,6 +198,17 @@ export default function NewSaleForm({ onSaleCompleted }) {
                     price_basis: value,
                     unit_price: recalculatedPrice
                 };
+            } else if (field === 'discount_amount') {
+                const discVal = Math.max(0, parseFloat(value) || 0);
+                newItems[index] = { ...currentItem, discount_amount: discVal };
+
+                const sumOfItemDiscounts = newItems.reduce((acc, item) => acc + (parseFloat(item.discount_amount) || 0), 0);
+
+                return {
+                    ...prev,
+                    total_discount_amount: sumOfItemDiscounts,
+                    items: newItems
+                };
             } else {
                 newItems[index] = { ...currentItem, [field]: value };
             }
@@ -209,7 +222,8 @@ export default function NewSaleForm({ onSaleCompleted }) {
         const disc = Math.max(0, parseFloat(val) || 0);
         setFormData(prev => ({
             ...prev,
-            discount_amount: disc
+            total_discount_amount: disc,
+            items: prev.items.map(item => ({ ...item, discount_amount: 0 }))
         }));
     };
 
@@ -265,7 +279,7 @@ export default function NewSaleForm({ onSaleCompleted }) {
         return { ...item, tax_rate: itemTaxRate, lineGross, lineTaxable, cgst, sgst, igst, lineTax, lineTotal };
     });
 
-    const overallDiscount = parseFloat(formData.discount_amount || 0);
+    const overallDiscount = Math.max(0, parseFloat(formData.total_discount_amount || 0) - totalDiscount);
     const grandTotal = Math.max(0, (totalSubtotal - totalDiscount) - overallDiscount);
 
     const balanceDue = Math.max(0, grandTotal - parseFloat(formData.paid_amount || 0));
@@ -275,7 +289,7 @@ export default function NewSaleForm({ onSaleCompleted }) {
         setFormData(prev => ({ ...prev, paid_amount: Math.round(grandTotal) }));
     };
 
-    const handleSubmitSale = async (e) => {
+    const handleSubmitSale = (e) => {
         e.preventDefault();
 
         if (!formData.customer_id) {
@@ -291,6 +305,15 @@ export default function NewSaleForm({ onSaleCompleted }) {
             return;
         }
 
+        const paidAmt = parseFloat(formData.paid_amount || 0);
+        const roundedPaidAmt = Math.round(paidAmt * 100) / 100;
+        const roundedGrandTotal = Math.round(grandTotal * 100) / 100;
+
+        if (roundedPaidAmt > roundedGrandTotal) {
+            setError(`Amount paid (₹${roundedPaidAmt.toFixed(2)}) cannot be greater than the grand total amount (₹${roundedGrandTotal.toFixed(2)}).`);
+            return;
+        }
+
         // Validate slab products
         for (let item of formData.items) {
             if (item.inventory_behavior === 'SLAB') {
@@ -301,6 +324,12 @@ export default function NewSaleForm({ onSaleCompleted }) {
             }
         }
 
+        setError('');
+        setShowConfirmModal(true);
+    };
+
+    const processSaleSubmission = async () => {
+        setShowConfirmModal(false);
         setSubmitting(true);
         setError('');
 
@@ -309,6 +338,7 @@ export default function NewSaleForm({ onSaleCompleted }) {
             const payload = {
                 ...formData,
                 paid_amount: parseFloat(formData.paid_amount || 0),
+                total_discount_amount: parseFloat(formData.total_discount_amount || 0),
                 items: calculatedItems.map(item => ({
                     product_variant_id: item.product_variant_id,
                     unit_id: item.unit_id,
@@ -334,6 +364,7 @@ export default function NewSaleForm({ onSaleCompleted }) {
             setFormData(prev => ({
                 ...prev,
                 paid_amount: 0,
+                total_discount_amount: 0,
                 notes: '',
                 items: []
             }));
@@ -374,9 +405,7 @@ export default function NewSaleForm({ onSaleCompleted }) {
             </div>
 
             <div className="card-body p-4">
-                {error && <div className="alert alert-danger alert-dismissible fade show">{error}</div>}
-                {successMessage && <div className="alert alert-success alert-dismissible fade show">{successMessage}</div>}
-
+                
                 <form onSubmit={handleSubmitSale}>
                     {/* Header Row: Customer, Warehouse, Date */}
                     <div className="row g-3 p-3 bg-light rounded border mb-4">
@@ -666,6 +695,30 @@ export default function NewSaleForm({ onSaleCompleted }) {
                                     </div>
                                 </div>
                             </div>
+                            <div className="mt-2">
+                                {error && (
+                                    <div className="alert alert-danger alert-dismissible fade show d-flex justify-content-between align-items-center mb-3" role="alert">
+                                        <span>{error}</span>
+                                        <button
+                                            type="button"
+                                            className="btn-close"
+                                            onClick={() => setError('')}
+                                            aria-label="Close"
+                                        ></button>
+                                    </div>
+                                )}
+                                {successMessage && (
+                                    <div className="alert alert-success alert-dismissible fade show d-flex justify-content-between align-items-center mb-3" role="alert">
+                                        <span>{successMessage}</span>
+                                        <button
+                                            type="button"
+                                            className="btn-close"
+                                            onClick={() => setSuccessMessage('')}
+                                            aria-label="Close"
+                                        ></button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="col-md-5">
@@ -677,7 +730,7 @@ export default function NewSaleForm({ onSaleCompleted }) {
                                 </div>
                                 
                                 <div className="d-flex justify-content-between align-items-center mb-2 text-danger">
-                                    <span>Total Discount:</span>
+                                    <span>Total Discount/Less(-):</span>
                                     <div className="d-flex align-items-center" style={{ maxWidth: '140px' }}>
                                         <span className="fw-semibold me-1">₹</span>
                                         <input
@@ -686,7 +739,7 @@ export default function NewSaleForm({ onSaleCompleted }) {
                                             step="0.01"
                                             min="0"
                                             className="form-control form-control-sm text-end fw-bold text-danger"
-                                            value={formData.discount_amount || ''}
+                                            value={formData.total_discount_amount || ''}
                                             onChange={handleTotalDiscountChange}
                                             placeholder="0.00"
                                         />
@@ -821,6 +874,52 @@ export default function NewSaleForm({ onSaleCompleted }) {
                             <div className="modal-footer bg-light">
                                 <button type="button" className="btn btn-primary px-4" onClick={() => setSlabModalItemIndex(null)}>
                                     Done
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Sale Submission Confirmation Modal */}
+            {showConfirmModal && (
+                <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content shadow-lg border-0">
+                            <div className="modal-header bg-primary text-white py-3">
+                                <h5 className="modal-title fw-bold">
+                                    <i className="fa-solid fa-circle-question me-2"></i>Confirm Sale & Issue Invoice
+                                </h5>
+                                <button type="button" className="btn-close btn-close-white" onClick={() => setShowConfirmModal(false)}></button>
+                            </div>
+                            <div className="modal-body p-4">
+                                <p className="fw-semibold text-dark mb-3">
+                                    Are you sure you want to complete this sale and post to inventory & accounts?
+                                </p>
+                                <div className="p-3 border rounded bg-light mb-3">
+                                    <div className="d-flex justify-content-between mb-2 small">
+                                        <span className="text-muted">Customer:</span>
+                                        <strong className="text-dark">{selectedCustomer?.name || 'Walk-in Customer'}</strong>
+                                    </div>
+                                    <div className="d-flex justify-content-between mb-2 small">
+                                        <span className="text-muted">Items Count:</span>
+                                        <strong>{calculatedItems.length} Line Item(s)</strong>
+                                    </div>
+                                    <div className="d-flex justify-content-between mb-2 small">
+                                        <span className="text-muted">Grand Total:</span>
+                                        <strong className="text-primary fs-6">₹ {grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                                    </div>
+                                    <div className="d-flex justify-content-between small">
+                                        <span className="text-muted">Paid Amount:</span>
+                                        <strong className="text-success fs-6">₹ {parseFloat(formData.paid_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="modal-footer bg-light">
+                                <button type="button" className="btn btn-secondary px-3" onClick={() => setShowConfirmModal(false)}>
+                                    Cancel
+                                </button>
+                                <button type="button" className="btn btn-success px-4 fw-bold" onClick={processSaleSubmission}>
+                                    <i className="fa-solid fa-check-circle me-1"></i> Yes, Confirm & Post
                                 </button>
                             </div>
                         </div>

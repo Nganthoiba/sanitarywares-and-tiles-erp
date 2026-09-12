@@ -334,6 +334,14 @@ class SalesService
                 ];
             }
 
+            $overallDiscount = isset($data['total_discount_amount']) ? (float) $data['total_discount_amount'] : (isset($data['discount_amount']) ? (float) $data['discount_amount'] : 0.0);
+            $finalDiscount = $totalDiscount + $overallDiscount;
+            $totalInvoiceAmount = max(0, $totalInvoiceAmount - $overallDiscount);
+
+            if (round($paidAmount, 2) > round($totalInvoiceAmount, 2)) {
+                throw new Exception("Amount paid (₹" . number_format($paidAmount, 2) . ") cannot be greater than the grand total amount (₹" . number_format($totalInvoiceAmount, 2) . ").");
+            }
+
             $dueAmount = max(0, $totalInvoiceAmount - $paidAmount);
             $paymentStatus = 'UNPAID';
             if ($paidAmount >= $totalInvoiceAmount) {
@@ -356,8 +364,8 @@ class SalesService
                 'invoice_number' => $invoiceNumber,
                 'invoice_date' => $invoiceDate,
                 'subtotal' => $totalSubtotal,
-                'discount_amount' => $totalDiscount,
-                'taxable_amount' => $totalTaxable,
+                'discount_amount' => $finalDiscount,
+                'taxable_amount' => max(0, $totalTaxable - $overallDiscount),
                 'tax_amount' => $totalTax,
                 'cgst_amount' => $totalCGST,
                 'sgst_amount' => $totalSGST,
