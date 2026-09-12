@@ -462,18 +462,26 @@ export default function NewSaleForm({ onSaleCompleted }) {
                             <div className="row g-2 align-items-center">
                                 <div className="col-md-10">
                                     <SearchableSelect
-                                        options={context.products.map(p => {
-                                            const stockInfo = p.stock_by_warehouse?.[formData.warehouse_id];
-                                            
-                                            // Stock quantity should always be in integer and no fraction.
-                                            const availableQty = stockInfo ? parseInt(stockInfo.total_qty) : 0;
-                                            return {
-                                                value: p.id,
-                                                label: `${p.name} [${p.sku}] - Stock: ${availableQty} ${p.base_unit_symbol || ''}`,
-                                                searchText: `${p.name} ${p.sku} ${p.category_name || ''}`,
-                                                sublabel: `SKU: ${p.sku} | Available Stock: ${availableQty} ${p.base_unit_symbol || ''}${p.category_name ? ` | Category: ${p.category_name}` : ''}`
-                                            };
-                                        })}
+                                        options={context.products
+                                            .filter(p => {
+                                                if (!formData.warehouse_id) return false;
+                                                const stockInfo = p.stock_by_warehouse?.[formData.warehouse_id];
+                                                if (!stockInfo) return false;
+                                                const availableQty = parseInt(stockInfo.total_qty || 0);
+                                                return availableQty > 0;
+                                            })
+                                            .map(p => {
+                                                const stockInfo = p.stock_by_warehouse[formData.warehouse_id];
+                                                
+                                                // Stock quantity should always be in integer and no fraction.
+                                                const availableQty = parseInt(stockInfo.total_qty || 0);
+                                                return {
+                                                    value: p.id,
+                                                    label: `${p.name} [${p.sku}] - Stock: ${availableQty} ${p.base_unit_symbol || ''}`,
+                                                    searchText: `${p.name} ${p.sku} ${p.category_name || ''}`,
+                                                    sublabel: `SKU: ${p.sku} | Available Stock: ${availableQty} ${p.base_unit_symbol || ''}${p.category_name ? ` | Category: ${p.category_name}` : ''}`
+                                                };
+                                            })}
                                         value={selectedProductId}
                                         onChange={(val) => setSelectedProductId(val)}
                                         placeholder="-- Search & Choose Product to Add to Bill --"
