@@ -215,7 +215,7 @@ class SalesService
                 $quantity = (float) $item['quantity'];
                 $unitPrice = (float) $item['unit_price'];
                 $discountAmount = isset($item['discount_amount']) ? (float) $item['discount_amount'] : 0.0;
-                $taxRate = (float) ($variant->taxProfile->rate ?? 18.00);
+                $taxRate = isset($item['tax_rate']) ? (float) $item['tax_rate'] : (float) ($variant->taxProfile->rate ?? 18.00);
 
                 if ($quantity <= 0) {
                     throw new Exception("Quantity must be greater than zero for product: {$variant->name}");
@@ -268,9 +268,9 @@ class SalesService
                     ];
                 }
 
-                // Amount calculations
+                // Amount calculations (Tax Inclusive)
                 $lineGross = $quantity * $unitPrice;
-                $lineTaxable = max(0, $lineGross - $discountAmount);
+                $lineGrossAfterDiscount = max(0, $lineGross - $discountAmount);
 
                 $cgstRate = 0.0;
                 $cgstAmount = 0.0;
@@ -278,20 +278,25 @@ class SalesService
                 $sgstAmount = 0.0;
                 $igstRate = 0.0;
                 $igstAmount = 0.0;
+                $lineTaxable = $lineGrossAfterDiscount;
+                $lineTax = 0.0;
 
-                if ($isInterState) {
-                    $igstRate = $taxRate;
-                    $igstAmount = round($lineTaxable * ($igstRate / 100.0), 4);
-                    $lineTax = $igstAmount;
-                } else {
-                    $cgstRate = round($taxRate / 2.0, 2);
-                    $sgstRate = round($taxRate / 2.0, 2);
-                    $cgstAmount = round($lineTaxable * ($cgstRate / 100.0), 4);
-                    $sgstAmount = round($lineTaxable * ($sgstRate / 100.0), 4);
-                    $lineTax = $cgstAmount + $sgstAmount;
+                if ($taxRate > 0) {
+                    $lineTaxable = round($lineGrossAfterDiscount / (1 + ($taxRate / 100.0)), 4);
+                    $lineTax = $lineGrossAfterDiscount - $lineTaxable;
+
+                    if ($isInterState) {
+                        $igstRate = $taxRate;
+                        $igstAmount = round($lineTax, 4);
+                    } else {
+                        $cgstRate = round($taxRate / 2.0, 2);
+                        $sgstRate = round($taxRate / 2.0, 2);
+                        $cgstAmount = round($lineTax / 2.0, 4);
+                        $sgstAmount = round($lineTax / 2.0, 4);
+                    }
                 }
 
-                $lineSubtotal = $lineTaxable + $lineTax;
+                $lineSubtotal = $lineGrossAfterDiscount;
 
                 $totalSubtotal += $lineGross;
                 $totalDiscount += $discountAmount;

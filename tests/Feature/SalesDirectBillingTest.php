@@ -132,7 +132,7 @@ class SalesDirectBillingTest extends TestCase
             'warehouse_id' => $this->warehouse->id,
             'invoice_date' => '2026-09-05',
             'payment_method' => 'CASH',
-            'paid_amount' => 1180.00,
+            'paid_amount' => 1000.00,
             'notes' => 'Counter Cash Sale Test',
             'items' => [
                 [
@@ -168,16 +168,16 @@ class SalesDirectBillingTest extends TestCase
         $invoice = Invoice::with('items')->find($invoiceId);
         $this->assertNotNull($invoice);
         $this->assertEquals(1000.00, (float) $invoice->subtotal);
-        $this->assertEquals(180.00, (float) $invoice->tax_amount);
-        $this->assertEquals(1180.00, (float) $invoice->total_amount);
+        $this->assertEquals(152.5424, (float) $invoice->tax_amount);
+        $this->assertEquals(1000.00, (float) $invoice->total_amount);
         $this->assertEquals('PAID', $invoice->payment_status);
 
         $this->assertCount(1, $invoice->items);
         $item = $invoice->items->first();
         $this->assertEquals('Vitrified Premium Floor Tile 800x800', $item->product_name_snapshot);
         $this->assertEquals('TILE-VIT-800', $item->sku_snapshot);
-        $this->assertEquals(90.00, (float) $item->cgst_amount);
-        $this->assertEquals(90.00, (float) $item->sgst_amount);
+        $this->assertEquals(76.2712, (float) $item->cgst_amount);
+        $this->assertEquals(76.2712, (float) $item->sgst_amount);
 
         // 2. Verify Stock Deduction
         $inventoryObject = InventoryObject::where('product_variant_id', $this->product->id)->first();
@@ -207,5 +207,39 @@ class SalesDirectBillingTest extends TestCase
         $this->assertEquals('TILE-VIT-800', $products[0]['sku']);
         $this->assertEquals(2400.00, $products[0]['current_pricing']['selling_price']);
         $this->assertEquals('BOX', $products[0]['current_pricing']['price_basis']);
+    }
+
+    public function test_direct_counter_sale_without_gst(): void
+    {
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'invoice_date' => '2026-09-05',
+            'payment_method' => 'CASH',
+            'paid_amount' => 1000.00,
+            'notes' => 'Sale without GST disclose',
+            'items' => [
+                [
+                    'product_variant_id' => $this->product->id,
+                    'unit_id' => $this->pcsUnit->id,
+                    'price_basis' => 'PCS',
+                    'quantity' => 10,
+                    'unit_price' => 100.00,
+                    'discount_amount' => 0,
+                    'tax_rate' => 0,
+                ]
+            ]
+        ];
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/sales/direct', $payload);
+
+        $response->assertStatus(201);
+        $invoiceId = $response->json('invoice.id');
+        $invoice = Invoice::with('items')->find($invoiceId);
+
+        $this->assertEquals(1000.00, (float) $invoice->subtotal);
+        $this->assertEquals(0.00, (float) $invoice->tax_amount);
+        $this->assertEquals(1000.00, (float) $invoice->total_amount);
     }
 }

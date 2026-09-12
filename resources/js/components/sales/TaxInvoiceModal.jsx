@@ -60,10 +60,18 @@ function formatHumanDate(dateString) {
 export default function TaxInvoiceModal({ invoice, show, onClose }) {
     if (!show || !invoice) return null;
 
+    const [showGstPreview, setShowGstPreview] = React.useState(true);
+
+    React.useEffect(() => {
+        if (invoice) {
+            setShowGstPreview(parseFloat(invoice.tax_amount || 0) > 0);
+        }
+    }, [invoice]);
+
     const handlePrint = () => {
         const printContent = document.getElementById('printable-tax-invoice');
         const win = window.open('', '', 'height=900,width=800');
-        win.document.write('<html><head><title>Tax Invoice - ' + (invoice.invoice_number || 'INV') + '</title>');
+        win.document.write('<html><head><title>Invoice - ' + (invoice.invoice_number || 'INV') + '</title>');
         win.document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">');
         win.document.write('<style>');
         win.document.write(`
@@ -94,11 +102,25 @@ export default function TaxInvoiceModal({ invoice, show, onClose }) {
         <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
             <div className="modal-dialog modal-xl modal-dialog-scrollable">
                 <div className="modal-content shadow-lg border-0">
-                    <div className="modal-header bg-dark text-white py-2 no-print d-flex justify-content-between">
-                        <h5 className="modal-title fs-6 fw-bold">
-                            <i className="fa-solid fa-file-invoice me-2 text-warning"></i>Tax Invoice Preview ({invoice.invoice_number})
+                    <div className="modal-header bg-dark text-white py-2 no-print d-flex justify-content-between align-items-center">
+                        <h5 className="modal-title fs-6 fw-bold mb-0">
+                            <i className="fa-solid fa-file-invoice me-2 text-warning"></i>Invoice Preview ({invoice.invoice_number})
                         </h5>
-                        <div>
+                        <div className="d-flex align-items-center gap-3">
+                            <div className="form-check form-switch mb-0 d-flex align-items-center me-2">
+                                <input
+                                    className="form-check-input me-2"
+                                    type="checkbox"
+                                    role="switch"
+                                    id="taxInvoiceShowGstToggle"
+                                    checked={showGstPreview}
+                                    onChange={(e) => setShowGstPreview(e.target.checked)}
+                                    style={{ cursor: 'pointer', width: '2.4em', height: '1.2em' }}
+                                />
+                                <label className="form-check-label fw-bold text-white mb-0" htmlFor="taxInvoiceShowGstToggle" style={{ cursor: 'pointer' }}>
+                                    Show GST Details
+                                </label>
+                            </div>
                             <button className="btn btn-warning btn-sm me-2 fw-semibold" onClick={handlePrint}>
                                 <i className="fa-solid fa-print me-1"></i> Print Invoice
                             </button>
@@ -122,7 +144,9 @@ export default function TaxInvoiceModal({ invoice, show, onClose }) {
                                     </p>
                                 </div>
                                 <div className="col-5 text-end">
-                                    <span className="badge bg-primary fs-6 mb-2 px-3 py-2">TAX INVOICE</span>
+                                    <span className={`badge ${showGstPreview ? 'bg-primary' : 'bg-secondary'} fs-6 mb-2 px-3 py-2`}>
+                                        {showGstPreview ? 'TAX INVOICE' : 'INVOICE'}
+                                    </span>
                                     <h5 className="fw-bold text-dark mb-0">{invoice.invoice_number}</h5>
                                     <p className="small text-muted mb-0">Date: {formatHumanDate(invoice.invoice_date)}</p>
                                     <p className="small text-muted mb-0">Warehouse: {invoice.warehouse?.name || 'Main Warehouse'}</p>
@@ -172,8 +196,8 @@ export default function TaxInvoiceModal({ invoice, show, onClose }) {
                                         <th className="text-end">Qty</th>
                                         <th className="text-end">Rate (₹)</th>
                                         <th className="text-end">Disc (₹)</th>
-                                        <th className="text-end">Taxable (₹)</th>
-                                        <th className="text-end">GST %</th>
+                                        {showGstPreview && <th className="text-end">Taxable (₹)</th>}
+                                        {showGstPreview && <th className="text-end">GST %</th>}
                                         <th className="text-end">Amount (₹)</th>
                                     </tr>
                                 </thead>
@@ -195,8 +219,8 @@ export default function TaxInvoiceModal({ invoice, show, onClose }) {
                                             <td className="text-end fw-bold">{parseFloat(item.quantity).toFixed(2)}</td>
                                             <td className="text-end">₹ {parseFloat(item.unit_price).toFixed(2)}</td>
                                             <td className="text-end text-muted">₹ {parseFloat(item.discount_amount || 0).toFixed(2)}</td>
-                                            <td className="text-end">₹ {parseFloat(item.taxable_amount).toFixed(2)}</td>
-                                            <td className="text-end">{parseFloat(item.tax_rate || 18).toFixed(1)}%</td>
+                                            {showGstPreview && <td className="text-end">₹ {parseFloat(item.taxable_amount).toFixed(2)}</td>}
+                                            {showGstPreview && <td className="text-end">{parseFloat(item.tax_rate || 18).toFixed(1)}%</td>}
                                             <td className="text-end fw-bold">₹ {parseFloat(item.subtotal).toFixed(2)}</td>
                                         </tr>
                                     ))}
@@ -214,26 +238,28 @@ export default function TaxInvoiceModal({ invoice, show, onClose }) {
                                     </div>
 
                                     {/* Tax breakdown summary */}
-                                    <div className="p-2 border rounded small bg-white">
-                                        <strong className="text-muted d-block mb-1">Tax Breakdown Summary:</strong>
-                                        {isInterState ? (
-                                            <div className="d-flex justify-content-between text-muted">
-                                                <span>IGST Amount:</span>
-                                                <strong>₹ {parseFloat(invoice.igst_amount || 0).toFixed(2)}</strong>
-                                            </div>
-                                        ) : (
-                                            <>
+                                    {showGstPreview && (
+                                        <div className="p-2 border rounded small bg-white">
+                                            <strong className="text-muted d-block mb-1">Tax Breakdown Summary:</strong>
+                                            {isInterState ? (
                                                 <div className="d-flex justify-content-between text-muted">
-                                                    <span>CGST Amount:</span>
-                                                    <strong>₹ {parseFloat(invoice.cgst_amount || 0).toFixed(2)}</strong>
+                                                    <span>IGST Amount:</span>
+                                                    <strong>₹ {parseFloat(invoice.igst_amount || 0).toFixed(2)}</strong>
                                                 </div>
-                                                <div className="d-flex justify-content-between text-muted">
-                                                    <span>SGST Amount:</span>
-                                                    <strong>₹ {parseFloat(invoice.sgst_amount || 0).toFixed(2)}</strong>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
+                                            ) : (
+                                                <>
+                                                    <div className="d-flex justify-content-between text-muted">
+                                                        <span>CGST Amount:</span>
+                                                        <strong>₹ {parseFloat(invoice.cgst_amount || 0).toFixed(2)}</strong>
+                                                    </div>
+                                                    <div className="d-flex justify-content-between text-muted">
+                                                        <span>SGST Amount:</span>
+                                                        <strong>₹ {parseFloat(invoice.sgst_amount || 0).toFixed(2)}</strong>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="col-5">
@@ -249,14 +275,18 @@ export default function TaxInvoiceModal({ invoice, show, onClose }) {
                                                     <td className="text-end text-danger fw-bold">- ₹ {parseFloat(invoice.discount_amount).toFixed(2)}</td>
                                                 </tr>
                                             )}
-                                            <tr>
-                                                <td className="text-muted">Taxable Value:</td>
-                                                <td className="text-end fw-bold">₹ {parseFloat(invoice.taxable_amount).toFixed(2)}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="text-muted">Total Tax (GST):</td>
-                                                <td className="text-end fw-bold text-primary">₹ {parseFloat(invoice.tax_amount).toFixed(2)}</td>
-                                            </tr>
+                                            {showGstPreview && (
+                                                <>
+                                                    <tr>
+                                                        <td className="text-muted">Taxable Value:</td>
+                                                        <td className="text-end fw-bold">₹ {parseFloat(invoice.taxable_amount).toFixed(2)}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td className="text-muted">Total Tax (GST):</td>
+                                                        <td className="text-end fw-bold text-primary">₹ {parseFloat(invoice.tax_amount).toFixed(2)}</td>
+                                                    </tr>
+                                                </>
+                                            )}
                                             <tr className="border-top border-bottom fs-6 bg-light">
                                                 <td className="fw-bold text-dark py-2">Grand Total:</td>
                                                 <td className="text-end fw-bold text-dark py-2">

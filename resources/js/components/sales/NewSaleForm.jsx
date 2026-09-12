@@ -34,6 +34,9 @@ export default function NewSaleForm({ onSaleCompleted }) {
     const [createdInvoice, setCreatedInvoice] = useState(null);
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
+    // GST visibility toggle
+    const [showGst, setShowGst] = useState(true);
+
     // Slab selection modal state
     const [slabModalItemIndex, setSlabModalItemIndex] = useState(null);
 
@@ -228,23 +231,28 @@ export default function NewSaleForm({ onSaleCompleted }) {
         const qty = parseFloat(item.quantity || 0);
         const price = parseFloat(item.unit_price || 0);
         const disc = parseFloat(item.discount_amount || 0);
-        const taxRate = parseFloat(item.tax_rate || 18);
+        const itemTaxRate = parseFloat(item.tax_rate || 18);
+        const taxRate = showGst ? itemTaxRate : 0;
 
         const lineGross = qty * price;
-        const lineTaxable = Math.max(0, lineGross - disc);
+        const lineGrossAfterDiscount = Math.max(0, lineGross - disc);
 
+        let lineTaxable = lineGrossAfterDiscount;
         let cgst = 0, sgst = 0, igst = 0, lineTax = 0;
 
-        if (isInterState) {
-            igst = (lineTaxable * taxRate) / 100;
-            lineTax = igst;
-        } else {
-            cgst = (lineTaxable * (taxRate / 2)) / 100;
-            sgst = (lineTaxable * (taxRate / 2)) / 100;
-            lineTax = cgst + sgst;
+        if (showGst && taxRate > 0) {
+            lineTaxable = lineGrossAfterDiscount / (1 + (taxRate / 100));
+            lineTax = lineGrossAfterDiscount - lineTaxable;
+
+            if (isInterState) {
+                igst = lineTax;
+            } else {
+                cgst = lineTax / 2;
+                sgst = lineTax / 2;
+            }
         }
 
-        const lineTotal = lineTaxable + lineTax;
+        const lineTotal = lineGrossAfterDiscount;
 
         totalSubtotal += lineGross;
         totalDiscount += disc;
@@ -254,11 +262,11 @@ export default function NewSaleForm({ onSaleCompleted }) {
         totalIGST += igst;
         totalTax += lineTax;
 
-        return { ...item, lineGross, lineTaxable, cgst, sgst, igst, lineTax, lineTotal };
+        return { ...item, tax_rate: itemTaxRate, lineGross, lineTaxable, cgst, sgst, igst, lineTax, lineTotal };
     });
 
     const overallDiscount = parseFloat(formData.discount_amount || 0);
-    const grandTotal = Math.max(0, (totalTaxable + totalTax) - overallDiscount);
+    const grandTotal = Math.max(0, (totalSubtotal - totalDiscount) - overallDiscount);
 
     const balanceDue = Math.max(0, grandTotal - parseFloat(formData.paid_amount || 0));
 
@@ -300,7 +308,17 @@ export default function NewSaleForm({ onSaleCompleted }) {
             const token = localStorage.getItem('auth_token');
             const payload = {
                 ...formData,
-                paid_amount: parseFloat(formData.paid_amount || 0)
+                paid_amount: parseFloat(formData.paid_amount || 0),
+                items: calculatedItems.map(item => ({
+                    product_variant_id: item.product_variant_id,
+                    unit_id: item.unit_id,
+                    price_basis: item.price_basis,
+                    quantity: item.quantity,
+                    unit_price: item.unit_price,
+                    discount_amount: item.discount_amount,
+                    slab_ids: item.slab_ids,
+                    tax_rate: showGst ? item.tax_rate : 0
+                }))
             };
 
             const res = await axios.post('/api/sales/direct', payload, {
@@ -420,7 +438,25 @@ export default function NewSaleForm({ onSaleCompleted }) {
                     <div className="card border mb-4 shadow-sm">
                         <div className="card-header bg-light fw-bold text-dark d-flex justify-content-between align-items-center">
                             <span><i className="fa-solid fa-cubes me-2 text-primary"></i>Add Items to Bill</span>
-                            <span className="small text-muted">Intra-State GST: {isInterState ? 'NO (IGST)' : 'YES (CGST + SGST)'}</span>
+                            <div className="d-flex align-items-center gap-3">
+                                <div className="form-check form-switch mb-0 d-flex align-items-center">
+                                    <input
+                                        className="form-check-input me-2"
+                                        type="checkbox"
+                                        role="switch"
+                                        id="showGstToggle"
+                                        checked={showGst}
+                                        onChange={(e) => setShowGst(e.target.checked)}
+                                        style={{ cursor: 'pointer', width: '2.4em', height: '1.2em' }}
+                                    />
+                                    <label className="form-check-label fw-bold text-dark mb-0" htmlFor="showGstToggle" style={{ cursor: 'pointer' }}>
+                                        Show GST
+                                    </label>
+                                </div>
+                                {showGst && (
+                                    <span className="small text-muted border-start ps-3">Intra-State GST: {isInterState ? 'NO (IGST)' : 'YES (CGST + SGST)'}</span>
+                                )}
+                            </div>
                         </div>
                         <div className="card-body p-3">
                             <div className="row g-2 align-items-center">
@@ -428,7 +464,9 @@ export default function NewSaleForm({ onSaleCompleted }) {
                                     <SearchableSelect
                                         options={context.products.map(p => {
                                             const stockInfo = p.stock_by_warehouse?.[formData.warehouse_id];
-                                            const availableQty = stockInfo ? stockInfo.total_qty : 0;
+                                            
+                                            // Stock quantity should always be in integer and no fraction.
+                                            const availableQty = stockInfo ? parseInt(stockInfo.total_qty) : 0;
                                             return {
                                                 value: p.id,
                                                 label: `${p.name} [${p.sku}] - Stock: ${availableQty} ${p.base_unit_symbol || ''}`,
@@ -468,7 +506,7 @@ export default function NewSaleForm({ onSaleCompleted }) {
                                     <th style={{ width: '120px' }}>Unit Price (₹)</th>
                                     <th style={{ width: '110px' }}>Discount (₹)</th>
                                     <th style={{ width: '120px' }}>Taxable (₹)</th>
-                                    <th style={{ width: '110px' }}>GST Amount</th>
+                                    {showGst && <th style={{ width: '110px' }}>GST Amount</th>}
                                     <th style={{ width: '130px' }}>Subtotal (₹)</th>
                                     <th style={{ width: '50px' }} className="text-center">Action</th>
                                 </tr>
@@ -476,7 +514,7 @@ export default function NewSaleForm({ onSaleCompleted }) {
                             <tbody>
                                 {calculatedItems.length === 0 ? (
                                     <tr>
-                                        <td colSpan="10" className="text-center py-4 text-muted fst-italic">
+                                        <td colSpan={showGst ? "10" : "9"} className="text-center py-4 text-muted fst-italic">
                                             No products added yet. Select a product above to build the invoice.
                                         </td>
                                     </tr>
@@ -543,9 +581,11 @@ export default function NewSaleForm({ onSaleCompleted }) {
                                             <td className="text-end fw-semibold">
                                                 ₹ {item.lineTaxable.toFixed(2)}
                                             </td>
-                                            <td className="text-end text-primary small">
-                                                ₹ {item.lineTax.toFixed(2)} ({item.tax_rate}%)
-                                            </td>
+                                            {showGst && (
+                                                <td className="text-end text-primary small">
+                                                    ₹ {item.lineTax.toFixed(2)} ({item.tax_rate}%)
+                                                </td>
+                                            )}
                                             <td className="text-end fw-bold fs-6 text-dark">
                                                 ₹ {item.lineTotal.toFixed(2)}
                                             </td>
@@ -631,7 +671,7 @@ export default function NewSaleForm({ onSaleCompleted }) {
                                 <div className="d-flex justify-content-between align-items-center mb-2 text-danger">
                                     <span>Total Discount:</span>
                                     <div className="d-flex align-items-center" style={{ maxWidth: '140px' }}>
-                                        <span className="fw-semibold me-1">- ₹</span>
+                                        <span className="fw-semibold me-1">₹</span>
                                         <input
                                             id="total-discount"
                                             type="number"
@@ -649,10 +689,12 @@ export default function NewSaleForm({ onSaleCompleted }) {
                                     <span className="text-muted">Taxable Amount:</span>
                                     <span className="fw-semibold">₹ {totalTaxable.toFixed(2)}</span>
                                 </div>
-                                <div className="d-flex justify-content-between mb-2 text-primary">
-                                    <span>Total Tax (GST):</span>
-                                    <span className="fw-semibold">₹ {totalTax.toFixed(2)}</span>
-                                </div>
+                                {showGst && (
+                                    <div className="d-flex justify-content-between mb-2 text-primary">
+                                        <span>Total Tax (GST):</span>
+                                        <span className="fw-semibold">₹ {totalTax.toFixed(2)}</span>
+                                    </div>
+                                )}
 
                                 <div className="d-flex justify-content-between py-2 border-top border-bottom fs-5 bg-light px-2 my-2 rounded">
                                     <strong className="text-dark">Grand Total:</strong>

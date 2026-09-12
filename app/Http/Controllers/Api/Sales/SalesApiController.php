@@ -53,6 +53,7 @@ class SalesApiController extends Controller
             'items.*.quantity' => 'required|numeric|gt:0',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.discount_amount' => 'nullable|numeric|min:0',
+            'items.*.tax_rate' => 'nullable|numeric|min:0',
             'items.*.slab_ids' => 'nullable|array',
         ]);
 
