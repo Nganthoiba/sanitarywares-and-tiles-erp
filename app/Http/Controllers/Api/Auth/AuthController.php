@@ -8,6 +8,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
+use App\Mail\PasswordResetMail;
 use App\Shared\Context\TenantContext;
 
 class AuthController extends Controller
@@ -250,4 +256,107 @@ class AuthController extends Controller
             'user' => $this->buildUserContext($user->fresh())
         ]);
     }
+
+    /**
+     * Send password reset token / code to user email.
+     */
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $email = strtolower(trim($request->input('email')));
+        $user = User::withoutGlobalScopes()->where('email', $email)->first();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'The entered email address is not registered in this application.'
+            ], 404);
+        }
+
+        // Generate 6-digit OTP reset code
+        $token = (string) rand(100000, 999999);
+
+        // Save token in database
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $email],
+            [
+                'token' => Hash::make($token),
+                'created_at' => Carbon::now(),
+            ]
+        );
+
+        try {
+            Mail::to($user->email)->send(new PasswordResetMail($user, $token));
+        } catch (\Exception $e) {
+            Log::error("Failed to send password reset email to {$email}: " . $e->getMessage());
+            return response()->json([
+                'message' => 'Unable to send password reset email. Please check server email configuration or try again later.'
+            ], 500);
+        }
+
+        return response()->json([
+            'message' => 'Password reset code has been sent to your registered email address: ' . $email,
+            'email' => $email,
+        ]);
+    }
+
+    /**
+     * Reset password using reset token / code.
+     */
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'token' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $email = strtolower(trim($request->input('email')));
+        $token = trim($request->input('token'));
+
+        $record = DB::table('password_reset_tokens')->where('email', $email)->first();
+
+        if (!$record) {
+            return response()->json([
+                'message' => 'Invalid or expired password reset request.'
+            ], 422);
+        }
+
+        // Check token expiration (60 minutes)
+        if (Carbon::parse($record->created_at)->addMinutes(60)->isPast()) {
+            DB::table('password_reset_tokens')->where('email', $email)->delete();
+            return response()->json([
+                'message' => 'Password reset token has expired. Please request a new one.'
+            ], 422);
+        }
+
+        // Verify token match (supports plain match or hashed match)
+        $isMatch = Hash::check($token, $record->token) || $token === $record->token;
+        if (!$isMatch) {
+            return response()->json([
+                'message' => 'Invalid password reset code.'
+            ], 422);
+        }
+
+        $user = User::withoutGlobalScopes()->where('email', $email)->first();
+        if (!$user) {
+            return response()->json([
+                'message' => 'User account not found.'
+            ], 404);
+        }
+
+        // Update password
+        $user->password = Hash::make($request->input('password'));
+        $user->save();
+
+        // Delete reset token
+        DB::table('password_reset_tokens')->where('email', $email)->delete();
+
+        return response()->json([
+            'message' => 'Password has been reset successfully. You can now log in with your new password.'
+        ]);
+    }
 }
+

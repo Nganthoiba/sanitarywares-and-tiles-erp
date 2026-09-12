@@ -38,6 +38,8 @@ Route::get('/test', function () {
 // Public Auth / Registration Routes
 Route::post('/register-organization', [OrganizationRegistrationController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login'])->name('login');
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 Route::post('/accept-invitation', [UserInvitationController::class, 'accept']);
 
 // Authenticated Routes
