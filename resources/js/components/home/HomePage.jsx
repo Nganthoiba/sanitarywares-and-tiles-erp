@@ -29,7 +29,7 @@ export default function HomePage() {
             badgeText: 'Billing Active',
             description: 'Generate estimates, convert quotes into Tax Invoices, manage customer balances, and reserve stock.',
             features: [],//['Quotation to Invoice Pipeline', 'Instant Stock Allocation', 'Multi-Unit Pricing Engine'],
-            route: '/sales',
+            route: '/sales/new',
             linkText: 'Launch Sales Console'
         },
         {
