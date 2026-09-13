@@ -38,6 +38,8 @@ export default function SalesManager({ initialTab = 'new-sale' }) {
         search: '',
         payment_status: '',
         status: '',
+        start_date: '',
+        end_date: '',
         page: 1
     });
 
@@ -47,9 +49,12 @@ export default function SalesManager({ initialTab = 'new-sale' }) {
 
     useEffect(() => {
         if (activeTab === 'invoices') {
-            fetchInvoices();
+            const timer = setTimeout(() => {
+                fetchInvoices();
+            }, 300);
+            return () => clearTimeout(timer);
         }
-    }, [activeTab, filters.page, filters.payment_status, filters.status]);
+    }, [activeTab, filters.page, filters.payment_status, filters.status, filters.start_date, filters.end_date, filters.search]);
 
     const fetchInvoices = async () => {
         setLoading(true);
@@ -199,50 +204,154 @@ export default function SalesManager({ initialTab = 'new-sale' }) {
             {activeTab === 'invoices' && (
                 <div className="card shadow-sm border-0">
                     <div className="card-header bg-white py-3">
-                        <form onSubmit={handleSearchSubmit} className="row g-2 align-items-center">
-                            <div className="col-md-4">
-                                <div className="input-group">
-                                    <span className="input-group-text bg-light"><i className="fa-solid fa-search"></i></span>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        placeholder="Search by Invoice # or Customer..."
-                                        value={filters.search}
-                                        onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                                    />
+                        <form onSubmit={handleSearchSubmit}>
+                            <div className="row g-2 align-items-center mb-2">
+                                <div className="col-md-3" style={{ flex: '0 0 auto', width: '23%' }}>
+                                    <div className="input-group">
+                                        <span className="input-group-text bg-light border-end-0"><i className="fa-solid fa-search text-muted"></i></span>
+                                        <input
+                                            type="text"
+                                            className="form-control border-start-0 ps-0"
+                                            placeholder="Search Invoice # or Customer..."
+                                            value={filters.search}
+                                            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value, page: 1 }))}
+                                        />
+                                        {filters.search && (
+                                            <button 
+                                                className="btn btn-outline-secondary border-start-0 bg-white text-muted"
+                                                type="button"
+                                                onClick={() => setFilters(prev => ({ ...prev, search: '', page: 1 }))}
+                                            >
+                                                <i className="fa-solid fa-xmark"></i>
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="col-md-2 col-sm-6" style={{ flex: '0 0 auto', width: '16.5%' }}>
+                                    <div className="input-group" title="Filter From Invoice Date">
+                                        <span className="input-group-text bg-light text-muted small fw-medium px-2" style={{ fontSize: '0.78rem' }}>
+                                            <i className="fa-solid fa-calendar-day me-1 text-primary"></i>From:
+                                        </span>
+                                        <input
+                                            type="date"
+                                            className="form-control fw-medium px-2"
+                                            style={{ fontSize: '0.82rem' }}
+                                            value={filters.start_date}
+                                            onChange={(e) => setFilters(prev => ({ ...prev, start_date: e.target.value, page: 1 }))}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="col-md-2 col-sm-6" style={{ flex: '0 0 auto', width: '16.5%' }}>
+                                    <div className="input-group" title="Filter To Invoice Date">
+                                        <span className="input-group-text bg-light text-muted small fw-medium px-2" style={{ fontSize: '0.78rem' }}>
+                                            <i className="fa-solid fa-calendar-day me-1 text-primary"></i>To:
+                                        </span>
+                                        <input
+                                            type="date"
+                                            className="form-control fw-medium px-2"
+                                            style={{ fontSize: '0.82rem' }}
+                                            value={filters.end_date}
+                                            onChange={(e) => setFilters(prev => ({ ...prev, end_date: e.target.value, page: 1 }))}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="col-md-2" style={{ flex: '0 0 auto', width: '22%' }}>
+                                    <select
+                                        className="form-select"
+                                        style={{ fontSize: '0.85rem' }}
+                                        value={filters.payment_status}
+                                        onChange={(e) => setFilters(prev => ({ ...prev, payment_status: e.target.value, page: 1 }))}
+                                    >
+                                        <option value="">All Payment Statuses</option>
+                                        <option value="PAID">PAID</option>
+                                        <option value="PARTIALLY_PAID">PARTIALLY PAID</option>
+                                        <option value="UNPAID">UNPAID</option>
+                                    </select>
+                                </div>
+
+                                <div className="col-md-2" style={{ flex: '0 0 auto', width: '22%' }}>
+                                    <select
+                                        className="form-select"
+                                        style={{ fontSize: '0.85rem' }}
+                                        value={filters.status}
+                                        onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value, page: 1 }))}
+                                    >
+                                        <option value="">All Invoice Statuses</option>
+                                        <option value="APPROVED">APPROVED</option>
+                                        <option value="DRAFT">DRAFT</option>
+                                        <option value="CANCELLED">CANCELLED</option>
+                                    </select>
                                 </div>
                             </div>
 
-                            <div className="col-md-3">
-                                <select
-                                    className="form-select"
-                                    value={filters.payment_status}
-                                    onChange={(e) => setFilters({ ...filters, payment_status: e.target.value, page: 1 })}
-                                >
-                                    <option value="">All Payment Statuses</option>
-                                    <option value="PAID">PAID</option>
-                                    <option value="PARTIALLY_PAID">PARTIALLY PAID</option>
-                                    <option value="UNPAID">UNPAID</option>
-                                </select>
-                            </div>
+                            {/* Quick Presets & Reset Bar */}
+                            <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-2 mt-2 border-top">
+                                <div className="d-flex align-items-center gap-1 flex-wrap">
+                                    <span className="text-muted small fw-semibold me-1" style={{ fontSize: '0.78rem' }}>
+                                        <i className="fa-solid fa-clock-rotate-left me-1 text-primary"></i>Quick Date Range:
+                                    </span>
+                                    <button
+                                        type="button"
+                                        className={`btn btn-xs ${filters.start_date === new Date().toISOString().split('T')[0] && filters.end_date === new Date().toISOString().split('T')[0] ? 'btn-primary' : 'btn-outline-secondary'} py-0.5 px-2 rounded-pill`}
+                                        onClick={() => {
+                                            const today = new Date().toISOString().split('T')[0];
+                                            setFilters(prev => ({ ...prev, start_date: today, end_date: today, page: 1 }));
+                                        }}
+                                        style={{ fontSize: '0.76rem' }}
+                                    >
+                                        Today
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill"
+                                        onClick={() => {
+                                            const now = new Date();
+                                            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+                                            const today = now.toISOString().split('T')[0];
+                                            setFilters(prev => ({ ...prev, start_date: firstDay, end_date: today, page: 1 }));
+                                        }}
+                                        style={{ fontSize: '0.76rem' }}
+                                    >
+                                        This Month
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill"
+                                        onClick={() => {
+                                            const now = new Date();
+                                            const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30)).toISOString().split('T')[0];
+                                            const today = new Date().toISOString().split('T')[0];
+                                            setFilters(prev => ({ ...prev, start_date: thirtyDaysAgo, end_date: today, page: 1 }));
+                                        }}
+                                        style={{ fontSize: '0.76rem' }}
+                                    >
+                                        Last 30 Days
+                                    </button>
+                                    {(filters.start_date || filters.end_date) && (
+                                        <button
+                                            type="button"
+                                            className="btn btn-xs btn-outline-danger py-0.5 px-2 rounded-pill ms-1"
+                                            onClick={() => setFilters(prev => ({ ...prev, start_date: '', end_date: '', page: 1 }))}
+                                            style={{ fontSize: '0.76rem' }}
+                                        >
+                                            <i className="fa-solid fa-xmark me-1"></i>Clear Dates
+                                        </button>
+                                    )}
+                                </div>
 
-                            <div className="col-md-3">
-                                <select
-                                    className="form-select"
-                                    value={filters.status}
-                                    onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })}
-                                >
-                                    <option value="">All Invoice Statuses</option>
-                                    <option value="APPROVED">APPROVED</option>
-                                    <option value="DRAFT">DRAFT</option>
-                                    <option value="CANCELLED">CANCELLED</option>
-                                </select>
-                            </div>
-
-                            <div className="col-md-2">
-                                <button type="submit" className="btn btn-secondary w-100 fw-semibold">
-                                    Apply Filter
-                                </button>
+                                {(filters.search || filters.payment_status || filters.status || filters.start_date || filters.end_date) && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-link text-decoration-none text-muted p-0 ms-auto"
+                                        onClick={() => setFilters({ search: '', payment_status: '', status: '', start_date: '', end_date: '', page: 1 })}
+                                        style={{ fontSize: '0.78rem' }}
+                                    >
+                                        <i className="fa-solid fa-rotate-left me-1"></i>Reset All Filters
+                                    </button>
+                                )}
                             </div>
                         </form>
                     </div>

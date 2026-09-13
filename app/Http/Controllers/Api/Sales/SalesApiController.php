@@ -85,7 +85,7 @@ class SalesApiController extends Controller
             ], 401);
         }
 
-        $filters = $request->only(['status', 'payment_status', 'search', 'per_page']);
+        $filters = $request->only(['status', 'payment_status', 'search', 'per_page', 'start_date', 'end_date', 'from_date', 'to_date']);
         $invoices = $this->salesService->listInvoices($orgId, $filters);
         return response()->json($invoices);
     }

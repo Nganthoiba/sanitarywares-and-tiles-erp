@@ -556,6 +556,17 @@ class SalesService
             $query->where('payment_status', $filters['payment_status']);
         }
 
+        $startDate = $filters['start_date'] ?? $filters['from_date'] ?? null;
+        $endDate = $filters['end_date'] ?? $filters['to_date'] ?? null;
+
+        if (!empty($startDate)) {
+            $query->whereDate('invoice_date', '>=', $startDate);
+        }
+
+        if (!empty($endDate)) {
+            $query->whereDate('invoice_date', '<=', $endDate);
+        }
+
         if (!empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
