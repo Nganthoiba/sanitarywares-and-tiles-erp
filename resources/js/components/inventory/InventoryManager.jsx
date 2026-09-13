@@ -450,19 +450,12 @@ export default function InventoryManager() {
         setSubmittingAction(true);
         setError(null);
         try {
-            let objId = transferForm.inventory_object_id;
-            if (!objId) {
-                const targetStock = stockItems.find(
-                    s => String(s.product_variant_id) === String(transferForm.product_variant_id) &&
-                         String(s.warehouse_id) === String(transferForm.from_warehouse_id)
-                );
-                if (targetStock && targetStock.inventory_object_ids?.length > 0) {
-                    objId = targetStock.inventory_object_ids[0];
-                }
-            }
+            const itemPayload = transferForm.inventory_object_id
+                ? { inventory_object_id: parseInt(transferForm.inventory_object_id), quantity: parseFloat(transferForm.quantity) }
+                : { product_variant_id: parseInt(transferForm.product_variant_id), quantity: parseFloat(transferForm.quantity) };
 
-            if (!objId) {
-                alert("Please select a valid product with active stock in the source warehouse.");
+            if (!itemPayload.inventory_object_id && !itemPayload.product_variant_id) {
+                alert("Please select a product or item to transfer.");
                 setSubmittingAction(false);
                 return;
             }
@@ -470,12 +463,7 @@ export default function InventoryManager() {
             const payload = {
                 from_warehouse_id: parseInt(transferForm.from_warehouse_id),
                 to_warehouse_id: parseInt(transferForm.to_warehouse_id),
-                items: [
-                    {
-                        inventory_object_id: parseInt(objId),
-                        quantity: parseFloat(transferForm.quantity)
-                    }
-                ],
+                items: [itemPayload],
                 remarks: transferForm.remarks
             };
 
@@ -502,19 +490,12 @@ export default function InventoryManager() {
         setSubmittingAction(true);
         setError(null);
         try {
-            let objId = adjustForm.inventory_object_id;
-            if (!objId) {
-                const targetStock = stockItems.find(
-                    s => String(s.product_variant_id) === String(adjustForm.product_variant_id) &&
-                         String(s.warehouse_id) === String(adjustForm.warehouse_id)
-                );
-                if (targetStock && targetStock.inventory_object_ids?.length > 0) {
-                    objId = targetStock.inventory_object_ids[0];
-                }
-            }
+            const itemPayload = adjustForm.inventory_object_id
+                ? { inventory_object_id: parseInt(adjustForm.inventory_object_id), quantity_delta: parseFloat(adjustForm.quantity_delta), area_delta: 0 }
+                : { product_variant_id: parseInt(adjustForm.product_variant_id), quantity_delta: parseFloat(adjustForm.quantity_delta), area_delta: 0 };
 
-            if (!objId) {
-                alert("Please select a product with valid stock in the selected warehouse.");
+            if (!itemPayload.inventory_object_id && !itemPayload.product_variant_id) {
+                alert("Please select a product or item to adjust.");
                 setSubmittingAction(false);
                 return;
             }
@@ -523,13 +504,7 @@ export default function InventoryManager() {
                 warehouse_id: parseInt(adjustForm.warehouse_id),
                 adjustment_type: adjustForm.adjustment_type,
                 reason: adjustForm.reason || "Manual stock adjustment",
-                items: [
-                    {
-                        inventory_object_id: parseInt(objId),
-                        quantity_delta: parseFloat(adjustForm.quantity_delta),
-                        area_delta: 0
-                    }
-                ]
+                items: [itemPayload]
             };
 
             const res = await axios.post("/api/inventory/adjustments", payload, {

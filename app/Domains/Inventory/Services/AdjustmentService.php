@@ -12,11 +12,19 @@ use Exception;
 
 class AdjustmentService
 {
+    protected StockResolverService $stockResolver;
+
+    public function __construct(?StockResolverService $stockResolver = null)
+    {
+        $this->stockResolver = $stockResolver ?? new StockResolverService();
+    }
+
     public function initiateAdjustment(array $data): InventoryAdjustment
     {
         return DB::transaction(function () use ($data) {
+            $orgId = $data['organization_id'] ?? 1;
             $adjustment = InventoryAdjustment::create([
-                'organization_id' => $data['organization_id'] ?? 1,
+                'organization_id' => $orgId,
                 'warehouse_id' => $data['warehouse_id'],
                 'adjustment_number' => $data['adjustment_number'] ?? 'ADJ-' . uniqid(),
                 'adjustment_date' => $data['adjustment_date'] ?? now()->toDateString(),
@@ -27,12 +35,73 @@ class AdjustmentService
             ]);
 
             foreach ($data['items'] as $item) {
-                InventoryAdjustmentItem::create([
-                    'inventory_adjustment_id' => $adjustment->id,
-                    'inventory_object_id' => $item['inventory_object_id'],
-                    'quantity_delta' => $item['quantity_delta'],
-                    'area_delta' => $item['area_delta'] ?? 0.0000
-                ]);
+                if (!empty($item['inventory_object_id'])) {
+                    // Specific inventory object adjustment (Slab or explicit object)
+                    InventoryAdjustmentItem::create([
+                        'inventory_adjustment_id' => $adjustment->id,
+                        'inventory_object_id' => $item['inventory_object_id'],
+                        'quantity_delta' => (float) $item['quantity_delta'],
+                        'area_delta' => (float) ($item['area_delta'] ?? 0.0000)
+                    ]);
+                } else if (!empty($item['product_variant_id'])) {
+                    // Ordinary product stock adjustment
+                    $variantId = (int) $item['product_variant_id'];
+                    $qtyDelta = (float) $item['quantity_delta'];
+                    $areaDelta = (float) ($item['area_delta'] ?? 0.0000);
+
+                    if ($qtyDelta < 0) {
+                        // Negative adjustment: resolve stock dynamically across available objects
+                        $allocations = $this->stockResolver->resolveStock(
+                            $orgId,
+                            $variantId,
+                            $data['warehouse_id'],
+                            abs($qtyDelta)
+                        );
+
+                        foreach ($allocations as $alloc) {
+                            /** @var InventoryObject $sourceObj */
+                            $sourceObj = $alloc['object'];
+                            $takeQty = $alloc['quantity'];
+                            $takeArea = $alloc['area'];
+
+                            InventoryAdjustmentItem::create([
+                                'inventory_adjustment_id' => $adjustment->id,
+                                'inventory_object_id' => $sourceObj->id,
+                                'quantity_delta' => -$takeQty,
+                                'area_delta' => -$takeArea
+                            ]);
+                        }
+                    } else {
+                        // Positive adjustment: find or create bulk inventory object
+                        $existingObj = InventoryObject::where('organization_id', $orgId)
+                            ->where('product_variant_id', $variantId)
+                            ->where('warehouse_id', $data['warehouse_id'])
+                            ->whereIn('status', ['AVAILABLE', 'ON_HAND'])
+                            ->orderBy('id', 'asc')
+                            ->first();
+
+                        if (!$existingObj) {
+                            $existingObj = InventoryObject::create([
+                                'organization_id' => $orgId,
+                                'product_variant_id' => $variantId,
+                                'warehouse_id' => $data['warehouse_id'],
+                                'object_code' => 'ADJ-BULK-' . $adjustment->adjustment_number,
+                                'quantity' => 0.0000,
+                                'area' => 0.0000,
+                                'status' => 'AVAILABLE',
+                            ]);
+                        }
+
+                        InventoryAdjustmentItem::create([
+                            'inventory_adjustment_id' => $adjustment->id,
+                            'inventory_object_id' => $existingObj->id,
+                            'quantity_delta' => $qtyDelta,
+                            'area_delta' => $areaDelta
+                        ]);
+                    }
+                } else {
+                    throw new Exception("Adjustment item must specify either product_variant_id or inventory_object_id.");
+                }
             }
 
             return $adjustment;
@@ -53,15 +122,20 @@ class AdjustmentService
 
             foreach ($adj->items as $item) {
                 $obj = $item->inventoryObject;
+                if (!$obj) {
+                    continue;
+                }
 
                 // Adjust quantities or area
-                $obj->quantity = max(0, $obj->quantity + $item->quantity_delta);
-                if ($obj->area > 0) {
-                    $obj->area = max(0, $obj->area + $item->area_delta);
+                $obj->quantity = max(0, (float) $obj->quantity + (float) $item->quantity_delta);
+                if ((float) $obj->area > 0 || (float) $item->area_delta != 0) {
+                    $obj->area = max(0, (float) $obj->area + (float) $item->area_delta);
                 }
 
                 if ($obj->quantity <= 0 && $obj->area <= 0) {
                     $obj->status = 'SCRAPPED';
+                } else if ($obj->status === 'SCRAPPED' && $obj->quantity > 0) {
+                    $obj->status = 'AVAILABLE';
                 }
                 $obj->save();
 
@@ -69,8 +143,10 @@ class AdjustmentService
                     'organization_id' => $adj->organization_id,
                     'inventory_object_id' => $obj->id,
                     'movement_type' => $adj->adjustment_type,
-                    'quantity_delta' => $item->quantity_delta,
-                    'area_delta' => $item->area_delta
+                    'quantity_delta' => (float) $item->quantity_delta,
+                    'area_delta' => (float) $item->area_delta,
+                    'from_warehouse_id' => $adj->warehouse_id,
+                    'to_warehouse_id' => $adj->warehouse_id,
                 ]);
             }
 

@@ -660,12 +660,15 @@ class InventoryApiController extends Controller
             'from_warehouse_id' => 'required|exists:warehouses,id',
             'to_warehouse_id' => 'required|exists:warehouses,id',
             'items' => 'required|array',
-            'items.*.inventory_object_id' => 'required|exists:inventory_objects,id',
+            'items.*.inventory_object_id' => 'nullable|exists:inventory_objects,id',
+            'items.*.product_variant_id' => 'required_without:items.*.inventory_object_id|nullable|exists:products,id',
             'items.*.quantity' => 'required|numeric|min:0.0001'
         ]);
 
+        $orgId = $request->user()?->organization_id ?? $request->header('X-Organization-Id', 1);
+
         $trf = $this->transferService->initiateTransfer(array_merge($validated, [
-            'organization_id' => $request->header('X-Organization-Id', 1),
+            'organization_id' => $orgId,
             'user_id' => $request->user()?->id ?? 1
         ]));
 
@@ -686,13 +689,16 @@ class InventoryApiController extends Controller
             'adjustment_type' => 'required|string',
             'reason' => 'nullable|string',
             'items' => 'required|array',
-            'items.*.inventory_object_id' => 'required|exists:inventory_objects,id',
+            'items.*.inventory_object_id' => 'nullable|exists:inventory_objects,id',
+            'items.*.product_variant_id' => 'required_without:items.*.inventory_object_id|nullable|exists:products,id',
             'items.*.quantity_delta' => 'required|numeric',
             'items.*.area_delta' => 'nullable|numeric'
         ]);
 
+        $orgId = $request->user()?->organization_id ?? $request->header('X-Organization-Id', 1);
+
         $adj = $this->adjustmentService->initiateAdjustment(array_merge($validated, [
-            'organization_id' => $request->header('X-Organization-Id', 1),
+            'organization_id' => $orgId,
             'user_id' => $request->user()?->id ?? 1
         ]));
 
