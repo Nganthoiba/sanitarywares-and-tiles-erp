@@ -327,8 +327,9 @@ class InventoryApiController extends Controller
             ->orderBy('name')
             ->get();
 
-        $categories = Category::orderBy('name')
-            ->when($orgId, fn($q) => $q->where('organization_id', $orgId))
+        $categories = Category::where('is_active', true)
+            ->when($orgId, fn($q) => $q->where(fn($sub) => $sub->where('organization_id', $orgId)->orWhereNull('organization_id')))
+            ->orderBy('name')
             ->get();
 
         $storageLocations = StorageLocation::orderBy('code')
