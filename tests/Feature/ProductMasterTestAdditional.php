@@ -121,9 +121,9 @@ class ProductMasterTestAdditional extends TestCase
     }
 
     /**
-     * Test product variant creation with family optionality (fallback default family resolution).
+     * Test product creation with category and brand.
      */
-    public function test_product_creation_resolves_default_family_when_family_id_omitted()
+    public function test_product_creation_with_category_and_brand()
     {
         $newCategory = Category::create([
             'organization_id' => $this->org->id,

@@ -6,8 +6,7 @@ use App\Domains\Master\Models\Branch;
 use App\Domains\Master\Models\Warehouse;
 use App\Domains\Master\Models\Category;
 use App\Domains\Master\Models\Unit;
-use App\Domains\Product\Models\ProductFamily;
-use App\Domains\Product\Models\ProductVariant;
+use App\Domains\Product\Models\Product;
 use App\Domains\Inventory\Models\InventoryObject;
 use App\Domains\Inventory\Models\InventoryMovement;
 use App\Domains\Reporting\Services\InventoryReportService;
@@ -55,13 +54,6 @@ echo "--- Bootstrapped Laravel 12 workspace context for Reporting Engine Validat
         'decimal_places' => 0
     ]);
 
-    $pf = ProductFamily::firstOrCreate([
-        'organization_id' => $org->id,
-        'category_id' => $cat->id,
-        'name' => 'Closets Family',
-        'code' => 'CLST-FAM'
-    ]);
-
     $gst18 = \App\Domains\Master\Models\TaxProfile::firstOrCreate([
         'organization_id' => $org->id,
         'name' => 'GST 18%'
@@ -72,9 +64,9 @@ echo "--- Bootstrapped Laravel 12 workspace context for Reporting Engine Validat
         'igst_rate' => 18
     ]);
 
-    $variant = ProductVariant::firstOrCreate([
+    $variant = Product::firstOrCreate([
         'organization_id' => $org->id,
-        'product_family_id' => $pf->id,
+        'category_id' => $cat->id,
         'purchase_unit_id' => $unit->id,
         'sales_unit_id' => $unit->id,
         'base_unit_id' => $unit->id,

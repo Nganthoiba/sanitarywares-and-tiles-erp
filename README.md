@@ -1,13 +1,13 @@
-# Tiles & Sanitaryware ERP System
+# Sanitarywares & Tiles ERP System
 
-A comprehensive, multi-tenant business management and Enterprise Resource Planning (ERP) platform purpose-built for businesses dealing in **Tiles**, **Sanitaryware**, **Granite**, **Marble**, **CP Fittings**, **Bathroom Accessories**, and other building materials.
+A comprehensive, multi-tenant business management and Enterprise Resource Planning (ERP) platform purpose-built for enterprises dealing in **Tiles**, **Sanitaryware**, **Granite**, **Marble**, **CP Fittings**, **Bathroom Accessories**, and other building materials.
 
-The primary objective of this system is to computerise and streamline the complete operational lifecycle of building-material enterprises — starting from supplier procurement, continuing through goods receiving and multi-unit inventory management, and concluding with sales execution and business intelligence reporting.
+The primary objective of this system is to digitize and automate the complete operational lifecycle of building-material enterprises — connecting supplier procurement, goods receiving, multi-unit inventory management, point-of-sale execution, tax invoicing, and business intelligence reporting into a single, unified platform.
 
 ---
 
 ```text
-                        TILES & SANITARYWARE ERP
+                           SANITYWARE & TILES ERP ARCHITECTURE
 
   ┌──────────────┐      ┌────────────────┐      ┌────────────────────┐
   │   SUPPLIER   │ ───► │ PURCHASE ORDER │ ───► │ GOODS RECEIPT (GRN)│
@@ -15,9 +15,9 @@ The primary objective of this system is to computerise and streamline the comple
                                                           │
                                                           ▼
   ┌──────────────┐      ┌────────────────┐      ┌────────────────────┐
-  │   CUSTOMER   │ ◄─── │     SALES      │ ◄─── │     INVENTORY      │
-  └──────┬───────┘      └────────────────┘      └─────────┬──────────┘
-         │                                                │
+  │   CUSTOMER   │ ◄─── │ TAX INVOICE /  │ ◄─── │     INVENTORY      │
+  └──────┬───────┘      │     SALES      │      └─────────┬──────────┘
+         │              └────────────────┘                │
          ▼                                                ▼
   ┌──────────────┐                              ┌────────────────────┐
   │  REPORTING   │                              │ STOCK TRANSFERS &  │
@@ -25,393 +25,403 @@ The primary objective of this system is to computerise and streamline the comple
   └──────────────┘                              └────────────────────┘
 ```
 
-> **Core Operating Principle:**
-> _One connected transaction chain in which each operational stage feeds the next — connecting Procurement, Inventory, Sales, and Financial Reporting into a unified, traceable digital ecosystem._
+> **Core Operating Principle:**  
+> _One connected transaction chain in which every operational stage feeds the next — linking Procurement, Inventory, Sales, Accounting, and Business Intelligence into a stateful, auditable digital ecosystem._
 
 ---
 
 ## Table of Contents
 
-- [1. Project Vision](#1-project-vision)
-- [2. Target Businesses](#2-target-businesses)
-- [3. Core Business Lifecycle](#3-core-business-lifecycle)
-- [4. Procurement Management](#4-procurement-management)
-    - [4.1 Purchase Order Lifecycle & Statuses](#41-purchase-order-lifecycle--statuses)
-    - [42 Goods Receipt Note (GRN)](#42-goods-receipt-note-grn)
-    - [4.3 Direct GRN (Receiving Without PO)](#43-direct-grn-receiving-without-po)
-- [5. Advanced Inventory & Measurement Models](#5-advanced-inventory--measurement-models)
-    - [5.1 Units of Measurement (UOM) Dimensions](#51-units-of-measurement-uom-dimensions)
-    - [5.2 Product-Specific Unit Conversions](#52-product-specific-unit-conversions)
-    - [5.3 Tiles & Box Coverage Dynamics](#53-tiles--box-coverage-dynamics)
-    - [5.4 Granite & Marble Slab Management](#54-granite--marble-slab-management)
-- [6. Product Catalog & Attribute System](#6-product-catalog--attribute-system)
-    - [6.1 Product Types (Standard vs. Measured Material)](#61-product-types-standard-vs-measured-material)
-    - [6.2 Product Specifications & Reusable Attributes](#62-product-specifications--reusable-attributes)
-    - [6.3 Global Manufacturer Master vs. Tenant Suppliers](#63-global-manufacturer-master-vs-tenant-suppliers)
-- [7. Multi-Tenant Architecture & RBAC](#7-multi-tenant-architecture--rbac)
-    - [7.1 Organization Isolation](#71-organization-isolation)
-    - [7.2 Role-Based Access Control (RBAC)](#72-role-based-access-control-rbac)
-    - [7.3 Multi-Branch & Multi-Warehouse Operations](#73-multi-branch--multi-warehouse-operations)
-- [8. Sales, Pricing & Auditability](#8-sales-pricing--auditability)
-    - [8.1 Sales Flow & Inventory Reduction](#81-sales-flow--inventory-reduction)
-    - [8.2 Pricing Models & Tax Profiles](#82-pricing-models--tax-profiles)
-    - [8.3 End-to-End Audit Trail](#83-end-to-end-audit-trail)
-- [9. Technical Stack & Getting Started](#9-technical-stack--getting-started)
-- [10. Project Status & Roadmap](#10-project-status--roadmap)
+- [1. System Overview](#1-system-overview)
+- [2. Architecture](#2-architecture)
+- [3. Tenant Model](#3-tenant-model)
+- [4. Product Model](#4-product-model)
+- [5. Procurement](#5-procurement)
+- [6. Inventory](#6-inventory)
+- [7. Sales](#7-sales)
+- [8. Accounting](#8-accounting)
+- [9. Reporting](#9-reporting)
+- [10. Security/RBAC](#10-securityrbac)
+- [11. Installation](#11-installation)
+- [12. Configuration](#12-configuration)
+- [13. Development Workflow](#13-development-workflow)
+- [14. Testing](#14-testing)
+- [15. Current Status](#15-current-status)
+- [16. Roadmap](#16-roadmap)
 
 ---
 
-## 1. Project Vision
+## 1. System Overview
 
-Traditional building-material businesses often struggle with fragmented software solutions — using one tool for purchasing, another for inventory, spreadsheet tracking for granite slabs, and separate billing software.
+Traditional building-material retailers and distributors often rely on fragmented software — separate tools for purchasing, basic billing software without dimensional unit conversions, manual spreadsheets for tracking granite/marble slabs, and disconnected accounting.
 
-This ERP brings all these operational domains together into **one integrated, stateful platform**:
+This ERP provides an integrated, domain-tailored solution:
 
-- **Unified Stock Movement:** Every purchase order, delivery receipt, stock transfer, adjustment, and sales invoice updates inventory dynamically.
-- **Real-World Product Modeling:** Native support for complex, dimension-dependent products such as tiles (sold per box/sq.ft.) and granite slabs (tracked by individual slab area).
-- **Traceable Transaction Chains:** Complete auditability from supplier PO to customer invoice.
+- **Unified Stock Lifecycle:** Every Purchase Order, Goods Receipt Note (GRN), Stock Transfer, Adjustment, and Sales Invoice updates inventory dynamically in real time.
+- **Real-World Product Modeling:** Native support for complex, dimension-dependent items such as tiles (sold per Box, Piece, or Sq.Ft.) and granite/marble slabs (tracked by individual slab length, width, and surface area).
+- **Multi-Tenant Enterprise Structure:** Support for multi-tenant organizations with multi-branch and multi-warehouse operational hierarchies.
+- **Traceable Transaction Chains:** Full audit trail connecting supplier procurement through stock movements down to final sales invoices and financial reports.
 
----
-
-## 2. Target Businesses
-
-The application is tailored specifically for:
-
-- **Product Domains:**
-    - Ceramic, Vitrified, & Porcelain Tiles
-    - Sanitaryware & Bathroom Fixtures
-    - Granite, Marble, & Natural Stone Slabs
-    - CP Fittings & Plumbing Hardware
-    - Building Material Accessories
-- **Enterprise Formats:**
-    - Single-Location Retail Showrooms
-    - Wholesale Distributors
-    - Hybrid Retail-Wholesale Dealers
-    - Multi-Branch & Multi-Warehouse Enterprises
+### Target Businesses
+- **Product Domains:** Ceramic & Vitrified Tiles, Sanitaryware & Bathroom Fixtures, Granite & Marble Slabs, CP Fittings & Plumbing Hardware, Building Material Accessories.
+- **Enterprise Formats:** Single-Location Retail Showrooms, Wholesale Distributors, Hybrid Retail-Wholesale Dealers, Multi-Branch Enterprises.
 
 ---
 
-## 3. Core Business Lifecycle
+## 2. Architecture
 
-The entire platform operates around a connected operational pipeline:
+The application is built using a modern **Domain-Driven Design (DDD)** backend combined with a Single Page Application (SPA) frontend.
 
 ```text
-  [Supplier] ──► [Purchase Order] ──► [Goods Receipt (GRN)] ──► [Inventory]
-                                                                     │
-  [Customer] ◄── [Sales Invoice]  ◄── [Stock Allocation] ◄──────────┤
-                                                                     ▼
-                                                         [Transfers / Adjustments]
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │                           REACT 19 SPA FRONTEND                        │
+  │     React Router v7  │  Bootstrap 5  │  Axios  │  Vite Asset Pipeline   │
+  └───────────────────────────────────┬────────────────────────────────────┘
+                                      │ REST API (Sanctum Tokens)
+                                      ▼
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │                          LARAVEL 12 BACKEND API                        │
+  │  ┌──────────────────────────────────────────────────────────────────┐  │
+  │  │ HTTP Controllers & Requests (app/Http/Controllers/Api/*)         │  │
+  │  └────────────────────────────────┬─────────────────────────────────┘  │
+  │                                   │                                    │
+  │  ┌────────────────────────────────▼─────────────────────────────────┐  │
+  │  │ Domain Layer (app/Domains/{Master, Product, Inventory, Sales...}) │  │
+  │  │    ├── Services   ├── Queries   ├── Models   ├── DTOs            │  │
+  │  └────────────────────────────────┬─────────────────────────────────┘  │
+  └───────────────────────────────────┼────────────────────────────────────┘
+                                      │ Eloquent ORM
+                                      ▼
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │                 DATABASE (PostgreSQL 16+ / MySQL 8.0+)                 │
+  └────────────────────────────────────────────────────────────────────────┘
 ```
 
-> **Key Rule:** Every movement of physical goods is tied to an explicit, stateful business transaction. Manual stock count updates require documented audit reasons.
+### Key Architectural Layers
+1. **Frontend Layer (`resources/js/`)**: Single Page Application written in React 19, powered by React Router v7, Vite, and Bootstrap 5.
+2. **Controller Layer (`app/Http/Controllers/Api/`)**: Thin API controllers handling request validation, routing, HTTP responses, and delegating business logic to domain services.
+3. **Domain Layer (`app/Domains/`)**: Encapsulated business domain modules:
+   - `Master`: Organizations, Branches, Warehouses, Categories, Brands, Tax Profiles, Units, Customers, Suppliers.
+   - `Product`: Unified Product models, attributes, values, unit conversions, organization pricing.
+   - `Procurement`: Purchase Orders, GRNs, line items, receiving logic.
+   - `Inventory`: InventoryObjects, InventoryMovements, stock adjustments, stock transfers.
+   - `Sales`: Invoices, InvoiceItems, sales state machine, tax computation, customer ledgers.
+   - `Reporting`: Optimized report queries (`SalesReportQuery`, `GraniteReportQuery`), DTOs, audit logs.
+4. **Database Layer**: Migration scripts supporting dual-database compatibility (PostgreSQL 16+ primary, MySQL 8.0+ / MariaDB supported).
 
 ---
 
-## 4. Procurement Management
+## 3. Tenant Model
 
-The Procurement module governs all purchasing activities from external suppliers.
-
-```text
-  User Initiates PO ──► Order Sent to Supplier ──► Supplier Delivers ──► GRN Recorded ──► Stock Updated
-```
-
-A **Purchase Order (PO)** records the enterprise's binding commercial request to buy goods. Key fields captured include:
-
-- **Header Details:** Supplier, Branch, PO Number, PO Date, Expected Delivery Date, Reference Number, Payment & Delivery Terms.
-- **Line Items:** Products, Quantities, Units, Rates, Item Discounts, Taxes (CGST/SGST/IGST), Total Amounts, Remarks.
-
-### 4.1 Purchase Order Lifecycle & Statuses
-
-Purchase Orders transition through well-defined lifecycle states:
-
-| Status               | Description                                                         |
-| :------------------- | :------------------------------------------------------------------ |
-| `DRAFT`              | Initial order creation & item entry; editable by procurement staff. |
-| `SUBMITTED`          | Submitted for internal review/approval.                             |
-| `APPROVED`           | Approved by authorized organization manager.                        |
-| `SENT`               | Formally dispatched to the external supplier.                       |
-| `PARTIALLY_RECEIVED` | Goods partially delivered; matching GRN recorded.                   |
-| `FULLY_RECEIVED`     | All ordered line items fully received in warehouse.                 |
-| `CLOSED`             | Order completed or manually concluded.                              |
-| `CANCELLED`          | Order voided prior to fulfillment.                                  |
-
-### 4.2 Goods Receipt Note (GRN)
-
-A **Goods Receipt Note (GRN)** records physical delivery at the warehouse. While a PO represents _what was ordered_, the GRN represents _what was physically delivered_.
+The platform is designed around strict multi-tenancy with a multi-tiered organization structure.
 
 ```text
-  PO Ordered Quantity:     100 BOX Tiles
-  GRN Received Quantity:    60 BOX
-  ───────────────────────────────────────────
-  Remaining PO Balance:     40 BOX (PO Status: PARTIALLY_RECEIVED)
+  Super Admin (Global Platform Management)
+  └── Organization Tenant (organization_id)
+      ├── Branch BR-01 (Showroom)
+      │   └── Warehouse WH-01 (Display Floor Stock)
+      └── Branch BR-02 (Central Depot)
+          ├── Warehouse WH-02 (Main Storage Warehouse)
+          └── Warehouse WH-03 (Granite Yard)
 ```
 
-The system automatically calculates and maintains:
-
-- **Ordered Quantity**
-- **Received Quantity to Date**
-- **Outstanding Quantity Balance**
-
-### 4.3 Direct GRN (Receiving Without PO)
-
-For emergency stock deliveries, cash purchases, or supplier replacements where no prior PO exists, the system supports **Direct GRN**:
-
-```text
-  Supplier Delivery ──► Direct GRN Entry ──► Warehouse Inventory
-```
-
-> [!NOTE]
-> Direct GRNs are treated as audit exceptions, requiring dedicated manager authorization and documented reasons to preserve procurement integrity.
+### Multi-Tenancy Rules
+- **Data Isolation:** Organization-owned models (`Product`, `InventoryObject`, `PurchaseOrder`, `GRN`, `Invoice`, `Supplier`, `Customer`, `Branch`, `Warehouse`) enforce strict `organization_id` tenant scoping.
+- **Tenant Context (`TenantContext`):** Automatically injects and resolves active tenant context per request to prevent cross-tenant data leakage.
+- **Operational Hierarchy:** An Organization contains multiple **Branches**, and each Branch contains one or more **Warehouses** (storage locations).
+- **Stock Transfer Notes:** Inter-warehouse and inter-branch stock transfers require formal transfer notes and audit logs.
 
 ---
 
-## 5. Advanced Inventory & Measurement Models
+## 4. Product Model
 
-One of the greatest complexities in building materials is that products are purchased, stored, priced, and sold using different measurement units.
-
-### 5.1 Units of Measurement (UOM) Dimensions
-
-The system categorizes measurement units into distinct physical dimensions:
-
-| Dimension  | Supported Units                    |
-| :--------- | :--------------------------------- |
-| **Length** | `MM`, `CM`, `M`, `IN`, `FT`        |
-| **Area**   | `SQ.MM`, `SQ.M`, `SQ.IN`, `SQ.FT`  |
-| **Volume** | `CU.MM`, `CU.CM`, `CU.M`, `CU.FT`  |
-| **Mass**   | `G`, `KG`, `TON`                   |
-| **Count**  | `PCS`, `BOX`, `BAG`, `SET`, `SLAB` |
-
-> [!IMPORTANT]
-> **Dimension Conversion Rule:** Conversions between units of the _same_ dimension (e.g., `FT` ↔ `MM`, `SQ.FT` ↔ `SQ.M`) are universal standard math. Conversions _across_ dimensions (e.g., `MM` ↔ `SQ.FT`) are strictly disallowed unless governed by explicit product specifications.
-
-### 5.2 Product-Specific Unit Conversions
-
-Commercial packaging varies per product:
-
-- Product A: `1 BOX = 4 PCS = 15.5 SQ.FT`
-- Product B: `1 BOX = 2 PCS = 12.0 SQ.FT`
-
-`BOX` → `PCS` is therefore modeled as a **Product-Specific Commercial Conversion** defined individually on the product record.
-
-### 5.3 Tiles & Box Coverage Dynamics
-
-For tiles, the system automatically correlates physical dimensions, piece counts, box quantities, and coverage area:
+The Product Catalog represents a streamlined, unified domain model. The legacy Product Family concept has been fully removed in favor of direct category/brand associations on a single `Product` model.
 
 ```text
-  Tile Specs:          600 × 600 mm (Thickness: 8 mm)
-  Box Packing:         4 PCS / BOX
-  Coverage per Box:    0.36 SQ.M / PC × 4 = 1.44 SQ.M (15.5 SQ.FT) per BOX
+                             UNIFIED PRODUCT MODEL
+
+  ┌──────────────────────────────────────────────────────────────────────┐
+  │                             PRODUCT                                  │
+  │  name, sku, category_id, brand_id, tax_profile_id, inventory_behavior  │
+  └──────────────────────────────────┬───────────────────────────────────┘
+                                     │
+             ┌───────────────────────┴───────────────────────┐
+             ▼                                               ▼
+  ┌───────────────────────┐                       ┌──────────────────────┐
+  │   STANDARD PRODUCT    │                       │  MEASURED MATERIAL   │
+  │ (Tiles, Sanitaryware) │                       │   (Granite / Marble) │
+  │ Units: BOX, PCS, SQFT │                       │ Slabs: L × W × T     │
+  └───────────────────────┘                       └───────────────────────┘
 ```
 
-Users can enter sales or purchase orders in **Boxes**, **Pieces**, or **Square Feet**, and the system seamlessly converts and updates inventory accurately.
+### Product Behaviors
+- **`STANDARD`**: Uniform items with consistent unit counts (e.g., Tiles, Sanitaryware, Accessories, CP Fittings).
+- **`MEASURED_MATERIAL`**: Dimensional items where individual pieces (slabs) have unique length, width, thickness, and calculated surface areas (e.g., Granite & Marble Slabs).
 
-### 5.4 Granite & Marble Slab Management
+### Dynamic Units of Measurement (UOM) & Commercial Conversions
+- **Dimensions:** Length (`MM`, `CM`, `M`, `FT`), Area (`SQ.MM`, `SQ.M`, `SQ.FT`), Mass (`KG`, `TON`), Count (`PCS`, `BOX`, `SLAB`).
+- **Product Commercial Conversions:** Defined per product (e.g., `1 BOX = 4 PCS = 15.5 SQ.FT`). Orders can be entered in Boxes, Pieces, or Square Feet, and the system automatically calculates stock movements and pricing.
 
-Granite and marble are purchased as physical slabs but priced by total surface area (`₹180 / SQ.FT`). Individual slabs within the same bundle vary in physical dimensions:
-
-```text
-  Slab #1: 120 IN × 72 IN = 60.00 SQ.FT.
-  Slab #2: 118 IN × 70 IN = 57.36 SQ.FT.
-  ────────────────────────────────────────────────────
-  Total Inventory: 2 SLABS | Total Area: 117.36 SQ.FT.
-```
-
-The system tracks **individual slab piece records** with exact length/width dimensions and calculated surface area, ensuring pricing and inventory valuation remain perfectly accurate.
+### Global Manufacturer Registry vs. Tenant Suppliers
+- **Global Manufacturer Master:** Shared global registry of real-world manufacturers (e.g., *Kajaria*, *Somany*, *Jaquar*). Super Admins maintain verification status (`VERIFIED`, `UNVERIFIED`).
+- **Tenant Suppliers:** Commercial vendors registered per tenant organization for purchasing transactions.
 
 ---
 
-## 6. Product Catalog & Attribute System
+## 5. Procurement
 
-The Product Catalog forms the master foundation for purchasing, inventory, and sales.
-
-### 6.1 Product Types (Standard vs. Measured Material)
-
-Products follow two core operational configurations:
-
-- **`STANDARD`**: Used for uniform items with consistent unit counts (e.g., Tiles, Sanitaryware, Accessories, CP Fittings).
-- **`MEASURED_MATERIAL`**: Used for dimensional materials with variable slab sizes (e.g., Granite Slabs, Marble Blocks).
-
-### 6.2 Product Specifications & Reusable Attributes
-
-Attributes (e.g., _Length_, _Width_, _Thickness_, _Color_, _Finish_, _Material_) are defined as global reusable concepts and attached to products as needed:
+The Procurement module manages purchasing activities from external suppliers.
 
 ```text
-  Attribute Definition: Thickness [Numeric, Unit: MM]
-  ├── Product A (Vitrified Tile)  ──► Value: 8 MM
-  ├── Product B (Parking Tile)    ──► Value: 12 MM
-  └── Product C (Granite Slab)    ──► Value: 18 MM
+  PO Draft ──► PO Submitted ──► PO Approved ──► PO Sent ──► Goods Receipt (GRN) ──► Stock Updated
 ```
 
-### 6.3 Global Manufacturer Master vs. Tenant Suppliers
+### Purchase Order (PO) Lifecycle
 
-The application distinguishes between Manufacturers and Suppliers based on real-world business ownership:
+| Status | Description |
+| :--- | :--- |
+| `DRAFT` | Order creation and item entry; editable by procurement staff. |
+| `SUBMITTED` | Submitted for internal manager review. |
+| `APPROVED` | Approved by authorized organization manager. |
+| `SENT` | Formally dispatched to supplier. |
+| `PARTIALLY_RECEIVED` | Goods partially delivered; matching GRN recorded. |
+| `FULLY_RECEIVED` | All ordered line items fully received in warehouse. |
+| `CLOSED` | Order completed or manually concluded. |
+| `CANCELLED` | Order voided prior to fulfillment. |
 
-```text
-  ┌──────────────────────────────────────────────────────────┐
-  │         GLOBAL INDEPENDENT MASTER REGISTRY               │
-  │   Manufacturer: Kajaria Ceramics Ltd (Global / GSTIN)    │
-  └────────────────────────────┬─────────────────────────────┘
-                               │
-            ┌──────────────────┴──────────────────┐
-            ▼                                     ▼
-  ┌──────────────────┐                  ┌──────────────────┐
-  │  ORGANIZATION A  │                  │  ORGANIZATION B  │
-  │  Tenant Supplier │                  │  Tenant Supplier │
-  │  Product Catalog │                  │  Product Catalog │
-  └──────────────────┘                  └──────────────────┘
-```
-
-- **Manufacturer (Global Master):** Real-world manufacturing business entities (e.g., _Kajaria_, _Somany_, _Jaquar_) exist as global master records shared across tenants.
-    - **Super Admin (`super-admin`):** Full CRUD management & verification status control (`VERIFIED`, `UNVERIFIED`, `REJECTED`).
-    - **Organization Admin:** Can search the master registry and contribute new manufacturers once; cannot update or delete shared global records.
-- **Supplier (Tenant-Scoped):** Commercial vendor entities registered per organization for purchasing transactions.
+### Goods Receipt Note (GRN) & Direct GRN
+- **PO-Linked GRN:** Matches physical deliveries against PO ordered quantities and automatically maintains outstanding balances.
+- **Direct GRN:** Supports receiving stock directly without a prior PO for cash purchases or emergency deliveries, subject to manager authorization audit logs.
 
 ---
 
-## 7. Multi-Tenant Architecture & RBAC
+## 6. Inventory
 
-### 7.1 Organization Isolation
-
-The ERP enforces strict data isolation across tenant organizations:
-
-- Organization-owned models (`Product`, `Inventory`, `PurchaseOrder`, `GRN`, `Supplier`, `Branch`, `Warehouse`) enforce automatic tenant scoping (`organization_id`).
-- All requests are validated against active `TenantContext` to prevent cross-tenant data leakage.
-
-### 7.2 Role-Based Access Control (RBAC)
-
-User permissions are governed through roles and explicit permission permissions:
+Inventory tracking is fully stateful, real-time, and auditable across branches and warehouses.
 
 ```text
-  User ──► Active Role ──► Assigned Permissions
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                            INVENTORY OBJECT                             │
+  │  organization_id │ branch_id │ warehouse_id │ product_id │ stock_qty    │
+  └────────────────────────────────────┬────────────────────────────────────┘
+                                       │
+                                       ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                      INVENTORY MOVEMENT (AUDIT LOG)                     │
+  │  movement_type: GRN / SALE / TRANSFER / ADJUSTMENT                     │
+  │  reference_type & ID │ quantity_change │ balance_after │ reason         │
+  └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Super Administrator (`super-admin`):** Global platform management, system seeders, global manufacturer registry verification.
-- **Organization Administrator (`administrator`):** Full administrative authority over organization setup, branches, staff, products, suppliers, purchasing, and reports.
-- **Staff Member:** Role-restricted operational access (e.g., Inventory Store Manager, Purchasing Agent, Sales Operator).
-
-### 7.3 Multi-Branch & Multi-Warehouse Operations
-
-An organization can configure multiple operational locations:
-
-```text
-  Organization HQ
-  ├── Main Showroom (Branch BR01)
-  │   └── Showroom Display Stock
-  └── Central Warehouse (Branch BR02)
-      ├── Warehouse WH01 (Storage Location R1-C1-S1)
-      └── Warehouse WH02 (Storage Location R2-C2-S2)
-```
-
-Stock transfers between branches/warehouses generate formal **Stock Transfer Notes** for strict accountability.
+### Inventory Capabilities
+- **Batch & Box Stock:** Standard products are tracked by piece/box quantity and warehouse bin location.
+- **Dimensional Slab Stock:** Granite/Marble slabs are tracked as discrete physical slab records (`InventoryObject`) recording exact Length × Width dimensions, thickness, and total square footage.
+- **Stock Transfers:** Formal inter-warehouse transfer notes with dispatch and receipt confirmations.
+- **Stock Adjustments:** Documented manual count adjustments requiring reason codes and supervisor audit trails.
 
 ---
 
-## 8. Sales, Pricing & Auditability
+## 7. Sales
 
-### 8.1 Sales Flow & Inventory Reduction
-
-Sales orders and invoices deduct inventory in real time according to the configured product unit rules.
+The Sales & Invoicing module provides point-of-sale execution, customer tax invoice generation, and real-time inventory deduction.
 
 ```text
-  Customer Order ──► Unit & Conversion Match ──► Real-Time Stock Deduction ──► Sales Invoice
+  New Sale Form ──► Stock Check & Tax Calc ──► Post Invoice ──► Stock Deducted ──► Tax Invoice Modal
 ```
 
-### 8.2 Pricing Models & Tax Profiles
+### Sales Workflow
+1. **Order Entry (`NewSaleForm.jsx` / `SalesApiController`):**
+   - Select Customer, Branch, and Warehouse.
+   - Add line items with choice of sale unit (`BOX`, `PCS`, `SQ.FT`, `SLAB`).
+   - Auto-calculate item subtotal, discounts, and GST tax breakdown based on customer state vs warehouse state (CGST + SGST for intra-state, IGST for inter-state).
+2. **Invoice Posting (`SalesService`):**
+   - Creates `Invoice` and `InvoiceItem` records.
+   - Reserves and deducts inventory immediately from the designated warehouse.
+   - Records an `InventoryMovement` entry of type `SALE`.
+3. **Invoice & Billing (`TaxInvoiceModal.jsx`):**
+   - Generates GST-compliant Tax Invoices displaying HSN/SAC codes, tax rates, vehicle/dispatch details, and customer billing address.
 
-- **Pricing Unit Distinction:** Pricing units are decoupled from storage units. Tiles can be stored in `BOX` but can be priced in `PCS`, with auto-calculated totals. However, for the Granite/Marbles, the storage unit will be in `SLABS` and priced in `SQ.FT`.
-- **Tax Profiles:** Full GST compliance with configurable **HSN/SAC** codes, **CGST**, **SGST**, and **IGST** rates.
+---
 
-### 8.3 End-to-End Audit Trail
+## 8. Accounting
 
-Every stock movement maintains an unalterable transactional audit record:
+The Accounting layer links commercial transactions directly to financial tracking and GST reporting.
 
-```text
-  Stock Change (+100 BOX) ──► Audit Log: GRN-00042 (PO-00027, Supplier: ABC Distributors)
-  Stock Change (-20 PCS)  ──► Audit Log: INV-00128 (Customer: XYZ Construction)
+- **GST Tax Profiles:** Configurable tax profiles with HSN/SAC codes, CGST %, SGST %, and IGST %.
+- **Intra-State vs. Inter-State Logic:** Automatically applies CGST + SGST when supplier/warehouse and customer are in the same state, or IGST when crossing state borders.
+- **Customer & Supplier Ledgers:** Tracks accounts receivable (invoices) and accounts payable (GRNs / supplier bills).
+- **Financial Auditability:** Immutable transaction history linking every invoice and purchase receipt to accounting entries.
+
+---
+
+## 9. Reporting
+
+The Reporting module provides real-time business intelligence, dashboard metrics, and audit log tracking.
+
+### Core Reporting Features
+- **Sales Analytics (`SalesReportQuery`):** Sales by Category, Brand, Branch, Date Range, and Revenue analysis.
+- **Inventory Reporting (`InventoryReportService`):** Stock valuation, low-stock alerts, movement summaries, slab coverage reports (`GraniteReportQuery`).
+- **Dashboard Service (`DashboardService`):** High-level KPI aggregations for executive dashboards (total sales, total inventory value, pending POs).
+- **Audit Logs (`ReportAuditLog`):** Tracks report generation history, parameter filters, user actions, and CSV export activities.
+
+---
+
+## 10. Security/RBAC
+
+Security and access control are enforced at both API and UI levels.
+
+### Authentication & Authorization
+- **API Authentication:** Laravel Sanctum token-based authentication.
+- **Role-Based Access Control (RBAC):**
+  - `super-admin`: Global platform management, system seeders, global manufacturer verification.
+  - `administrator`: Full administrative authority over organization setup, branches, staff, catalog, procurement, sales, and reports.
+  - `staff`: Role-restricted operational permissions (e.g., Inventory Store Manager, Sales Operator, Purchasing Agent).
+- **Tenant Authorization Guard:** Prevents authorized users of Organization A from reading or modifying resources belonging to Organization B.
+
+---
+
+## 11. Installation
+
+### Prerequisites
+- **PHP:** 8.2 or 8.3+ (with `pdo`, `pdo_pgsql` / `pdo_mysql`, `mbstring`, `bcmath`, `xml`, `curl` extensions)
+- **Composer:** 2.x
+- **Node.js:** 18.x or 20.x+ & `npm`
+- **Database:** PostgreSQL 16+ (Recommended) or MySQL 8.0+ / MariaDB / SQLite
+
+### Step-by-Step Installation Guide
+
+1. **Clone the Repository:**
+   ```bash
+   git clone https://github.com/Nganthoiba/sanitarywares-and-tiles-erp.git
+   cd sanitarywares-and-tiles-erp
+   ```
+
+2. **Install PHP Dependencies:**
+   ```bash
+   composer install
+   ```
+
+3. **Install JavaScript Dependencies:**
+   ```bash
+   npm install
+   ```
+
+4. **Environment Setup:**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+
+5. **Configure Database in `.env`:**
+   ```env
+   DB_CONNECTION=pgsql
+   DB_HOST=127.0.0.1
+   DB_PORT=5432
+   DB_DATABASE=tiles_and_sanitary
+   DB_USERNAME=postgres
+   DB_PASSWORD=your_password
+   ```
+
+6. **Run Database Migrations & Seeders:**
+   ```bash
+   php artisan migrate --seed
+   ```
+   *Seeds default units, sample organization, super-admin account, tax profiles, and sample categories.*
+
+---
+
+## 12. Configuration
+
+### Key Environment Variables (`.env`)
+
+| Variable | Description | Example |
+| :--- | :--- | :--- |
+| `APP_NAME` | Application Title | `Sanitarywares & Tiles ERP` |
+| `APP_ENV` | Environment Mode | `local` / `production` |
+| `APP_URL` | Base URL | `http://localhost:8000` |
+| `DB_CONNECTION` | Database Driver | `pgsql` / `mysql` / `sqlite` |
+| `DB_HOST` | Database Server Host | `127.0.0.1` |
+| `DB_PORT` | Database Port | `5432` (PostgreSQL) / `3306` (MySQL) |
+| `SANCTUM_STATEFUL_DOMAINS` | Sanctum CORS Domains | `localhost:8000,127.0.0.1:8000` |
+
+---
+
+## 13. Development Workflow
+
+### Starting the Development Environment
+
+You can start backend, queue listener, logs, and frontend Vite server concurrently:
+
+```bash
+# Option 1: Run standard Laravel dev command (runs backend + Vite concurrently)
+composer run dev
+
+# Option 2: Run separate terminals
+# Terminal 1: Backend API Server
+php artisan serve
+
+# Terminal 2: Frontend Vite Development Server
+npm run dev
+```
+
+### Production Build
+```bash
+npm run build
 ```
 
 ---
 
-## 9. Technical Stack & Getting Started
+## 14. Testing
 
-### Tech Stack
+The project maintains an extensive PHPUnit automated test suite covering master records, procurement, inventory, sales, and reporting.
 
-- **Backend Framework:** Laravel 12 (PHP 8.3+)
-- **Frontend Engine:** React 18, JSX, Bootstrap 5, FontAwesome 6
-- **Asset Pipeline:** Vite
-- **Database:** MySQL 8.0+ / MariaDB or psql (PostgreSQL) 16.14
-- **Testing Suite:** PHPUnit 12
+### Tech Stack Specifications
+- **PHPUnit Version:** PHPUnit 11 (`^11.5.50`)
+- **Framework:** Laravel 12 Testing Suite
 
-### Quick Start Guide
+### Running Automated Tests
 
-1. **Clone & Install Dependencies:**
+```bash
+# Run complete test suite
+./vendor/bin/phpunit
 
-    ```bash
-    git clone https://github.com/Nganthoiba/sanitarywares-and-tiles-erp.git
-    cd sanitarywares-and-tiles-erp
-    composer install
-    npm install
-    ```
-
-2. **Configure Environment:**
-
-    ```bash
-    cp .env.example .env
-    php artisan key:generate
-    ```
-
-    _Configure your MySQL/Postgresql database credentials in `.env`._
-
-3. **Run Migrations & Seeders:**
-
-    ```bash
-    php artisan migrate --seed
-    ```
-
-    _This seeds standard units, default organization, sample products, global manufacturers, and the Super Admin account._
-
-4. **Start Development Servers:**
-
-    ```bash
-    # Terminal 1: Backend API
-    php artisan serve
-
-    # Terminal 2: Frontend Vite
-    npm run dev
-    ```
-
-5. **Run Automated Test Suite:**
-    ```bash
-    ./vendor/bin/phpunit --filter=GlobalManufacturerTest
-    ./vendor/bin/phpunit --filter=ProductMasterTest
-    ```
+# Run specific domain test suite
+./vendor/bin/phpunit --filter=ProductMasterTest
+./vendor/bin/phpunit --filter=SalesApiTest
+./vendor/bin/phpunit --filter=PurchaseOrderTest
+```
 
 ---
 
-## 10. Project Status & Roadmap
+## 15. Current Status
 
-This project is under active continuous development.
+The application is in active, stable production-ready state with all core operational modules implemented:
 
-### Core Modules Active
-
-- [x] Multi-Tenant Architecture & Organization Context
-- [x] Super Admin & Role Switcher UI
-- [x] Global Manufacturer Master Registry with Duplicate GSTIN Detection
-- [x] Product Catalog & Reusable Specification Attributes
-- [x] Multi-Unit Measurement Engine & Conversions (Tile Box Coverage, Slab Dimensions)
-- [x] Supplier Registry
-- [x] Purchase Orders & Stateful Lifecycle Management
-- [x] Goods Receipt Notes (GRN) & PO Balance Tracking
-- [x] Automated PHPUnit Test Suites
-
-### Upcoming Enhancements
-
-- [ ] Sales Invoicing & Customer Management
-- [ ] Stock Transfer & Branch Reconciliation Workflow
-- [ ] Low-Stock Automated Reorder Notifications
-- [ ] GST e-Invoicing & E-Way Bill Integration
-- [ ] Barcode / QR Code Slab Scanning Engine
+- [x] Multi-Tenant Architecture & `TenantContext` isolation
+- [x] Super Admin & Organization Switcher UI
+- [x] Unified Product Catalog (Single `Product` model, `STANDARD` vs `MEASURED_MATERIAL`)
+- [x] Global Manufacturer Registry with duplicate GSTIN detection
+- [x] Dynamic Measurement Engine & UOM commercial conversions (`BOX` <-> `PCS` <-> `SQ.FT`)
+- [x] Supplier & Customer Masters
+- [x] Procurement Module (PO state machine, Goods Receipt Notes, Direct GRN)
+- [x] Multi-Warehouse Inventory Management & Slab tracking
+- [x] Sales & Invoicing Module (`SalesService`, `SalesApiController`, `TaxInvoiceModal`)
+- [x] GST Tax Calculation Engine (CGST, SGST, IGST)
+- [x] Reporting & Dashboard Engine (`SalesReportQuery`, `GraniteReportQuery`, `ReportAuditLog`)
+- [x] Role-Based Access Control (RBAC) & Sanctum authentication
+- [x] Comprehensive Automated PHPUnit Test Suite (180+ tests passing)
 
 ---
 
-_Licensed under the [MIT License](LICENSE)._
+## 16. Roadmap
+
+Planned future features and enhancements:
+
+- [ ] **GST e-Invoicing & E-Way Bill Integration:** Direct API connectivity with NIC portal for automated e-Invoice IRN generation and E-Way bill printing.
+- [ ] **Mobile Barcode & QR Code Scanner:** Mobile app for warehouse staff to scan granite slab QR tags and box barcodes during GRN and dispatch.
+- [ ] **Advanced Customer Credit & Payment Tracking:** Partial payment recording, customer credit limit enforcement, and overdue payment reminder notifications.
+- [ ] **Predictive Inventory Analytics:** Low-stock automated reorder alerts based on historical sales velocity.
+
+---
+
+*Licensed under the [MIT License](LICENSE).*

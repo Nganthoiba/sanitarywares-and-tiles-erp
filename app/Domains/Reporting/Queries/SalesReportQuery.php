@@ -43,8 +43,7 @@ class SalesReportQuery
         return DB::table('invoice_items')
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
             ->join('product_variants', 'invoice_items.product_variant_id', '=', 'product_variants.id')
-            ->join('product_families', 'product_variants.product_family_id', '=', 'product_families.id')
-            ->join('categories', 'product_families.category_id', '=', 'categories.id')
+            ->join('categories', 'product_variants.category_id', '=', 'categories.id')
             ->select(
                 'categories.name as category_name',
                 DB::raw('sum(invoice_items.quantity) as total_qty'),

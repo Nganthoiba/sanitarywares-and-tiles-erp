@@ -368,7 +368,6 @@ export default function ProductEntry({ initialSubTab = "list" }) {
             })) || [];
 
             const payload = {
-                product_family_id: product.product_family_id,
                 name: product.name,
                 sku: product.sku,
                 gtin: product.gtin,
@@ -609,14 +608,6 @@ export default function ProductEntry({ initialSubTab = "list" }) {
             return { ...prev, attributes: updatedAttrs };
         });
         setAttrToRemove(null);
-    };
-
-    // -------------------------------------------------------------
-    // Family Specific Sub-Views
-    // -------------------------------------------------------------
-    const handleViewFamilyProducts = (family) => {
-        setSelectedFamilyId(family.id);
-        setFamilyProducts(products.filter(p => p.product_family_id === family.id));
     };
 
     // -------------------------------------------------------------

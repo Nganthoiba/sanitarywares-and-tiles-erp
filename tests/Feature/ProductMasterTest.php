@@ -166,7 +166,7 @@ class ProductMasterTest extends TestCase
     /**
      * 3. Test Tile specific variant creation (STANDARD, inheriting brand/tax profile).
      */
-    public function test_tile_creation_inherits_brand_and_tax_profile_from_family()
+    public function test_tile_creation_with_brand_and_tax_profile()
     {
         $payload = [
             'category_id' => $this->category->id,
