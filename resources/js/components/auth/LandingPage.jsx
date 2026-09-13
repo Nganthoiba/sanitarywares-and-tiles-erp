@@ -431,7 +431,7 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
                             </div>
 
                             {/* Radio Buttons Control */}
-                            <div className="d-flex align-items-center gap-3.5">
+                            <div className="d-flex align-items-center gap-3">
                               <div className="form-check form-check-inline mb-0 d-flex align-items-center gap-2 ps-0 me-0">
                                 <input
                                   className="form-check-input cursor-pointer m-0"
@@ -461,7 +461,7 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
                                 />
                                 <label className="form-check-label small fw-bold text-dark cursor-pointer mb-0 user-select-none d-flex align-items-center gap-1.5" htmlFor="areaModeDimensionsLanding" style={{ fontSize: '0.78rem' }}>
                                   <i className="fa-solid fa-ruler-combined text-primary"></i>
-                                  <span>Length × Breadth</span>
+                                  <span>Length x Breadth</span>
                                 </label>
                               </div>
                             </div>
