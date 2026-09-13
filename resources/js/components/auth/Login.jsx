@@ -147,7 +147,7 @@ export default function Login({ onLoginSuccess, onNavigateToRegister, onNavigate
     };
 
     return (
-        <div className="min-vh-100 d-flex align-items-center justify-content-center bg-light font-sans py-5">
+        <div className="min-vh-100 d-flex align-items-center justify-content-center bg-light font-sans py-5 auth-page login-page">
             <div className="container">
                 <div className="card border-0 shadow-lg overflow-hidden" style={{ borderRadius: '1.5rem', maxWidth: '1000px', margin: '0 auto' }}>
                     <div className="row g-0">
