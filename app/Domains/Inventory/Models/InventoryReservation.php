@@ -32,7 +32,9 @@ class InventoryReservation extends Model
         'customer_id',
         'created_by',
         'quantity',
+        'fulfilled_quantity',
         'area',
+        'fulfilled_area',
         'reservation_date',
         'expires_at',
         'reference_number',
@@ -42,10 +44,27 @@ class InventoryReservation extends Model
 
     protected $casts = [
         'quantity' => 'decimal:4',
+        'fulfilled_quantity' => 'decimal:4',
         'area' => 'decimal:4',
+        'fulfilled_area' => 'decimal:4',
         'reservation_date' => 'datetime',
         'expires_at' => 'datetime',
     ];
+
+    protected $appends = [
+        'remaining_quantity',
+        'remaining_area',
+    ];
+
+    public function getRemainingQuantityAttribute(): float
+    {
+        return max(0.0, (float) $this->quantity - (float) ($this->fulfilled_quantity ?? 0));
+    }
+
+    public function getRemainingAreaAttribute(): float
+    {
+        return max(0.0, (float) $this->area - (float) ($this->fulfilled_area ?? 0));
+    }
 
     public function organization(): BelongsTo
     {

@@ -20,7 +20,7 @@ class ReservationService
     {
         return DB::transaction(function () use ($data) {
             $orgId = $data['organization_id'] ?? 1;
-            $variantId = $data['product_variant_id'] ?? null;
+            $variantId = $data['product_variant_id'] ?? $data['product_id'] ?? null;
             $objectId = $data['inventory_object_id'] ?? null;
 
             if ($objectId && !$variantId) {
@@ -68,10 +68,10 @@ class ReservationService
             $inventoryObjects = $objQuery->lockForUpdate()->get();
             $onHandQty = (float) $inventoryObjects->sum('quantity');
 
-            // Calculate active reservations
+            // Calculate active reservations based on remaining unfulfilled quantities
             $resQuery = InventoryReservation::where('organization_id', $orgId)
                 ->where('product_variant_id', $variantId)
-                ->whereIn('status', ['ACTIVE', 'PENDING'])
+                ->whereIn('status', ['ACTIVE', 'PENDING', 'PARTIALLY_FULFILLED'])
                 ->where(function ($q) {
                     $q->whereNull('expires_at')
                       ->orWhere('expires_at', '>=', Carbon::now());
@@ -87,7 +87,7 @@ class ReservationService
                 $resQuery->where('inventory_object_id', $objectId);
             }
 
-            $activeReservedQty = (float) $resQuery->sum('quantity');
+            $activeReservedQty = (float) $resQuery->select(DB::raw('SUM(quantity - fulfilled_quantity) as total_active'))->value('total_active') ?? 0.0;
             $availableQty = max(0, $onHandQty - $activeReservedQty);
 
             if ($requestedQty > $availableQty) {
@@ -117,7 +117,9 @@ class ReservationService
                 'customer_id' => $data['customer_id'] ?? null,
                 'created_by' => $data['created_by'] ?? null,
                 'quantity' => $requestedQty,
+                'fulfilled_quantity' => 0.0000,
                 'area' => $data['area'] ?? 0.0000,
+                'fulfilled_area' => 0.0000,
                 'reservation_date' => $data['reservation_date'] ?? Carbon::now(),
                 'expires_at' => !empty($data['expires_at']) ? Carbon::parse($data['expires_at']) : null,
                 'reference_number' => $data['reference_number'] ?? null,
@@ -132,18 +134,22 @@ class ReservationService
     }
 
     /**
-     * Cancel/Release a reservation.
+     * Cancel/Release a reservation. Releases remaining unfulfilled quantity.
      */
     public function release(int $reservationId): void
     {
         DB::transaction(function () use ($reservationId) {
             $res = InventoryReservation::where('id', $reservationId)->firstOrFail();
 
-            if (!in_array($res->status, ['ACTIVE', 'PENDING'])) {
-                throw new Exception("Reservation is already {$res->status}.");
+            if (!in_array($res->status, ['ACTIVE', 'PENDING', 'PARTIALLY_FULFILLED'])) {
+                throw new Exception("Reservation #{$res->reservation_number} is already {$res->status}.");
             }
 
-            $res->status = 'CANCELLED';
+            if ((float) $res->fulfilled_quantity > 0) {
+                $res->status = 'FULFILLED'; // Close out unfulfilled remaining balance
+            } else {
+                $res->status = 'CANCELLED';
+            }
             $res->save();
 
             event(new InventoryReleased($res));
@@ -151,19 +157,41 @@ class ReservationService
     }
 
     /**
-     * Fulfill a reservation (when dispatched).
+     * Fulfill a reservation (when dispatched / sold). Supports partial fulfillment.
      */
-    public function fulfill(int $reservationId): void
+    public function fulfill(InventoryReservation|int $reservation, ?float $quantityToFulfill = null, ?float $areaToFulfill = null): InventoryReservation
     {
-        DB::transaction(function () use ($reservationId) {
-            $res = InventoryReservation::where('id', $reservationId)->firstOrFail();
+        return DB::transaction(function () use ($reservation, $quantityToFulfill, $areaToFulfill) {
+            $res = $reservation instanceof InventoryReservation 
+                ? $reservation 
+                : InventoryReservation::where('id', $reservation)->firstOrFail();
 
-            if (!in_array($res->status, ['ACTIVE', 'PENDING'])) {
-                throw new Exception("Reservation is already {$res->status}.");
+            if (!in_array($res->status, ['ACTIVE', 'PENDING', 'PARTIALLY_FULFILLED'])) {
+                throw new Exception("Reservation #{$res->reservation_number} is currently {$res->status} and cannot be fulfilled.");
             }
 
-            $res->status = 'FULFILLED';
+            $remainingQty = $res->remaining_quantity;
+            $fulfillQty = ($quantityToFulfill !== null && $quantityToFulfill > 0)
+                ? min($quantityToFulfill, $remainingQty)
+                : $remainingQty;
+
+            $remainingArea = $res->remaining_area;
+            $fulfillArea = ($areaToFulfill !== null && $areaToFulfill > 0)
+                ? min($areaToFulfill, $remainingArea)
+                : $remainingArea;
+
+            $res->fulfilled_quantity = (float) $res->fulfilled_quantity + $fulfillQty;
+            $res->fulfilled_area = (float) $res->fulfilled_area + $fulfillArea;
+
+            if ($res->fulfilled_quantity >= (float) $res->quantity) {
+                $res->status = 'FULFILLED';
+            } else {
+                $res->status = 'PARTIALLY_FULFILLED';
+            }
+
             $res->save();
+
+            return $res;
         });
     }
 
@@ -172,7 +200,7 @@ class ReservationService
      */
     public function expireOldReservations(int $hoursThreshold = 24): int
     {
-        $expiredList = InventoryReservation::whereIn('status', ['ACTIVE', 'PENDING'])
+        $expiredList = InventoryReservation::whereIn('status', ['ACTIVE', 'PENDING', 'PARTIALLY_FULFILLED'])
             ->where(function ($q) use ($hoursThreshold) {
                 $q->where(function ($sub) {
                     $sub->whereNotNull('expires_at')
@@ -187,12 +215,34 @@ class ReservationService
 
         $count = 0;
         foreach ($expiredList as $res) {
-            $res->status = 'EXPIRED';
+            if ((float) $res->fulfilled_quantity > 0) {
+                $res->status = 'FULFILLED'; // Keep fulfilled portion, expire remaining balance
+            } else {
+                $res->status = 'EXPIRED';
+            }
             $res->save();
             event(new InventoryReleased($res));
             $count++;
         }
 
         return $count;
+    }
+
+    /**
+     * Get active reserved quantity for a product variant at warehouse/location level.
+     */
+    public function getActiveReservedQuantity(int $productVariantId, ?int $warehouseId = null, ?int $storageLocationId = null): float
+    {
+        $query = InventoryReservation::where('product_variant_id', $productVariantId)
+            ->whereIn('status', ['ACTIVE', 'PENDING', 'PARTIALLY_FULFILLED']);
+
+        if ($warehouseId) {
+            $query->where('warehouse_id', $warehouseId);
+        }
+        if ($storageLocationId) {
+            $query->where('storage_location_id', $storageLocationId);
+        }
+
+        return (float) ($query->select(DB::raw('SUM(quantity - fulfilled_quantity) as total_active'))->value('total_active') ?? 0.0);
     }
 }

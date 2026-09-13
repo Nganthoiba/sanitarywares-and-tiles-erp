@@ -425,16 +425,28 @@ export default function InventoryManager() {
     };
 
     // Fulfill Reservation
-    const handleFulfillReservation = async (id) => {
-        if (!confirm("Mark this reservation as fulfilled?")) {
+    const handleFulfillReservation = async (reservation) => {
+        const remaining = reservation.remaining_quantity !== undefined ? reservation.remaining_quantity : reservation.quantity;
+        const unitSym = reservation.product?.base_unit?.symbol || reservation.product?.sales_unit?.symbol || 'Units';
+
+        const inputQty = prompt(
+            `Fulfill / Dispatch Reservation (${reservation.reservation_number || '#' + reservation.id}):\n\nTotal Reserved: ${reservation.quantity} ${unitSym}\nAlready Fulfilled: ${reservation.fulfilled_quantity || 0} ${unitSym}\nRemaining: ${remaining} ${unitSym}\n\nEnter quantity to fulfill now:`,
+            remaining
+        );
+
+        if (inputQty === null) return;
+        const qtyVal = parseFloat(inputQty);
+        if (isNaN(qtyVal) || qtyVal <= 0) {
+            alert("Please enter a valid positive quantity.");
             return;
         }
+
         try {
-            const res = await axios.post(`/api/inventory/reservations/${id}/fulfill`, {}, {
+            const res = await axios.post(`/api/inventory/reservations/${reservation.id}/fulfill`, { quantity: qtyVal }, {
                 headers: getAuthHeaders()
             });
             if (res.data.success) {
-                setSuccessMessage("Reservation marked as fulfilled.");
+                setSuccessMessage(res.data.message || "Reservation fulfilled successfully.");
                 loadReservations(reservationsPagination.current_page);
                 loadStockData();
                 setTimeout(() => setSuccessMessage(null), 4000);
@@ -1034,8 +1046,9 @@ export default function InventoryManager() {
                                         value={reservationsFilter.status}
                                         onChange={e => setReservationsFilter(prev => ({ ...prev, status: e.target.value }))}
                                     >
-                                        <option value="ALL">All Statuses</option>
+                                         <option value="ALL">All Statuses</option>
                                         <option value="ACTIVE">Active</option>
+                                        <option value="PARTIALLY_FULFILLED">Partially Fulfilled</option>
                                         <option value="FULFILLED">Fulfilled</option>
                                         <option value="CANCELLED">Cancelled</option>
                                         <option value="EXPIRED">Expired</option>
@@ -1085,10 +1098,10 @@ export default function InventoryManager() {
                                             <th className="ps-4 py-3 text-secondary text-uppercase fs-7 fw-bold">Reservation #</th>
                                             <th className="py-3 text-secondary text-uppercase fs-7 fw-bold">Product</th>
                                             <th className="py-3 text-secondary text-uppercase fs-7 fw-bold">Customer / Order</th>
-                                            <th className="py-3 text-secondary text-uppercase fs-7 fw-bold">Warehouse / Location</th>
-                                            <th className="py-3 text-end text-secondary text-uppercase fs-7 fw-bold">Reserved Qty</th>
-                                            <th className="py-3 text-secondary text-uppercase fs-7 fw-bold">Reservation Date</th>
-                                            <th className="py-3 text-secondary text-uppercase fs-7 fw-bold">Expiry Date</th>
+                                            <th className="py-3 text-secondary text-uppercase fs-7 fw-bold">Warehouse</th>
+                                            <th className="py-3 text-end text-secondary text-uppercase fs-7 fw-bold">Reserved</th>
+                                            <th className="py-3 text-end text-secondary text-uppercase fs-7 fw-bold">Fulfilled</th>
+                                            <th className="py-3 text-end text-secondary text-uppercase fs-7 fw-bold">Remaining</th>
                                             <th className="py-3 text-center text-secondary text-uppercase fs-7 fw-bold">Status</th>
                                             <th className="pe-4 py-3 text-end text-secondary text-uppercase fs-7 fw-bold">Actions</th>
                                         </tr>
@@ -1111,6 +1124,7 @@ export default function InventoryManager() {
                                         ) : (
                                             reservations.map((res) => {
                                                 const unitSym = res.product?.base_unit?.symbol || res.product?.sales_unit?.symbol || 'Units';
+                                                const remQty = res.remaining_quantity !== undefined ? res.remaining_quantity : (res.quantity - (res.fulfilled_quantity || 0));
                                                 return (
                                                     <tr key={res.id}>
                                                         <td className="ps-4 py-3 font-monospace fw-bold text-primary">
@@ -1132,18 +1146,20 @@ export default function InventoryManager() {
                                                                 <div className="text-muted fs-7">Loc: {res.storage_location.code}</div>
                                                             )}
                                                         </td>
-                                                        <td className="py-3 text-end fw-bold text-warning">
+                                                        <td className="py-3 text-end fw-bold text-dark">
                                                             {Number(res.quantity).toLocaleString()} {unitSym}
                                                         </td>
-                                                        <td className="py-3 text-muted fs-7">
-                                                            {res.reservation_date ? new Date(res.reservation_date).toLocaleDateString() : new Date(res.created_at).toLocaleDateString()}
+                                                        <td className="py-3 text-end fw-semibold text-success">
+                                                            {Number(res.fulfilled_quantity || 0).toLocaleString()} {unitSym}
                                                         </td>
-                                                        <td className="py-3 text-muted fs-7">
-                                                            {res.expires_at ? new Date(res.expires_at).toLocaleDateString() : 'No Expiry'}
+                                                        <td className="py-3 text-end fw-bold text-warning">
+                                                            {Number(remQty).toLocaleString()} {unitSym}
                                                         </td>
                                                         <td className="py-3 text-center">
                                                             {res.status === 'ACTIVE' || res.status === 'PENDING' ? (
                                                                 <span className="badge bg-primary-subtle text-primary border border-primary px-2.5 py-1">Active</span>
+                                                            ) : res.status === 'PARTIALLY_FULFILLED' ? (
+                                                                <span className="badge bg-warning-subtle text-warning border border-warning px-2.5 py-1">Partial ({Number(res.fulfilled_quantity).toLocaleString()}/{Number(res.quantity).toLocaleString()})</span>
                                                             ) : res.status === 'FULFILLED' ? (
                                                                 <span className="badge bg-success-subtle text-success border border-success px-2.5 py-1">Fulfilled</span>
                                                             ) : res.status === 'CANCELLED' ? (
@@ -1153,11 +1169,11 @@ export default function InventoryManager() {
                                                             )}
                                                         </td>
                                                         <td className="pe-4 py-3 text-end">
-                                                            {(res.status === 'ACTIVE' || res.status === 'PENDING') && (
+                                                            {(res.status === 'ACTIVE' || res.status === 'PENDING' || res.status === 'PARTIALLY_FULFILLED') && (
                                                                 <div className="btn-group">
                                                                     <button
                                                                         className="btn btn-outline-success btn-sm px-2 py-0.5 fs-7"
-                                                                        onClick={() => handleFulfillReservation(res.id)}
+                                                                        onClick={() => handleFulfillReservation(res)}
                                                                         title="Fulfill / Dispatch Reservation"
                                                                     >
                                                                         <i className="bi bi-check2-circle me-1"></i> Fulfill
@@ -1165,7 +1181,7 @@ export default function InventoryManager() {
                                                                     <button
                                                                         className="btn btn-outline-danger btn-sm px-2 py-0.5 fs-7"
                                                                         onClick={() => handleCancelReservation(res.id)}
-                                                                        title="Cancel Reservation"
+                                                                        title="Cancel Remaining Reservation"
                                                                     >
                                                                         <i className="bi bi-x-circle me-1"></i> Cancel
                                                                     </button>

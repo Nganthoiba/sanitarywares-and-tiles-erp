@@ -23,12 +23,17 @@ use App\Domains\Product\Services\TileDimensionService;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
+use App\Domains\Inventory\Services\ReservationService;
+
 class SalesService
 {
     public function __construct(
         protected InventoryService $inventoryService,
-        protected PostingService $postingService
-    ) {}
+        protected PostingService $postingService,
+        protected ?ReservationService $reservationService = null
+    ) {
+        $this->reservationService = $reservationService ?? new ReservationService();
+    }
 
     /**
      * Get data required for Sales forms (customers, warehouses, units, products with stock).
@@ -468,6 +473,34 @@ class SalesService
                         'quantity' => $task['quantity'],
                         'unit_id' => $task['unit_id'],
                     ]);
+                }
+            }
+
+            // Consume active customer reservations for the sold products
+            foreach ($processedItems as $procItem) {
+                $vId = $procItem['product_variant_id'];
+                $soldQty = $procItem['quantity'];
+
+                $resQuery = \App\Domains\Inventory\Models\InventoryReservation::where('organization_id', $organizationId)
+                    ->where('product_variant_id', $vId)
+                    ->where('warehouse_id', $warehouseId)
+                    ->whereIn('status', ['ACTIVE', 'PENDING', 'PARTIALLY_FULFILLED']);
+
+                if ($customerId) {
+                    $resQuery->where('customer_id', $customerId);
+                }
+
+                $activeRes = $resQuery->orderBy('created_at', 'asc')->get();
+                $qtyToFulfill = $soldQty;
+
+                foreach ($activeRes as $res) {
+                    if ($qtyToFulfill <= 0) break;
+                    $rem = $res->remaining_quantity;
+                    if ($rem <= 0) continue;
+
+                    $take = min($rem, $qtyToFulfill);
+                    $this->reservationService->fulfill($res->id, $take);
+                    $qtyToFulfill -= $take;
                 }
             }
 

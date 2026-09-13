@@ -599,10 +599,26 @@ class InventoryApiController extends Controller
     /**
      * POST /api/inventory/reservations/{id}/fulfill
      */
-    public function fulfillReservation($id)
+    public function fulfillReservation(Request $request, $id)
     {
-        $this->reservationService->fulfill($id);
-        return response()->json(['success' => true, 'message' => 'Reservation successfully marked as fulfilled.']);
+        $validated = $request->validate([
+            'quantity' => 'nullable|numeric|min:0.0001',
+            'area' => 'nullable|numeric|min:0',
+        ]);
+
+        $res = $this->reservationService->fulfill(
+            $id,
+            $validated['quantity'] ?? null,
+            $validated['area'] ?? null
+        );
+
+        return response()->json([
+            'success' => true,
+            'data' => $res,
+            'message' => $res->status === 'FULFILLED'
+                ? 'Reservation fully fulfilled and marked as complete.'
+                : 'Reservation partially fulfilled successfully.'
+        ]);
     }
 
     /**
