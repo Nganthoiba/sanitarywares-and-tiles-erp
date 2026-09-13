@@ -4,8 +4,22 @@ import axios from 'axios';
 export default function CategoryManager() {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [success, setSuccess] = useState(null);
+
+    // Toast state (Replaces static alert divs with auto-fading toasts)
+    const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+    const showToastNotification = (message, type = 'success') => {
+        setToast({ show: true, message, type });
+    };
+
+    useEffect(() => {
+        if (toast.show) {
+            const timer = setTimeout(() => {
+                setToast(prev => ({ ...prev, show: false }));
+            }, 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [toast.show]);
 
     // Search, Filter & Pagination states
     const [searchTerm, setSearchTerm] = useState('');
@@ -34,7 +48,6 @@ export default function CategoryManager() {
 
     const fetchCategories = async () => {
         setLoading(true);
-        setError(null);
         try {
             const token = localStorage.getItem('auth_token');
             const [catRes, formRes] = await Promise.all([
@@ -44,7 +57,7 @@ export default function CategoryManager() {
             setCategories(catRes.data || []);
             setUnits(formRes.data?.units || []);
         } catch (err) {
-            setError('Failed to fetch categories list.');
+            showToastNotification('Failed to fetch categories list.', 'danger');
         } finally {
             setLoading(false);
         }
@@ -64,7 +77,6 @@ export default function CategoryManager() {
             default_purchase_unit_id: '',
             default_sales_unit_id: ''
         });
-        setError(null);
         setShowModal(true);
     };
 
@@ -82,7 +94,6 @@ export default function CategoryManager() {
             default_purchase_unit_id: category.default_purchase_unit_id ? category.default_purchase_unit_id.toString() : '',
             default_sales_unit_id: category.default_sales_unit_id ? category.default_sales_unit_id.toString() : ''
         });
-        setError(null);
         setShowModal(true);
     };
 
@@ -91,8 +102,6 @@ export default function CategoryManager() {
     const [selectedCategoryForAttrs, setSelectedCategoryForAttrs] = useState(null);
     const [attrLoading, setAttrLoading] = useState(false);
     const [attrSaving, setAttrSaving] = useState(false);
-    const [attrError, setAttrError] = useState(null);
-    const [attrSuccess, setAttrSuccess] = useState(null);
 
     const [directAttrs, setDirectAttrs] = useState([]);
     const [inheritedFrom, setInheritedFrom] = useState(null);
@@ -114,7 +123,6 @@ export default function CategoryManager() {
         if (!newAttrForm.name.trim()) return;
 
         setDefiningAttr(true);
-        setAttrError(null);
         try {
             const token = localStorage.getItem('auth_token');
             const payload = {
@@ -128,7 +136,7 @@ export default function CategoryManager() {
 
             if (res.data?.success && res.data?.data) {
                 const newAttr = res.data.data;
-                setAttrSuccess(`Custom attribute "${newAttr.name}" defined successfully.`);
+                showToastNotification(`Custom attribute "${newAttr.name}" defined successfully.`, 'success');
                 setNewAttrForm({ name: '', type: 'string', unit_id: '' });
                 setShowDefineAttrModal(false);
 
@@ -155,7 +163,7 @@ export default function CategoryManager() {
                 }
             }
         } catch (err) {
-            setAttrError(err.response?.data?.message || 'Failed to create custom attribute definition.');
+            showToastNotification(err.response?.data?.message || 'Failed to create custom attribute definition.', 'danger');
         } finally {
             setDefiningAttr(false);
         }
@@ -163,8 +171,6 @@ export default function CategoryManager() {
 
     const handleOpenAttributesModal = async (category) => {
         setSelectedCategoryForAttrs(category);
-        setAttrError(null);
-        setAttrSuccess(null);
         setAttrLoading(true);
         setSelectedNewAttrId('');
         setShowDefineAttrModal(false);
@@ -181,7 +187,7 @@ export default function CategoryManager() {
             setInheritedAttrs(data.inherited_attributes || []);
             setAvailableSystemAttrs(data.available_attributes || []);
         } catch (err) {
-            setAttrError('Failed to load category specification attributes.');
+            showToastNotification('Failed to load category specification attributes.', 'danger');
         } finally {
             setAttrLoading(false);
         }
@@ -193,7 +199,7 @@ export default function CategoryManager() {
         if (!attrObj) return;
 
         if (directAttrs.some(a => a.attribute_id === attrObj.id)) {
-            setAttrError(`Attribute "${attrObj.name}" is already assigned to this category.`);
+            showToastNotification(`Attribute "${attrObj.name}" is already assigned to this category.`, 'warning');
             return;
         }
 
@@ -210,11 +216,15 @@ export default function CategoryManager() {
 
         setDirectAttrs(prev => [...prev, newDirectAttr]);
         setSelectedNewAttrId('');
-        setAttrError(null);
+        showToastNotification(`Attached "${attrObj.name}" attribute.`, 'info');
     };
 
     const handleRemoveAttributeFromCategory = (index) => {
+        const removed = directAttrs[index];
         setDirectAttrs(prev => prev.filter((_, i) => i !== index));
+        if (removed) {
+            showToastNotification(`Removed "${removed.name}" attribute.`, 'info');
+        }
     };
 
     const handleUpdateDirectAttrField = (index, field, value) => {
@@ -227,8 +237,6 @@ export default function CategoryManager() {
 
     const handleSaveCategoryAttributes = async () => {
         if (!selectedCategoryForAttrs) return;
-        setAttrError(null);
-        setAttrSuccess(null);
         setAttrSaving(true);
 
         try {
@@ -248,10 +256,10 @@ export default function CategoryManager() {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            setAttrSuccess(`Specification attributes for "${selectedCategoryForAttrs.name}" saved successfully.`);
+            showToastNotification(`Specification attributes for "${selectedCategoryForAttrs.name}" saved successfully.`, 'success');
             fetchCategories();
         } catch (err) {
-            setAttrError(err.response?.data?.message || 'Failed to save category attributes.');
+            showToastNotification(err.response?.data?.message || 'Failed to save category attributes.', 'danger');
         } finally {
             setAttrSaving(false);
         }
@@ -265,17 +273,15 @@ export default function CategoryManager() {
         if (!confirm(`Are you sure you want to delete category "${category.name}"? This action cannot be undone.`)) {
             return;
         }
-        setError(null);
-        setSuccess(null);
         try {
             const token = localStorage.getItem('auth_token');
             await axios.delete(`/api/categories-crud/${category.id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setSuccess('Category successfully deleted.');
+            showToastNotification(`Category "${category.name}" successfully deleted.`, 'success');
             fetchCategories();
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to delete category.');
+            showToastNotification(err.response?.data?.message || 'Failed to delete category.', 'danger');
         }
     };
 
@@ -288,9 +294,6 @@ export default function CategoryManager() {
             return;
         }
 
-        setError(null);
-        setSuccess(null);
-
         try {
             const token = localStorage.getItem('auth_token');
             await axios.put(`/api/categories-crud/${category.id}`, {
@@ -298,17 +301,15 @@ export default function CategoryManager() {
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setSuccess(`Category "${category.name}" successfully ${newStatus ? 'activated' : 'deactivated'}.`);
+            showToastNotification(`Category "${category.name}" successfully ${newStatus ? 'activated' : 'deactivated'}.`, newStatus ? 'success' : 'info');
             fetchCategories();
         } catch (err) {
-            setError(err.response?.data?.message || `Failed to ${actionText} category.`);
+            showToastNotification(err.response?.data?.message || `Failed to ${actionText} category.`, 'danger');
         }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError(null);
-        setSuccess(null);
 
         const payload = {
             ...form,
@@ -325,17 +326,17 @@ export default function CategoryManager() {
                 await axios.post('/api/categories-crud', payload, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-                setSuccess('Category created successfully.');
+                showToastNotification(`Category "${form.name}" created successfully.`, 'success');
             } else {
                 await axios.put(`/api/categories-crud/${selectedCategory.id}`, payload, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-                setSuccess('Category updated successfully.');
+                showToastNotification(`Category "${form.name}" updated successfully.`, 'success');
             }
             setShowModal(false);
             fetchCategories();
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to save category.');
+            showToastNotification(err.response?.data?.message || 'Failed to save category.', 'danger');
         }
     };
 
@@ -401,55 +402,71 @@ export default function CategoryManager() {
     const parentOptions = categories.filter(c => !selectedCategory || c.id !== selectedCategory.id);
 
     return (
-        <div className="animate__animated animate__fadeIn">
-            {/* Header Banner */}
-            <div className="d-flex align-items-center justify-content-between mb-4">
-                <div className="col-md-10">
-                    <h3 className="fw-bold text-dark">
-                        <i className="fa-solid fa-folder-tree me-2 text-primary"></i>Product Category Registry
-                    </h3>
-                    <div>
-                        <strong>What is a Product Category?</strong> Product categories organize your inventory hierarchically (e.g., <i>Tiles &gt; Ceramic Tiles</i>). Categories define logical classification, tax configurations, and properties structure, helping group similar items together for catalog browsing, sales analysis, and stock reporting.
+        <div className="animate__animated animate__fadeIn position-relative" style={{ fontSize: '0.92rem' }}>
+            {/* FLOATING TOAST NOTIFICATION OVERLAY */}
+            {toast.show && (
+                <div 
+                    className="position-fixed top-0 end-0 p-3 animate__animated animate__fadeInDown" 
+                    style={{ zIndex: 1200, maxWidth: '420px' }}
+                >
+                    <div 
+                        className={`toast show align-items-center text-white border-0 shadow-lg bg-${toast.type === 'danger' ? 'danger' : (toast.type === 'success' ? 'success' : (toast.type === 'warning' ? 'warning' : 'primary'))}`} 
+                        role="alert" 
+                        style={{ borderRadius: '12px' }}
+                    >
+                        <div className="d-flex p-3 align-items-center">
+                            <div className="fs-4 me-3">
+                                <i className={`fa-solid ${toast.type === 'danger' ? 'fa-circle-exclamation' : (toast.type === 'success' ? 'fa-circle-check' : (toast.type === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-info'))}`}></i>
+                            </div>
+                            <div className="toast-body p-0 flex-grow-1 fw-bold" style={{ fontSize: '0.9rem', lineHeight: '1.4' }}>
+                                {toast.message}
+                            </div>
+                            <button 
+                                type="button" 
+                                className="btn-close btn-close-white ms-3" 
+                                onClick={() => setToast(prev => ({ ...prev, show: false }))}
+                                aria-label="Close"
+                            ></button>
+                        </div>
                     </div>
-                    <p className="text-muted small mb-0">Define, edit, and group your catalog products by categories and subcategories.</p>
                 </div>
-                <button className="btn btn-primary shadow-sm" onClick={handleOpenCreate}>
-                    <i className="fa-solid fa-plus me-2"></i> Add Category
-                </button>
+            )}
+
+            {/* Header Banner */}
+            <div className="card border-0 shadow-sm p-4 mb-4 rounded-4" style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }}>
+                <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div className="d-flex align-items-center gap-3">
+                        <div className="d-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-3 p-3" style={{ width: '52px', height: '52px' }}>
+                            <i className="fa-solid fa-folder-tree fs-3"></i>
+                        </div>
+                        <div>
+                            <h4 className="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                Product Category Registry
+                            </h4>
+                            <p className="text-secondary mb-0" style={{ fontSize: '0.88rem' }}>
+                                Organize inventory hierarchically (e.g. <i>Tiles &gt; Ceramic Tiles</i>), define UOM units, and configure product specifications.
+                            </p>
+                        </div>
+                    </div>
+                    <button className="btn btn-primary btn-md fw-bold px-4 py-2 rounded-3 shadow-xs d-flex align-items-center gap-2" onClick={handleOpenCreate} style={{ fontSize: '0.9rem' }}>
+                        <i className="fa-solid fa-plus fs-6"></i> Add Category
+                    </button>
+                </div>
             </div>
 
-            {error && (
-                <div className="alert alert-danger d-flex align-items-center justify-content-between mb-4 animate__animated animate__shakeX" role="alert">
-                    <div className="d-flex align-items-center">
-                        <i className="fa-solid fa-circle-exclamation me-2"></i>
-                        <div>{error}</div>
-                    </div>
-                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setError(null)} aria-label="Close"></button>
-                </div>
-            )}
-
-            {success && (
-                <div className="alert alert-success d-flex align-items-center justify-content-between mb-4 animate__animated animate__fadeIn" role="alert">
-                    <div className="d-flex align-items-center">
-                        <i className="fa-solid fa-circle-check me-2"></i>
-                        <div>{success}</div>
-                    </div>
-                    <button type="button" className="btn-close ms-2 flex-shrink-0" onClick={() => setSuccess(null)} aria-label="Close"></button>
-                </div>
-            )}
-
             {/* Category Table Card */}
-            <div className="card border-0 shadow-sm p-4" style={{ borderRadius: '12px' }}>
+            <div className="card border-0 shadow-sm p-4 mb-4 rounded-4" style={{ borderRadius: '16px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0' }}>
                 {/* Search, Filter & Per-Page Controls */}
-                <div className="row g-3 align-items-center mb-2">
+                <div className="row g-3 align-items-center mb-4">
                     <div className="col-md-5">
                         <div className="input-group">
-                            <span className="input-group-text bg-white border-end-0 text-muted">
+                            <span className="input-group-text bg-white border-end-0 text-muted px-3">
                                 <i className="fa-solid fa-magnifying-glass"></i>
                             </span>
                             <input
                                 type="text"
-                                className="form-control border-start-0 ps-0"
+                                className="form-control border-start-0 ps-0 fw-medium"
+                                style={{ fontSize: '0.9rem' }}
                                 placeholder="Search category, slug, units, parent..."
                                 value={searchTerm}
                                 onChange={(e) => {
@@ -472,9 +489,10 @@ export default function CategoryManager() {
                         </div>
                     </div>
 
-                    <div className="col-md-3 col-6">
+                    <div className="col-md-4 col-6">
                         <select 
-                            className="form-select"
+                            className="form-select fw-medium"
+                            style={{ fontSize: '0.9rem' }}
                             value={statusFilter}
                             onChange={(e) => {
                                 setStatusFilter(e.target.value);
@@ -487,9 +505,10 @@ export default function CategoryManager() {
                         </select>
                     </div>
 
-                    <div className="col-md-2 col-6">
+                    <div className="col-md-3 col-6">
                         <select 
-                            className="form-select"
+                            className="form-select fw-medium"
+                            style={{ fontSize: '0.9rem' }}
                             value={perPage}
                             onChange={(e) => {
                                 setPerPage(parseInt(e.target.value, 10));
@@ -507,28 +526,28 @@ export default function CategoryManager() {
                 {loading ? (
                     <div className="text-center py-5">
                         <div className="spinner-border text-primary" role="status"></div>
-                        <span className="ms-2 font-monospace">Fetching categories catalog...</span>
+                        <div className="mt-2 text-secondary font-monospace fw-semibold" style={{ fontSize: '0.9rem' }}>Fetching categories catalog...</div>
                     </div>
                 ) : (
                     <>
                         <div className="table-responsive">
                             <table className="table table-hover align-middle mb-0">
                                 <thead>
-                                    <tr className="text-secondary text-uppercase" style={{ fontSize: '0.75rem', letterSpacing: '0.04em' }}>
-                                        <th style={{ width: '22%' }}>Category</th>
+                                    <tr className="text-secondary text-uppercase border-bottom" style={{ fontSize: '0.8rem', letterSpacing: '0.04em', fontWeight: 700 }}>
+                                        <th style={{ width: '24%' }}>Category Name</th>
                                         <th style={{ width: '18%' }}>Parent Category</th>
                                         <th style={{ width: '32%' }}>
                                             Default Units (UOM)
-                                            <span className="text-secondary font-monospace ms-1 fw-normal" style={{ fontSize: '0.68rem', textTransform: 'none' }}>
+                                            <span className="text-secondary font-monospace ms-1.5 fw-normal" style={{ fontSize: '0.74rem', textTransform: 'none' }}>
                                                 [B: Base | P: Purchase | S: Sales]
                                             </span>
                                         </th>
                                         <th className="text-center" style={{ width: '8%' }}>Order</th>
                                         <th className="text-center" style={{ width: '10%' }}>Status</th>
-                                        <th className="text-end" style={{ width: '10%' }}>Actions</th>
+                                        <th className="text-end" style={{ width: '8%' }}>Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="small">
+                                <tbody>
                                     {paginatedCategories.map((c) => {
                                         const baseSym = getUnitSymbol(c.default_base_unit_id, c.default_base_unit);
                                         const purSym = getUnitSymbol(c.default_purchase_unit_id, c.default_purchase_unit);
@@ -536,23 +555,25 @@ export default function CategoryManager() {
                                         const hasUnits = baseSym || purSym || saleSym;
 
                                         return (
-                                            <tr key={c.id}>
+                                            <tr key={c.id} style={{ height: '56px' }}>
                                                 <td>
-                                                    <div className="d-flex align-items-center">
-                                                        <i className="fa-solid fa-folder text-primary me-2 opacity-75"></i>
+                                                    <div className="d-flex align-items-center gap-2">
+                                                        <div className="d-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-2 p-1.5" style={{ width: '32px', height: '32px' }}>
+                                                            <i className="fa-solid fa-th"></i>
+                                                        </div>
                                                         <div>
-                                                            <div className="fw-semibold text-dark">{c.name}</div>
-                                                            <div className="font-monospace text-muted extra-small">{c.slug}</div>
+                                                            <div className="fw-bold text-dark" style={{ fontSize: '0.94rem' }}>{c.name}</div>
+                                                            <div className="font-monospace text-muted" style={{ fontSize: '0.78rem' }}>{c.slug}</div>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td>
                                                     {c.parent ? (
-                                                        <span className="badge bg-light text-dark border font-normal">
-                                                            {c.parent.name}
+                                                        <span className="badge bg-light text-dark border font-normal px-2.5 py-1.5" style={{ fontSize: '0.84rem' }}>
+                                                            <i className="fa-solid fa-diagram-nested text-secondary me-1.5"></i>{c.parent.name}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-muted small italic opacity-60">Root Category</span>
+                                                        <span className="text-muted italic opacity-60" style={{ fontSize: '0.84rem' }}>Root Category</span>
                                                     )}
                                                 </td>
                                                 <td>
@@ -560,56 +581,59 @@ export default function CategoryManager() {
                                                         <div className="d-flex align-items-center gap-1 flex-wrap">
                                                             {baseSym && (
                                                                 <span 
-                                                                    className="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2 py-1"
+                                                                    className="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2.5 py-1.5"
+                                                                    style={{ fontSize: '0.82rem' }}
                                                                     title={`Base Stock Unit: ${getUnitFullName(c.default_base_unit_id, c.default_base_unit)}`}
                                                                 >
-                                                                    <span className="text-secondary opacity-75 me-1" style={{ fontSize: '0.65rem' }}>B:</span>{baseSym}
+                                                                    <span className="text-secondary opacity-75 me-1" style={{ fontSize: '0.7rem' }}>B:</span>{baseSym}
                                                                 </span>
                                                             )}
                                                             {purSym && (
                                                                 <span 
-                                                                    className="badge bg-info-subtle text-info border border-info-subtle font-monospace px-2 py-1"
+                                                                    className="badge bg-info-subtle text-info-emphasis border border-info-subtle font-monospace px-2.5 py-1.5"
+                                                                    style={{ fontSize: '0.82rem' }}
                                                                     title={`Purchase Unit: ${getUnitFullName(c.default_purchase_unit_id, c.default_purchase_unit)}`}
                                                                 >
-                                                                    <span className="text-secondary opacity-75 me-1" style={{ fontSize: '0.65rem' }}>P:</span>{purSym}
+                                                                    <span className="text-secondary opacity-75 me-1" style={{ fontSize: '0.7rem' }}>P:</span>{purSym}
                                                                 </span>
                                                             )}
                                                             {saleSym && (
                                                                 <span 
-                                                                    className="badge bg-success-subtle text-success border border-success-subtle font-monospace px-2 py-1"
+                                                                    className="badge bg-success-subtle text-success border border-success-subtle font-monospace px-2.5 py-1.5"
+                                                                    style={{ fontSize: '0.82rem' }}
                                                                     title={`Sales Unit: ${getUnitFullName(c.default_sales_unit_id, c.default_sales_unit)}`}
                                                                 >
-                                                                    <span className="text-secondary opacity-75 me-1" style={{ fontSize: '0.65rem' }}>S:</span>{saleSym}
+                                                                    <span className="text-secondary opacity-75 me-1" style={{ fontSize: '0.7rem' }}>S:</span>{saleSym}
                                                                 </span>
                                                             )}
                                                         </div>
                                                     ) : (
-                                                        <span className="text-muted italic small opacity-50">-</span>
+                                                        <span className="text-muted italic opacity-50" style={{ fontSize: '0.84rem' }}>-</span>
                                                     )}
                                                 </td>
-                                                <td className="text-center font-monospace text-secondary">{c.sort_order}</td>
+                                                <td className="text-center font-monospace text-secondary fw-semibold" style={{ fontSize: '0.88rem' }}>{c.sort_order}</td>
                                                 <td className="text-center">
                                                     {c.is_active === 1 || c.is_active === true ? (
-                                                        <span className="badge bg-success-subtle text-success px-2 py-1">
-                                                            <i className="fa-solid fa-circle me-1" style={{ fontSize: '0.45rem' }}></i> Active
+                                                        <span className="badge bg-success-subtle text-success px-2.5 py-1.5 fw-semibold" style={{ fontSize: '0.8rem' }}>
+                                                            <i className="fa-solid fa-circle me-1.5" style={{ fontSize: '0.45rem' }}></i> Active
                                                         </span>
                                                     ) : (
-                                                        <span className="badge bg-secondary-subtle text-secondary px-2 py-1">
-                                                            <i className="fa-solid fa-circle me-1" style={{ fontSize: '0.45rem' }}></i> Inactive
+                                                        <span className="badge bg-secondary-subtle text-secondary px-2.5 py-1.5 fw-semibold" style={{ fontSize: '0.8rem' }}>
+                                                            <i className="fa-solid fa-circle me-1.5" style={{ fontSize: '0.45rem' }}></i> Inactive
                                                         </span>
                                                     )}
                                                 </td>
                                                 <td className="text-end">
                                                     <div className="btn-group btn-group-sm">
                                                         <button
-                                                            className="btn btn-sm btn-light text-info border-0 px-2"
+                                                            className="btn btn-sm btn-light text-info border-0 px-2.5 py-1.5"
                                                             onClick={() => handleOpenAttributesModal(c)}
                                                             title="Configure Product Specification Attributes (Specs)"
                                                         >
                                                             <i className="fa-solid fa-sliders"></i>
                                                         </button>
                                                         <button
-                                                            className="btn btn-sm btn-light text-primary border-0 px-2"
+                                                            className="btn btn-sm btn-light text-primary border-0 px-2.5 py-1.5"
                                                             onClick={() => handleOpenEdit(c)}
                                                             title="Edit Category"
                                                         >
@@ -617,7 +641,7 @@ export default function CategoryManager() {
                                                         </button>
                                                         {c.is_active === 1 || c.is_active === true ? (
                                                             <button
-                                                                className="btn btn-sm btn-light text-warning border-0 px-2"
+                                                                className="btn btn-sm btn-light text-warning border-0 px-2.5 py-1.5"
                                                                 onClick={() => handleToggleStatus(c)}
                                                                 title="Deactivate Category"
                                                             >
@@ -625,7 +649,7 @@ export default function CategoryManager() {
                                                             </button>
                                                         ) : (
                                                             <button
-                                                                className="btn btn-sm btn-light text-success border-0 px-2"
+                                                                className="btn btn-sm btn-light text-success border-0 px-2.5 py-1.5"
                                                                 onClick={() => handleToggleStatus(c)}
                                                                 title="Activate Category"
                                                             >
@@ -633,7 +657,7 @@ export default function CategoryManager() {
                                                             </button>
                                                         )}
                                                         <button
-                                                            className="btn btn-sm btn-light text-danger border-0 px-2"
+                                                            className="btn btn-sm btn-light text-danger border-0 px-2.5 py-1.5"
                                                             onClick={() => handleDelete(c)}
                                                             title="Delete Category"
                                                         >
@@ -650,18 +674,18 @@ export default function CategoryManager() {
                                                 <div className="text-muted mb-2">
                                                     <i className="fa-solid fa-filter-circle-xmark fs-2 opacity-50"></i>
                                                 </div>
-                                                <div className="fw-semibold text-secondary mb-1">No matching categories found</div>
-                                                <p className="text-muted small mb-3">Try adjusting your search query or status filter.</p>
+                                                <div className="fw-bold text-secondary mb-1" style={{ fontSize: '0.94rem' }}>No matching categories found</div>
+                                                <p className="text-muted mb-3" style={{ fontSize: '0.84rem' }}>Try adjusting your search query or status filter.</p>
                                                 {(searchTerm || statusFilter !== 'all') && (
                                                     <button 
-                                                        className="btn btn-outline-primary btn-sm px-3"
+                                                        className="btn btn-outline-primary btn-sm px-3 fw-semibold"
                                                         onClick={() => {
                                                             setSearchTerm('');
                                                             setStatusFilter('all');
                                                             setCurrentPage(1);
                                                         }}
                                                     >
-                                                        <i className="fa-solid fa-rotate-left me-1"></i> Clear Search Filters
+                                                        <i className="fa-solid fa-rotate-left me-1.5"></i> Clear Search Filters
                                                     </button>
                                                 )}
                                             </td>
@@ -674,10 +698,10 @@ export default function CategoryManager() {
                         {/* Pagination & Summary Footer */}
                         {filteredCategories.length > 0 && (
                             <div className="d-flex flex-column flex-md-row align-items-center justify-content-between pt-3 border-top gap-3">
-                                <div className="text-muted small">
+                                <div className="text-secondary" style={{ fontSize: '0.86rem' }}>
                                     Showing <span className="fw-bold text-dark">{indexOfFirstItem + 1}</span> to <span className="fw-bold text-dark">{indexOfLastItem}</span> of <span className="fw-bold text-dark">{filteredCategories.length}</span> categories
                                     {categories.length !== filteredCategories.length && (
-                                        <span className="ms-1 text-secondary">(filtered from {categories.length} total)</span>
+                                        <span className="ms-1.5 text-muted">(filtered from {categories.length} total)</span>
                                     )}
                                 </div>
 
@@ -703,7 +727,7 @@ export default function CategoryManager() {
                                                     <React.Fragment key={page}>
                                                         {showEllipsis && <li className="page-item disabled"><span className="page-link">...</span></li>}
                                                         <li className={`page-item ${safeCurrentPage === page ? 'active' : ''}`}>
-                                                            <button className="page-link" onClick={() => setCurrentPage(page)}>
+                                                            <button className="page-link fw-bold" onClick={() => setCurrentPage(page)}>
                                                                 {page}
                                                             </button>
                                                         </li>
@@ -731,23 +755,23 @@ export default function CategoryManager() {
 
             {/* CREATE / EDIT MODAL */}
             {showModal && (
-                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1070 }}>
+                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.55)', zIndex: 1070 }}>
                     <div className="modal-dialog modal-dialog-centered">
                         <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '16px' }}>
-                            <div className="modal-header border-bottom-0 pb-0 pt-4 px-4">
-                                <h5 className="modal-title fw-bold text-dark">
-                                    <i className="fa-solid fa-folder-tree text-primary me-2"></i>
+                            <div className="modal-header border-bottom pb-3 pt-4 px-4">
+                                <h5 className="modal-title fw-bold text-dark d-flex align-items-center gap-2">
+                                    <i className="fa-solid fa-folder-tree text-primary"></i>
                                     {modalMode === 'create' ? 'Add Product Category' : 'Edit Product Category'}
                                 </h5>
                                 <button type="button" className="btn-close" onClick={() => setShowModal(false)} aria-label="Close"></button>
                             </div>
                             <form onSubmit={handleSubmit}>
-                                <div className="modal-body px-4 py-3">
+                                <div className="modal-body px-4 py-3" style={{ fontSize: '0.9rem' }}>
                                     <div className="mb-3">
-                                        <label className="form-label small fw-semibold">Category Name *</label>
+                                        <label className="form-label fw-bold text-dark mb-1">Category Name *</label>
                                         <input
                                             type="text"
-                                            className="form-control form-control-sm"
+                                            className="form-control fw-medium"
                                             value={form.name}
                                             onChange={(e) => handleChange('name', e.target.value)}
                                             placeholder="e.g. GVT Tiles, Bathware, Adhesive"
@@ -756,28 +780,28 @@ export default function CategoryManager() {
                                     </div>
 
                                     <div className="mb-3">
-                                        <label className="form-label small fw-semibold">
+                                        <label className="form-label fw-bold text-dark mb-1">
                                             Slug {modalMode === 'edit' ? '(Permanent)' : '(Optional)'}
                                         </label>
                                         <input
                                             type="text"
-                                            className="form-control form-control-sm font-monospace"
+                                            className="form-control font-monospace fw-medium"
                                             value={form.slug}
                                             onChange={(e) => handleChange('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '-'))}
                                             placeholder="e.g. gvt-tiles (auto-generated if left blank)"
                                             disabled={modalMode === 'edit'}
                                         />
                                         {modalMode === 'edit' && (
-                                            <div className="form-text text-muted" style={{ fontSize: '0.72rem' }}>
-                                                <i className="fa-solid fa-lock me-1"></i> Slug is permanent once created and cannot be modified.
+                                            <div className="form-text text-muted" style={{ fontSize: '0.78rem' }}>
+                                                <i className="fa-solid fa-lock me-1.5"></i> Slug is permanent once created and cannot be modified.
                                             </div>
                                         )}
                                     </div>
 
                                     <div className="mb-3">
-                                        <label className="form-label small fw-semibold">Parent Category</label>
+                                        <label className="form-label fw-bold text-dark mb-1">Parent Category</label>
                                         <select
-                                            className="form-select form-select-sm"
+                                            className="form-select fw-medium"
                                             value={form.parent_id}
                                             onChange={(e) => handleChange('parent_id', e.target.value)}
                                         >
@@ -790,18 +814,15 @@ export default function CategoryManager() {
 
                                     {/* Standard Category Units (UOM Defaults) */}
                                     <div className="card bg-light border-0 p-3 mb-3 rounded-3">
-                                        <div className="fw-bold text-dark small mb-1 d-flex align-items-center">
-                                            <i className="fa-solid fa-ruler-combined text-primary me-2"></i>
-                                            Category Standard Units (UOM Defaults)
-                                        </div>
-                                        <div className="text-muted extra-small mb-2">
-                                            {form.parent_id ? 'Optional: Override unit defaults inherited from parent category.' : 'Set standard unit defaults for product variants created under this root category.'}
+                                        <div className="d-flex align-items-center gap-1.5 mb-2">
+                                            <i className="fa-solid fa-ruler text-primary me-1"></i>
+                                            <label className="form-label fw-bold text-dark mb-0" style={{ fontSize: '0.86rem' }}>Default Units of Measure (UOM)</label>
                                         </div>
                                         <div className="row g-2">
                                             <div className="col-md-4">
-                                                <label className="form-label extra-small fw-semibold text-secondary mb-1">Base Unit (Stock)</label>
+                                                <label className="form-label small fw-semibold text-secondary mb-1">Base Unit (Stock)</label>
                                                 <select
-                                                    className="form-select form-select-sm"
+                                                    className="form-select form-select-sm fw-medium"
                                                     value={form.default_base_unit_id}
                                                     onChange={(e) => handleChange('default_base_unit_id', e.target.value)}
                                                 >
@@ -812,9 +833,9 @@ export default function CategoryManager() {
                                                 </select>
                                             </div>
                                             <div className="col-md-4">
-                                                <label className="form-label extra-small fw-semibold text-secondary mb-1">Default Purchase Unit</label>
+                                                <label className="form-label small fw-semibold text-secondary mb-1">Default Purchase Unit</label>
                                                 <select
-                                                    className="form-select form-select-sm"
+                                                    className="form-select form-select-sm fw-medium"
                                                     value={form.default_purchase_unit_id}
                                                     onChange={(e) => handleChange('default_purchase_unit_id', e.target.value)}
                                                 >
@@ -825,9 +846,9 @@ export default function CategoryManager() {
                                                 </select>
                                             </div>
                                             <div className="col-md-4">
-                                                <label className="form-label extra-small fw-semibold text-secondary mb-1">Default Sales Unit</label>
+                                                <label className="form-label small fw-semibold text-secondary mb-1">Default Sales Unit</label>
                                                 <select
-                                                    className="form-select form-select-sm"
+                                                    className="form-select form-select-sm fw-medium"
                                                     value={form.default_sales_unit_id}
                                                     onChange={(e) => handleChange('default_sales_unit_id', e.target.value)}
                                                 >
@@ -841,9 +862,9 @@ export default function CategoryManager() {
                                     </div>
 
                                     <div className="mb-3">
-                                        <label className="form-label small fw-semibold">Description</label>
+                                        <label className="form-label fw-bold text-dark mb-1">Description</label>
                                         <textarea
-                                            className="form-control form-control-sm"
+                                            className="form-control fw-medium"
                                             value={form.description}
                                             onChange={(e) => handleChange('description', e.target.value)}
                                             placeholder="Brief description of the category..."
@@ -852,10 +873,10 @@ export default function CategoryManager() {
                                     </div>
 
                                     <div className="mb-3">
-                                        <label className="form-label small fw-semibold">Sort Order</label>
+                                        <label className="form-label fw-bold text-dark mb-1">Sort Order</label>
                                         <input
                                             type="number"
-                                            className="form-control form-control-sm font-monospace"
+                                            className="form-control font-monospace fw-medium"
                                             value={form.sort_order}
                                             onChange={(e) => handleChange('sort_order', e.target.value)}
                                             min="0"
@@ -863,24 +884,24 @@ export default function CategoryManager() {
                                         />
                                     </div>
 
-                                    <div className="form-check form-switch">
+                                    <div className="form-check form-switch mt-2">
                                         <input
-                                            className="form-check-input"
+                                            className="form-check-input cursor-pointer"
                                             type="checkbox"
                                             id="managerCategoryIsActive"
                                             checked={form.is_active}
                                             onChange={(e) => handleChange('is_active', e.target.checked)}
                                         />
-                                        <label className="form-check-label small text-muted" htmlFor="managerCategoryIsActive">
+                                        <label className="form-check-label fw-semibold text-secondary cursor-pointer" htmlFor="managerCategoryIsActive">
                                             Category is active for products
                                         </label>
                                     </div>
                                 </div>
                                 <div className="modal-footer border-top-0 pb-4 px-4">
-                                    <button type="button" className="btn btn-outline-secondary me-2 px-3 btn-sm" onClick={() => setShowModal(false)}>
+                                    <button type="button" className="btn btn-outline-secondary me-2 px-3 fw-semibold" onClick={() => setShowModal(false)}>
                                         Cancel
                                     </button>
-                                    <button type="submit" className="btn btn-primary px-4 btn-sm">
+                                    <button type="submit" className="btn btn-primary px-4 fw-bold">
                                         {modalMode === 'create' ? 'Save Category' : 'Update Category'}
                                     </button>
                                 </div>
@@ -897,41 +918,28 @@ export default function CategoryManager() {
                         <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '16px' }}>
                             <div className="modal-header border-bottom pb-3 pt-4 px-4 bg-light">
                                 <div>
-                                    <h5 className="modal-title fw-bold text-dark mb-0 d-flex align-items-center">
-                                        <i className="fa-solid fa-sliders text-info me-2 fs-5"></i>
+                                    <h5 className="modal-title fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                                        <i className="fa-solid fa-sliders text-info fs-5"></i>
                                         Configure Specifications for "{selectedCategoryForAttrs?.name}"
                                     </h5>
-                                    <small className="text-muted">
+                                    <small className="text-secondary" style={{ fontSize: '0.84rem' }}>
                                         Define required & optional product attributes for items created under this category.
                                     </small>
                                 </div>
                                 <button type="button" className="btn-close" onClick={() => setShowAttrModal(false)} aria-label="Close"></button>
                             </div>
 
-                            <div className="modal-body px-4 py-4" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-                                {attrError && (
-                                    <div className="alert alert-danger py-2 small mb-3 d-flex align-items-center justify-content-between">
-                                        <div><i className="fa-solid fa-circle-exclamation me-2"></i>{attrError}</div>
-                                        <button type="button" className="btn-close ms-2" onClick={() => setAttrError(null)}></button>
-                                    </div>
-                                )}
-                                {attrSuccess && (
-                                    <div className="alert alert-success py-2 small mb-3 d-flex align-items-center justify-content-between">
-                                        <div><i className="fa-solid fa-circle-check me-2"></i>{attrSuccess}</div>
-                                        <button type="button" className="btn-close ms-2" onClick={() => setAttrSuccess(null)}></button>
-                                    </div>
-                                )}
-
+                            <div className="modal-body px-4 py-4" style={{ maxHeight: '70vh', overflowY: 'auto', fontSize: '0.9rem' }}>
                                 {attrLoading ? (
                                     <div className="text-center py-5">
                                         <div className="spinner-border text-info spinner-border-sm me-2"></div>
-                                        <span className="small text-muted font-monospace">Loading category specifications...</span>
+                                        <span className="text-secondary font-monospace fw-semibold">Loading category specifications...</span>
                                     </div>
                                 ) : (
                                     <>
                                         {/* Status Header */}
                                         {directAttrs.length === 0 && inheritedFrom ? (
-                                            <div className="alert alert-warning border-0 p-3 mb-4 small rounded-3">
+                                            <div className="alert alert-warning border-0 p-3 mb-4 rounded-3">
                                                 <i className="fa-solid fa-code-branch me-2 text-warning"></i>
                                                 Currently inheriting specification attributes from parent category <strong>"{inheritedFrom.name}"</strong>:
                                                 <ul className="mb-0 mt-2 ps-3 text-dark">
@@ -941,17 +949,17 @@ export default function CategoryManager() {
                                                         </li>
                                                     ))}
                                                 </ul>
-                                                <div className="mt-2 text-muted extra-small">
+                                                <div className="mt-2 text-secondary" style={{ fontSize: '0.8rem' }}>
                                                     Adding direct attributes below will override parent inheritance for this category.
                                                 </div>
                                             </div>
                                         ) : directAttrs.length === 0 ? (
-                                            <div className="alert alert-light border p-3 mb-4 small text-muted text-center rounded-3">
-                                                <i className="fa-solid fa-info-circle me-1 text-info"></i>
+                                            <div className="alert alert-light border p-3 mb-4 text-muted text-center rounded-3">
+                                                <i className="fa-solid fa-circle-info me-1.5 text-info"></i>
                                                 No direct attributes configured for this category yet. Add attributes below.
                                             </div>
                                         ) : (
-                                            <div className="alert alert-info border-0 p-2 px-3 mb-4 small rounded-3">
+                                            <div className="alert alert-info border-0 p-2.5 px-3 mb-4 rounded-3">
                                                 <i className="fa-solid fa-sliders me-2 text-info"></i>
                                                 Configured with <strong>{directAttrs.length}</strong> direct specification attribute(s).
                                             </div>
@@ -960,22 +968,22 @@ export default function CategoryManager() {
                                         {/* Add New Attribute Control */}
                                         <div className="card bg-light border-0 p-3 mb-4 rounded-3">
                                             <div className="d-flex align-items-center justify-content-between mb-2">
-                                                <label className="form-label small fw-bold text-dark mb-0">
+                                                <label className="form-label fw-bold text-dark mb-0">
                                                     Add Product Specification Attribute
                                                 </label>
                                                 <button
                                                     type="button"
-                                                    className="btn btn-xs btn-outline-info"
+                                                    className="btn btn-xs btn-outline-info fw-semibold"
                                                     onClick={() => setShowDefineAttrModal(!showDefineAttrModal)}
                                                 >
-                                                    <i className="fa-solid fa-plus-circle me-1"></i> {showDefineAttrModal ? 'Close Creator' : 'Define New Attribute'}
+                                                    <i className="fa-solid fa-plus-circle me-1.5"></i> {showDefineAttrModal ? 'Close Creator' : 'Define New Attribute'}
                                                 </button>
                                             </div>
 
                                             {showDefineAttrModal && (
                                                 <div className="card border border-info-subtle p-3 mb-3 rounded-3 bg-white shadow-sm">
                                                     <div className="d-flex align-items-center justify-content-between mb-2.5 border-bottom pb-2">
-                                                        <h6 className="fw-bold text-dark mb-0 small">
+                                                        <h6 className="fw-bold text-dark mb-0">
                                                             <i className="fa-solid fa-plus-circle text-info me-2"></i> Define New Custom Product Attribute
                                                         </h6>
                                                         <button type="button" className="btn-close btn-sm" onClick={() => setShowDefineAttrModal(false)}></button>
@@ -983,12 +991,12 @@ export default function CategoryManager() {
                                                     <form onSubmit={handleCreateCustomAttribute}>
                                                         <div className="row g-2 align-items-end">
                                                             <div className="col-md-4">
-                                                                <label className="form-label extra-small fw-semibold text-secondary mb-1">
+                                                                <label className="form-label small fw-semibold text-secondary mb-1">
                                                                     Attribute Name <span className="text-danger">*</span>
                                                                 </label>
                                                                 <input
                                                                     type="text"
-                                                                    className="form-control form-control-sm"
+                                                                    className="form-control form-control-sm fw-medium"
                                                                     placeholder="e.g. Thickness, Water Absorption"
                                                                     value={newAttrForm.name}
                                                                     onChange={(e) => setNewAttrForm({ ...newAttrForm, name: e.target.value })}
@@ -996,11 +1004,11 @@ export default function CategoryManager() {
                                                                 />
                                                             </div>
                                                             <div className="col-md-3">
-                                                                <label className="form-label extra-small fw-semibold text-secondary mb-1">
+                                                                <label className="form-label small fw-semibold text-secondary mb-1">
                                                                     Data Type <span className="text-danger">*</span>
                                                                 </label>
                                                                 <select
-                                                                    className="form-select form-select-sm"
+                                                                    className="form-select form-select-sm fw-medium"
                                                                     value={newAttrForm.type}
                                                                     onChange={(e) => setNewAttrForm({ ...newAttrForm, type: e.target.value })}
                                                                 >
@@ -1011,11 +1019,11 @@ export default function CategoryManager() {
                                                                 </select>
                                                             </div>
                                                             <div className="col-md-3">
-                                                                <label className="form-label extra-small fw-semibold text-secondary mb-1">
+                                                                <label className="form-label small fw-semibold text-secondary mb-1">
                                                                     Default Unit (Optional)
                                                                 </label>
                                                                 <select
-                                                                    className="form-select form-select-sm"
+                                                                    className="form-select form-select-sm fw-medium"
                                                                     value={newAttrForm.unit_id}
                                                                     onChange={(e) => setNewAttrForm({ ...newAttrForm, unit_id: e.target.value })}
                                                                 >
@@ -1026,8 +1034,8 @@ export default function CategoryManager() {
                                                                 </select>
                                                             </div>
                                                             <div className="col-md-2 d-flex gap-1">
-                                                                <button type="submit" className="btn btn-sm btn-info text-white flex-grow-1" disabled={definingAttr}>
-                                                                    {definingAttr ? <span className="spinner-border spinner-border-sm"></span> : <><i className="fa-solid fa-check me-1"></i> Create</>}
+                                                                <button type="submit" className="btn btn-sm btn-info text-white flex-grow-1 fw-bold" disabled={definingAttr}>
+                                                                    {definingAttr ? <span className="spinner-border spinner-border-sm"></span> : <><i className="fa-solid fa-check me-1.5"></i> Create</>}
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -1037,7 +1045,7 @@ export default function CategoryManager() {
 
                                             <div className="input-group input-group-sm">
                                                 <select
-                                                    className="form-select"
+                                                    className="form-select fw-medium"
                                                     value={selectedNewAttrId}
                                                     onChange={(e) => setSelectedNewAttrId(e.target.value)}
                                                 >
@@ -1053,11 +1061,11 @@ export default function CategoryManager() {
                                                 </select>
                                                 <button
                                                     type="button"
-                                                    className="btn btn-primary"
+                                                    className="btn btn-primary fw-bold"
                                                     onClick={handleAddAttributeToCategory}
                                                     disabled={!selectedNewAttrId}
                                                 >
-                                                    <i className="fa-solid fa-plus me-1"></i> Attach Attribute
+                                                    <i className="fa-solid fa-plus me-1.5"></i> Attach Attribute
                                                 </button>
                                             </div>
                                         </div>
@@ -1065,14 +1073,14 @@ export default function CategoryManager() {
                                         {/* Table of Direct Attributes */}
                                         <h6 className="fw-bold text-dark mb-3">Direct Category Attributes Configuration</h6>
                                         {directAttrs.length === 0 ? (
-                                            <div className="text-center py-4 border rounded-3 bg-white text-muted small">
+                                            <div className="text-center py-4 border rounded-3 bg-white text-muted">
                                                 No attributes assigned directly. Select an attribute above and click "Attach Attribute".
                                             </div>
                                         ) : (
                                             <div className="table-responsive bg-white border rounded-3">
-                                                <table className="table table-hover align-middle mb-0 small">
+                                                <table className="table table-hover align-middle mb-0">
                                                     <thead className="bg-light">
-                                                        <tr className="text-muted font-monospace" style={{ fontSize: '0.75rem' }}>
+                                                        <tr className="text-muted font-monospace" style={{ fontSize: '0.8rem' }}>
                                                             <th style={{ width: '25%' }}>Attribute Name</th>
                                                             <th style={{ width: '15%' }}>Sort Order</th>
                                                             <th style={{ width: '15%' }}>Mandatory</th>
@@ -1084,13 +1092,13 @@ export default function CategoryManager() {
                                                         {directAttrs.map((attr, idx) => (
                                                             <tr key={attr.attribute_id}>
                                                                 <td>
-                                                                    <div className="fw-bold text-dark">{attr.name}</div>
-                                                                    <small className="text-muted font-monospace">{attr.unit_symbol ? `Unit: ${attr.unit_symbol}` : `Type: ${attr.type}`}</small>
+                                                                    <div className="fw-bold text-dark" style={{ fontSize: '0.92rem' }}>{attr.name}</div>
+                                                                    <small className="text-muted font-monospace" style={{ fontSize: '0.78rem' }}>{attr.unit_symbol ? `Unit: ${attr.unit_symbol}` : `Type: ${attr.type}`}</small>
                                                                 </td>
                                                                 <td>
                                                                     <input
                                                                         type="number"
-                                                                        className="form-control form-control-sm font-monospace"
+                                                                        className="form-control form-control-sm font-monospace fw-medium"
                                                                         style={{ maxWidth: '80px' }}
                                                                         value={attr.sort_order}
                                                                         onChange={(e) => handleUpdateDirectAttrField(idx, 'sort_order', e.target.value)}
@@ -1100,13 +1108,13 @@ export default function CategoryManager() {
                                                                 <td>
                                                                     <div className="form-check form-switch">
                                                                         <input
-                                                                            className="form-check-input"
+                                                                            className="form-check-input cursor-pointer"
                                                                             type="checkbox"
                                                                             checked={!!attr.is_required}
                                                                             onChange={(e) => handleUpdateDirectAttrField(idx, 'is_required', e.target.checked)}
                                                                             id={`req-check-${attr.attribute_id}`}
                                                                         />
-                                                                        <label className="form-check-label extra-small text-muted" htmlFor={`req-check-${attr.attribute_id}`}>
+                                                                        <label className="form-check-label text-muted cursor-pointer" htmlFor={`req-check-${attr.attribute_id}`} style={{ fontSize: '0.82rem' }}>
                                                                             {attr.is_required ? <span className="text-danger fw-bold">Required</span> : 'Optional'}
                                                                         </label>
                                                                     </div>
@@ -1114,7 +1122,7 @@ export default function CategoryManager() {
                                                                 <td>
                                                                     <input
                                                                         type="text"
-                                                                        className="form-control form-control-sm"
+                                                                        className="form-control form-control-sm fw-medium"
                                                                         placeholder="e.g. Red, Blue, Green (comma-separated)"
                                                                         value={Array.isArray(attr.allowed_values) ? attr.allowed_values.join(', ') : (attr.allowed_values || '')}
                                                                         onChange={(e) => handleUpdateDirectAttrField(idx, 'allowed_values', e.target.value)}
@@ -1123,7 +1131,7 @@ export default function CategoryManager() {
                                                                 <td className="text-end">
                                                                     <button
                                                                         type="button"
-                                                                        className="btn btn-xs btn-outline-danger"
+                                                                        className="btn btn-xs btn-outline-danger px-2 py-1"
                                                                         onClick={() => handleRemoveAttributeFromCategory(idx)}
                                                                         title="Remove attribute from category"
                                                                     >
@@ -1141,11 +1149,11 @@ export default function CategoryManager() {
                             </div>
 
                             <div className="modal-footer border-top pt-3 pb-4 px-4 bg-light">
-                                <button type="button" className="btn btn-secondary px-3 btn-sm" onClick={() => setShowAttrModal(false)} disabled={attrSaving}>
+                                <button type="button" className="btn btn-secondary px-3.5 btn-sm fw-semibold" onClick={() => setShowAttrModal(false)} disabled={attrSaving}>
                                     Cancel
                                 </button>
-                                <button type="button" className="btn btn-primary px-4 btn-sm" onClick={handleSaveCategoryAttributes} disabled={attrSaving || attrLoading}>
-                                    {attrSaving ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="fa-solid fa-floppy-disk me-1"></i>}
+                                <button type="button" className="btn btn-primary px-4 btn-sm fw-bold" onClick={handleSaveCategoryAttributes} disabled={attrSaving || attrLoading}>
+                                    {attrSaving ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="fa-solid fa-floppy-disk me-1.5"></i>}
                                     Save Category Attributes
                                 </button>
                             </div>
