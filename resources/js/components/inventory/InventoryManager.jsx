@@ -63,6 +63,15 @@ export default function InventoryManager() {
         last_page: 1,
         total: 0
     });
+    const [movementsFilter, setMovementsFilter] = useState({
+        start_date: "",
+        end_date: "",
+        product_variant_id: "",
+        search: "",
+        warehouse_id: "",
+        storage_location_id: "",
+        movement_type: ""
+    });
 
     // Item details modal/drawer state
     const [selectedItem, setSelectedItem] = useState(null);
@@ -226,9 +235,18 @@ export default function InventoryManager() {
     const loadMovements = async (page = 1, perPage = movementsPerPage) => {
         setMovementsLoading(true);
         try {
+            const params = { page, per_page: perPage };
+            if (movementsFilter.start_date) params.start_date = movementsFilter.start_date;
+            if (movementsFilter.end_date) params.end_date = movementsFilter.end_date;
+            if (movementsFilter.product_variant_id) params.product_variant_id = movementsFilter.product_variant_id;
+            if (movementsFilter.search) params.search = movementsFilter.search;
+            if (movementsFilter.warehouse_id) params.warehouse_id = movementsFilter.warehouse_id;
+            if (movementsFilter.storage_location_id) params.storage_location_id = movementsFilter.storage_location_id;
+            if (movementsFilter.movement_type) params.movement_type = movementsFilter.movement_type;
+
             const res = await axios.get("/api/inventory/movements", {
                 headers: getAuthHeaders(),
-                params: { page, per_page: perPage }
+                params
             });
             if (res.data.success) {
                 setMovements(res.data.data || []);
@@ -255,11 +273,26 @@ export default function InventoryManager() {
 
     useEffect(() => {
         if (viewMode === "history") {
-            loadMovements(1, movementsPerPage);
+            const timer = setTimeout(() => {
+                loadMovements(1, movementsPerPage);
+            }, 250);
+            return () => clearTimeout(timer);
         } else if (viewMode === "reservations") {
             loadReservations(1);
         }
-    }, [viewMode, reservationsFilter.status, reservationsFilter.search, reservationsFilter.warehouse_id]);
+    }, [
+        viewMode, 
+        reservationsFilter.status, 
+        reservationsFilter.search, 
+        reservationsFilter.warehouse_id,
+        movementsFilter.start_date,
+        movementsFilter.end_date,
+        movementsFilter.product_variant_id,
+        movementsFilter.search,
+        movementsFilter.warehouse_id,
+        movementsFilter.storage_location_id,
+        movementsFilter.movement_type
+    ]);
 
     // Handle Open Stock Details
     const handleOpenDetails = async (item) => {
@@ -1178,9 +1211,214 @@ export default function InventoryManager() {
 
             {/* TAB 3: STOCK HISTORY VIEW */}
             {viewMode === "history" && (
-                <div className="card border-0 shadow-sm rounded-3 mb-4 bg-white overflow-hidden">
-                    <div className="card-header bg-white border-bottom py-3 px-4">
-                        <h5 className="card-title fw-bold text-dark mb-0">Append-Only Stock Audit Ledger</h5>
+                <div className="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden" style={{ border: '1px solid #e2e8f0' }}>
+                    <div className="card-header bg-white border-bottom p-4">
+                        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                            <div className="d-flex align-items-center gap-3">
+                                <div className="d-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-3 p-3" style={{ width: '48px', height: '48px' }}>
+                                    <i className="fa-solid fa-clock-rotate-left fs-4"></i>
+                                </div>
+                                <div>
+                                    <h5 className="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                        Append-Only Stock Audit Ledger
+                                    </h5>
+                                    <p className="text-secondary small mb-0">
+                                        Immutable, tenant-scoped audit trail tracking all physical stock receipts, sales, transfers & adjustments.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="d-flex align-items-center gap-2">
+                                {movementsPagination.total > 0 && (
+                                    <span className="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-3 py-2 rounded-pill" style={{ fontSize: '0.8rem' }}>
+                                        <i className="fa-solid fa-list-check me-1.5"></i>{movementsPagination.total} Movements Recorded
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Filter Section Box */}
+                        <div className="p-4 rounded-3 border bg-light">
+                            {/* Line 1: Search Product / SKU, Warehouse, Storage Location, Movement Type */}
+                            <div className="row g-3 align-items-end mb-1">
+                                {/* Search / Product Keyword */}
+                                <div className="col-xl-3 col-md-6">
+                                    <label className="form-label text-secondary small fw-semibold mb-2">
+                                        <i className="fa-solid fa-magnifying-glass me-2 text-primary"></i>Search Product / SKU
+                                    </label>
+                                    <div className="input-group">
+                                        <span className="input-group-text bg-white border-end-0 text-muted">
+                                            <i className="fa-solid fa-search"></i>
+                                        </span>
+                                        <input
+                                            type="text"
+                                            className="form-control border-start-0 ps-0 fw-medium"
+                                            placeholder="Search product name or SKU..."
+                                            value={movementsFilter.search}
+                                            onChange={(e) => setMovementsFilter(prev => ({ ...prev, search: e.target.value }))}
+                                        />
+                                        {movementsFilter.search && (
+                                            <button
+                                                className="btn btn-outline-secondary border-start-0 bg-white text-muted"
+                                                type="button"
+                                                onClick={() => setMovementsFilter(prev => ({ ...prev, search: '' }))}
+                                            >
+                                                <i className="fa-solid fa-xmark"></i>
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Warehouse Filter */}
+                                <div className="col-xl-3 col-md-6">
+                                    <label className="form-label text-secondary small fw-semibold mb-2">
+                                        <i className="fa-solid fa-warehouse me-2 text-primary"></i>Warehouse
+                                    </label>
+                                    <select
+                                        className="form-select fw-medium"
+                                        value={movementsFilter.warehouse_id}
+                                        onChange={(e) => setMovementsFilter(prev => ({ ...prev, warehouse_id: e.target.value }))}
+                                    >
+                                        <option value="">All Warehouses</option>
+                                        {(contexts?.warehouses || []).map(w => (
+                                            <option key={w.id} value={w.id}>{w.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Location Filter */}
+                                <div className="col-xl-3 col-md-6">
+                                    <label className="form-label text-secondary small fw-semibold mb-2">
+                                        <i className="fa-solid fa-location-dot me-2 text-primary"></i>Storage Location
+                                    </label>
+                                    <select
+                                        className="form-select fw-medium"
+                                        value={movementsFilter.storage_location_id}
+                                        onChange={(e) => setMovementsFilter(prev => ({ ...prev, storage_location_id: e.target.value }))}
+                                    >
+                                        <option value="">All Storage Locations</option>
+                                        {(contexts?.storage_locations || [])
+                                            .filter(loc => !movementsFilter.warehouse_id || String(loc.warehouse_id) === String(movementsFilter.warehouse_id))
+                                            .map(loc => (
+                                                <option key={loc.id} value={loc.id}>
+                                                    {loc.code} {loc.name ? `(${loc.name})` : ''}
+                                                </option>
+                                            ))
+                                        }
+                                    </select>
+                                </div>
+
+                                {/* Movement Type */}
+                                <div className="col-xl-3 col-md-6">
+                                    <label className="form-label text-secondary small fw-semibold mb-2">
+                                        <i className="fa-solid fa-filter me-2 text-primary"></i>Movement Type
+                                    </label>
+                                    <select
+                                        className="form-select fw-medium"
+                                        value={movementsFilter.movement_type}
+                                        onChange={(e) => setMovementsFilter(prev => ({ ...prev, movement_type: e.target.value }))}
+                                    >
+                                        <option value="">All Movement Types</option>
+                                        <option value="PURCHASE">Receipt / Purchase</option>
+                                        <option value="SALE">Sale</option>
+                                        <option value="TRANSFER">Transfer</option>
+                                        <option value="RETURN">Return</option>
+                                        <option value="ADJUSTMENT">Adjustment</option>
+                                        <option value="DAMAGE">Damage</option>
+                                        <option value="RESERVATION">Reservation</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Line 2: Date Related Filters (From/To Date, Presets, Reset) */}
+                            <div className="row g-3 align-items-end pt-1">
+                                {/* Date Range: From & To */}
+                                <div className="col-lg-6 col-md-12">
+                                    <label className="form-label text-secondary small fw-semibold mb-2">
+                                        <i className="fa-solid fa-calendar-days me-2 text-primary"></i>Date Range
+                                    </label>
+                                    <div className="d-flex align-items-center gap-2">
+                                        <input
+                                            type="date"
+                                            className="form-control fw-medium"
+                                            value={movementsFilter.start_date}
+                                            onChange={(e) => setMovementsFilter(prev => ({ ...prev, start_date: e.target.value }))}
+                                            title="From Date"
+                                        />
+                                        <span className="text-muted small fw-semibold px-1">to</span>
+                                        <input
+                                            type="date"
+                                            className="form-control fw-medium"
+                                            value={movementsFilter.end_date}
+                                            onChange={(e) => setMovementsFilter(prev => ({ ...prev, end_date: e.target.value }))}
+                                            title="To Date"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Presets & Action Bar */}
+                                <div className="col-lg-6 col-md-12 d-flex align-items-center justify-content-between flex-wrap gap-2 pt-1">
+                                    <div className="d-flex align-items-center gap-3 flex-wrap">
+                                        <span className="text-muted small fw-semibold me-2 d-none d-sm-inline">Quick:</span>
+                                        <button
+                                            type="button"
+                                            className={`btn btn-sm ${movementsFilter.start_date === new Date().toISOString().split('T')[0] && movementsFilter.end_date === new Date().toISOString().split('T')[0] ? 'btn-primary' : 'btn-outline-secondary'} px-3 py-1 rounded-pill`}
+                                            onClick={() => {
+                                                const today = new Date().toISOString().split('T')[0];
+                                                setMovementsFilter(prev => ({ ...prev, start_date: today, end_date: today }));
+                                            }}
+                                            style={{ fontSize: '0.8rem' }}
+                                        >
+                                            Today
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-outline-secondary px-3 py-1 rounded-pill"
+                                            onClick={() => {
+                                                const now = new Date();
+                                                const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+                                                const today = now.toISOString().split('T')[0];
+                                                setMovementsFilter(prev => ({ ...prev, start_date: firstDay, end_date: today }));
+                                            }}
+                                            style={{ fontSize: '0.8rem' }}
+                                        >
+                                            This Month
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-outline-secondary px-3 py-1 rounded-pill"
+                                            onClick={() => {
+                                                const now = new Date();
+                                                const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30)).toISOString().split('T')[0];
+                                                const today = new Date().toISOString().split('T')[0];
+                                                setMovementsFilter(prev => ({ ...prev, start_date: thirtyDaysAgo, end_date: today }));
+                                            }}
+                                            style={{ fontSize: '0.8rem' }}
+                                        >
+                                            Last 30 Days
+                                        </button>
+                                    </div>
+
+                                    {(movementsFilter.search || movementsFilter.start_date || movementsFilter.end_date || movementsFilter.warehouse_id || movementsFilter.storage_location_id || movementsFilter.product_variant_id || movementsFilter.movement_type) && (
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-link text-danger text-decoration-none p-0 fw-semibold"
+                                            onClick={() => setMovementsFilter({
+                                                start_date: '',
+                                                end_date: '',
+                                                product_variant_id: '',
+                                                search: '',
+                                                warehouse_id: '',
+                                                storage_location_id: '',
+                                                movement_type: ''
+                                            })}
+                                            style={{ fontSize: '0.82rem' }}
+                                        >
+                                            <i className="fa-solid fa-rotate-left me-2"></i>Reset Filters
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div className="card-body p-0">
                         <div className="table-responsive">
@@ -1207,7 +1445,7 @@ export default function InventoryManager() {
                                     ) : movements.length === 0 ? (
                                         <tr>
                                             <td colSpan="7" className="text-center py-5 text-muted">
-                                                No stock movements recorded yet.
+                                                No stock movements recorded matching current filters.
                                             </td>
                                         </tr>
                                     ) : (
@@ -1241,6 +1479,31 @@ export default function InventoryManager() {
                             </table>
                         </div>
                     </div>
+
+                    {/* Pagination Footer for Movements */}
+                    {movementsPagination.last_page > 1 && (
+                        <div className="card-footer bg-white border-top py-2 px-4 d-flex justify-content-between align-items-center">
+                            <span className="small text-muted">
+                                Page {movementsPagination.current_page} of {movementsPagination.last_page} ({movementsPagination.total} total items)
+                            </span>
+                            <div className="btn-group btn-group-sm">
+                                <button
+                                    className="btn btn-outline-secondary"
+                                    disabled={movementsPagination.current_page === 1 || movementsLoading}
+                                    onClick={() => loadMovements(movementsPagination.current_page - 1)}
+                                >
+                                    <i className="bi bi-chevron-left"></i> Previous
+                                </button>
+                                <button
+                                    className="btn btn-outline-secondary"
+                                    disabled={movementsPagination.current_page === movementsPagination.last_page || movementsLoading}
+                                    onClick={() => loadMovements(movementsPagination.current_page + 1)}
+                                >
+                                    Next <i className="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 

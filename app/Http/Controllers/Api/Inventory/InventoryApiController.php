@@ -385,6 +385,49 @@ class InventoryApiController extends Controller
             });
         }
 
+        // Filter by Date Range (start_date / end_date)
+        $startDate = $request->input('start_date') ?? $request->input('from_date');
+        $endDate = $request->input('end_date') ?? $request->input('to_date');
+
+        if ($startDate) {
+            $query->whereDate('created_at', '>=', $startDate);
+        }
+        if ($endDate) {
+            $query->whereDate('created_at', '<=', $endDate);
+        }
+
+        // Filter by Product Name or SKU Search Keyword
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->whereHas('inventoryObject.variant', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('sku', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by Warehouse (from_warehouse_id OR to_warehouse_id)
+        if ($request->filled('warehouse_id')) {
+            $wId = $request->input('warehouse_id');
+            $query->where(function ($q) use ($wId) {
+                $q->where('from_warehouse_id', $wId)
+                  ->orWhere('to_warehouse_id', $wId);
+            });
+        }
+
+        // Filter by Storage Location (from_storage_location_id OR to_storage_location_id)
+        if ($request->filled('storage_location_id')) {
+            $locId = $request->input('storage_location_id');
+            $query->where(function ($q) use ($locId) {
+                $q->where('from_storage_location_id', $locId)
+                  ->orWhere('to_storage_location_id', $locId);
+            });
+        }
+
+        // Filter by Movement Type (PURCHASE, SALE, TRANSFER, etc.)
+        if ($request->filled('movement_type')) {
+            $query->where('movement_type', $request->input('movement_type'));
+        }
+
         $movements = $query->orderBy('created_at', 'desc')->paginate($request->query('per_page', 25));
 
         $items = collect($movements->items())->map(function ($m) {
