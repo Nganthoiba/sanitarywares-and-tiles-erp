@@ -214,11 +214,11 @@ function NavigationLayout({ user, handleLogout, hasPermission, fontSize, setFont
                     <ul className="navbar-nav ms-auto align-items-center">
                         <li className="nav-item d-flex align-items-center me-4">
                             <span className="text-muted small me-2" style={{ fontSize: '0.8rem' }}>Aa:</span>
-                            <div className="btn-group btn-group-sm" role="group" aria-label="Font size selector">
-                                <button type="button" className={`btn btn-outline-secondary py-0.5 px-2 ${fontSize === 12 ? 'active' : ''}`} onClick={() => setFontSize(12)} style={{ fontSize: '11px' }}>XS</button>
-                                <button type="button" className={`btn btn-outline-secondary py-0.5 px-2 ${fontSize === 13.5 ? 'active' : ''}`} onClick={() => setFontSize(13.5)} style={{ fontSize: '11px' }}>S</button>
-                                <button type="button" className={`btn btn-outline-secondary py-0.5 px-2 ${fontSize === 15 ? 'active' : ''}`} onClick={() => setFontSize(15)} style={{ fontSize: '11px' }}>M</button>
-                                <button type="button" className={`btn btn-outline-secondary py-0.5 px-2 ${fontSize === 16.5 ? 'active' : ''}`} onClick={() => setFontSize(16.5)} style={{ fontSize: '11px' }}>L</button>
+                            <div className="btn-group btn-group-sm font-size-selector" role="group" aria-label="Font size selector">
+                                <button type="button" className={`btn btn-outline-secondary font-size-btn py-0.5 px-2 ${Math.abs(fontSize - 12) < 0.5 ? 'active' : ''}`} onClick={() => setFontSize(12)} title="Extra Small (12px)">XS</button>
+                                <button type="button" className={`btn btn-outline-secondary font-size-btn py-0.5 px-2 ${Math.abs(fontSize - 13.5) < 0.5 ? 'active' : ''}`} onClick={() => setFontSize(13.5)} title="Small (13.5px)">S</button>
+                                <button type="button" className={`btn btn-outline-secondary font-size-btn py-0.5 px-2 ${Math.abs(fontSize - 15) < 0.5 ? 'active' : ''}`} onClick={() => setFontSize(15)} title="Medium (15px)">M</button>
+                                <button type="button" className={`btn btn-outline-secondary font-size-btn py-0.5 px-2 ${Math.abs(fontSize - 16.5) < 0.5 ? 'active' : ''}`} onClick={() => setFontSize(16.5)} title="Large (16.5px)">L</button>
                             </div>
                         </li>
                         <li className="nav-item d-flex align-items-center me-3">

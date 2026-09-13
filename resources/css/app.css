@@ -124,6 +124,12 @@ body, button, input, select, textarea, .table, .card, .dropdown-menu, .nav-link,
     font-size: var(--app-font-size) !important;
 }
 
+.font-size-btn {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    font-weight: 600 !important;
+}
+
 body {
     background-color: var(--background-color);
     color: var(--default-color);
@@ -1082,10 +1088,6 @@ textarea::placeholder {
         --app-font-size: 14.5px;
     }
 
-    body, button, input, select, textarea, .table, .card, .dropdown-menu, .nav-link, .modal, .form-control, .form-select, .btn {
-        font-size: 14.5px !important;
-    }
-
     .sidebar-wrapper:not(.collapsed) {
         width: 290px !important;
         min-width: 290px !important;
@@ -1167,10 +1169,6 @@ textarea::placeholder {
 @media screen and (max-width: 1440px), screen and (max-height: 900px) {
     :root {
         --app-font-size: 11px;
-    }
-
-    body, button, input, select, textarea, .table, .card, .dropdown-menu, .nav-link, .modal, .form-control, .form-select, .btn {
-        font-size: 11px !important;
     }
 
     /* Headings scaling & compact typography for <= 1440x900 */
@@ -1370,10 +1368,6 @@ textarea::placeholder {
         --app-font-size: 10.5px;
     }
 
-    body, button, input, select, textarea, .table, .card, .dropdown-menu, .nav-link, .modal, .form-control, .form-select, .btn {
-        font-size: 10.5px !important;
-    }
-
     /* Sidebar compact width & spacing for 1280px wide screens */
     .sidebar-wrapper:not(.collapsed) {
         width: 220px !important;
@@ -1453,10 +1447,6 @@ textarea::placeholder {
         --app-font-size: 10px;
     }
 
-    body, button, input, select, textarea, .table, .card, .dropdown-menu, .nav-link, .modal, .form-control, .form-select, .btn {
-        font-size: 10px !important;
-    }
-
     .sidebar-wrapper:not(.collapsed) {
         width: 190px !important;
         min-width: 180px !important;
@@ -1467,10 +1457,6 @@ textarea::placeholder {
 @media screen and (max-width: 768px) {
     :root {
         --app-font-size: 9.5px;
-    }
-
-    body, button, input, select, textarea, .table, .card, .dropdown-menu, .nav-link, .modal, .form-control, .form-select, .btn {
-        font-size: 9.5px !important;
     }
 
     .sidebar-wrapper {
@@ -1512,10 +1498,6 @@ textarea::placeholder {
 @media screen and (max-width: 576px) {
     :root {
         --app-font-size: 9px;
-    }
-
-    body, button, input, select, textarea, .table, .card, .dropdown-menu, .nav-link, .modal, .form-control, .form-select, .btn {
-        font-size: 9px !important;
     }
 }
 
