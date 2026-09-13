@@ -6,12 +6,17 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
   const [tileCalcMode, setTileCalcMode] = useState('forward'); // 'forward' | 'reverse'
   const [tileLength, setTileLength] = useState(600); // mm
   const [tileWidth, setTileWidth] = useState(600); // mm
+  const [tileUnit, setTileUnit] = useState('mm'); // 'mm' | 'cm' | 'ft'
   const [pcsPerBox, setPcsPerBox] = useState(4);
   const [boxCount, setBoxCount] = useState(50);
-  const [tilePricePerPiece, setTilePricePerPiece] = useState(50); // ₹ per piece
+  const [tilePricePerPiece, setTilePricePerPiece] = useState(150); // ₹ per piece
 
   // Reverse Tile Calculation State
   const [targetAreaSqFt, setTargetAreaSqFt] = useState(500); // Target SQ.FT
+  const [areaInputMode, setAreaInputMode] = useState('direct'); // 'direct' | 'dimensions'
+  const [roomLength, setRoomLength] = useState(20);
+  const [roomBreadth, setRoomBreadth] = useState(25);
+  const [roomUnit, setRoomUnit] = useState('ft'); // 'ft' | 'm' | 'in' | 'cm'
   const [wastagePercent, setWastagePercent] = useState(5); // % Wastage
 
   // Granite Slab inputs
@@ -21,16 +26,70 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
   const [slabWidthUnit, setSlabWidthUnit] = useState('FOOT'); // 'FOOT' or 'Inches'
   const [ratePerSqft, setRatePerSqft] = useState(180); // ₹
 
-  // Calculations for Sandbox (Forward Tiles)
-  const singleTileSqM = (tileLength / 1000) * (tileWidth / 1000);
+  // Handle Unit Conversions for Tile Dimensions
+  const handleTileUnitChange = (newUnit) => {
+    if (tileUnit === newUnit) return;
+    const l = Number(tileLength) || 0;
+    const w = Number(tileWidth) || 0;
+    let newL = l;
+    let newW = w;
+    if (tileUnit === 'mm' && newUnit === 'cm') { newL = l / 10; newW = w / 10; }
+    else if (tileUnit === 'mm' && newUnit === 'ft') { newL = +(l / 304.8).toFixed(2); newW = +(w / 304.8).toFixed(2); }
+    else if (tileUnit === 'cm' && newUnit === 'mm') { newL = Math.round(l * 10); newW = Math.round(w * 10); }
+    else if (tileUnit === 'cm' && newUnit === 'ft') { newL = +(l / 30.48).toFixed(2); newW = +(w / 30.48).toFixed(2); }
+    else if (tileUnit === 'ft' && newUnit === 'mm') { newL = Math.round(l * 304.8); newW = Math.round(w * 304.8); }
+    else if (tileUnit === 'ft' && newUnit === 'cm') { newL = Math.round(l * 30.48); newW = Math.round(w * 30.48); }
+    setTileLength(newL);
+    setTileWidth(newW);
+    setTileUnit(newUnit);
+  };
+
+  // Handle Unit Conversions for Room Area Dimensions
+  const handleRoomUnitChange = (newUnit) => {
+    if (roomUnit === newUnit) return;
+    const l = Number(roomLength) || 0;
+    const b = Number(roomBreadth) || 0;
+    let newL = l;
+    let newB = b;
+    if (roomUnit === 'ft' && newUnit === 'm') { newL = +(l * 0.3048).toFixed(2); newB = +(b * 0.3048).toFixed(2); }
+    else if (roomUnit === 'ft' && newUnit === 'in') { newL = Math.round(l * 12); newB = Math.round(b * 12); }
+    else if (roomUnit === 'ft' && newUnit === 'cm') { newL = Math.round(l * 30.48); newB = Math.round(b * 30.48); }
+    else if (roomUnit === 'm' && newUnit === 'ft') { newL = +(l / 0.3048).toFixed(2); newB = +(b / 0.3048).toFixed(2); }
+    else if (roomUnit === 'in' && newUnit === 'ft') { newL = +(l / 12).toFixed(2); newB = +(b / 12).toFixed(2); }
+    else if (roomUnit === 'cm' && newUnit === 'ft') { newL = +(l / 30.48).toFixed(2); newB = +(b / 30.48).toFixed(2); }
+    setRoomLength(newL);
+    setRoomBreadth(newB);
+    setRoomUnit(newUnit);
+  };
+
+  // Calculate Tile Dimensions in Feet
+  const tileLengthInFt = tileUnit === 'ft' ? (Number(tileLength) || 0) : (tileUnit === 'cm' ? (Number(tileLength) || 0) / 30.48 : (Number(tileLength) || 0) / 304.8);
+  const tileWidthInFt = tileUnit === 'ft' ? (Number(tileWidth) || 0) : (tileUnit === 'cm' ? (Number(tileWidth) || 0) / 30.48 : (Number(tileWidth) || 0) / 304.8);
+
+  const singleTileSqFt = tileLengthInFt * tileWidthInFt;
+  const singleTileSqM = singleTileSqFt / 10.7639;
+  const coveragePerBoxSqFt = singleTileSqFt * pcsPerBox;
   const coveragePerBoxSqM = singleTileSqM * pcsPerBox;
-  const coveragePerBoxSqFt = coveragePerBoxSqM * 10.7639;
   const totalPieces = boxCount * pcsPerBox;
   const totalTileSqFt = boxCount * coveragePerBoxSqFt;
   const totalTileCost = totalPieces * tilePricePerPiece;
 
+  // Calculate Area from Room Dimensions in SQ.FT
+  const rLength = Number(roomLength) || 0;
+  const rBreadth = Number(roomBreadth) || 0;
+  let calculatedAreaSqFt = rLength * rBreadth;
+  if (roomUnit === 'm') {
+    calculatedAreaSqFt = (rLength * rBreadth) * 10.7639;
+  } else if (roomUnit === 'in') {
+    calculatedAreaSqFt = (rLength / 12) * (rBreadth / 12);
+  } else if (roomUnit === 'cm') {
+    calculatedAreaSqFt = (rLength / 30.48) * (rBreadth / 30.48);
+  }
+
+  const currentTargetAreaSqFt = areaInputMode === 'direct' ? (Number(targetAreaSqFt) || 0) : calculatedAreaSqFt;
+
   // Calculations for Sandbox (Reverse Tiles: Area ➔ Boxes, Pieces & Cost)
-  const effectiveAreaSqFt = targetAreaSqFt * (1 + (wastagePercent || 0) / 100);
+  const effectiveAreaSqFt = currentTargetAreaSqFt * (1 + (wastagePercent || 0) / 100);
   const requiredBoxes = coveragePerBoxSqFt > 0 ? Math.ceil(effectiveAreaSqFt / coveragePerBoxSqFt) : 0;
   const totalReversePieces = requiredBoxes * pcsPerBox;
   const actualDeliveredSqFt = requiredBoxes * coveragePerBoxSqFt;
@@ -253,7 +312,7 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
                 <div className="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
                   <div>
                     <h5 className="fw-bold mb-0 text-primary">
-                      <i className="fa-solid fa-calculator text-primary me-2"></i>Tile & Granite/Marble Calculator
+                      <i className="fa-solid fa-calculator text-primary me-2"></i>Tile & Granite/Marble Calculator &nbsp;
                     </h5>
                     <small className="text-muted">Calculate real-world inventory</small>
                   </div>
@@ -281,7 +340,7 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
                     {/* Sub-mode switcher */}
                     <div className="d-flex justify-content-between align-items-center mb-3 p-1 bg-light rounded-3 border">
                       <span className="small fw-semibold text-secondary ms-2" style={{ fontSize: '0.75rem' }}>
-                        <i className="fa-solid fa-sliders text-primary me-1"></i>Mode:
+                        <i className="fa-solid fa-sliders text-primary me-2"></i>Mode:
                       </span>
                       <div className="btn-group btn-group-sm" role="group">
                         <button 
@@ -290,7 +349,7 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
                           onClick={() => setTileCalcMode('forward')}
                           style={{ fontSize: '0.73rem', borderRadius: '6px 0 0 6px' }}
                         >
-                          <i className="fa-solid fa-boxes-packing me-1"></i>Box ➔ SQ.FT & Cost
+                          <i className="fa-solid fa-boxes-packing me-2"></i>Box ➔ SQ.FT & Cost
                         </button>
                         <button 
                           type="button" 
@@ -298,7 +357,7 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
                           onClick={() => setTileCalcMode('reverse')}
                           style={{ fontSize: '0.73rem', borderRadius: '0 6px 6px 0' }}
                         >
-                          <i className="fa-solid fa-calculator me-1"></i>SQ.FT ➔ Boxes & Cost
+                          <i className="fa-solid fa-calculator me-2"></i>SQ.FT ➔ Boxes & Cost
                         </button>
                       </div>
                     </div>
@@ -306,25 +365,33 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
                     {tileCalcMode === 'forward' ? (
                       <div>
                         <div className="row g-2 mb-3">
-                          <div className="col-12 col-sm-4">
-                            <label className="form-label small fw-bold text-secondary">Tile Size (mm)</label>
+                          <div className="col-5 col-md-5.5">
+                            <label className="form-label small fw-bold text-secondary">Tile Size ({tileUnit})</label>
                             <div className="input-group input-group-sm">
                               <input type="number" className="form-control fw-bold" value={tileLength} onChange={(e) => setTileLength(Number(e.target.value))} />
                               <span className="input-group-text">x</span>
                               <input type="number" className="form-control fw-bold" value={tileWidth} onChange={(e) => setTileWidth(Number(e.target.value))} />
+                              <select className="form-select fw-bold border-secondary-subtle" value={tileUnit} onChange={(e) => handleTileUnitChange(e.target.value)} style={{ maxWidth: '65px', paddingLeft: '4px', paddingRight: '4px' }}>
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="ft">ft</option>
+                              </select>
                             </div>
                           </div>
-                          <div className="col-4 col-sm-2">
+                          <div className="col-2 col-md-2">
                             <label className="form-label small fw-bold text-secondary">Pcs/Box</label>
-                            <input type="number" className="form-control form-control-sm fw-bold" value={pcsPerBox} onChange={(e) => setPcsPerBox(Number(e.target.value))} />
+                            <input type="number" className="form-control form-control-sm fw-bold" value={pcsPerBox} onChange={(e) => setPcsPerBox(Number(e.target.value))} style={{ maxWidth: '80px' }}/>
                           </div>
-                          <div className="col-4 col-sm-3">
+                          <div className="col-2 col-md-2">
                             <label className="form-label small fw-bold text-secondary">Box Count</label>
-                            <input type="number" className="form-control form-control-sm fw-bold text-primary" value={boxCount} onChange={(e) => setBoxCount(Number(e.target.value))} />
+                            <input type="number" className="form-control form-control-sm fw-bold text-primary" value={boxCount} onChange={(e) => setBoxCount(Number(e.target.value))} style={{ maxWidth: '100px' }} />
                           </div>
-                          <div className="col-4 col-sm-3">
+                          <div className="col-3 col-md-3">
                             <label className="form-label small fw-bold text-secondary">Price/Piece (₹)</label>
-                            <input type="number" className="form-control form-control-sm fw-bold text-success" value={tilePricePerPiece} onChange={(e) => setTilePricePerPiece(Number(e.target.value))} />
+                            <div className="input-group input-group-sm">
+                              <span className="input-group-text">₹</span>
+                              <input type="number" className="form-control form-control-sm fw-bold text-success" value={tilePricePerPiece} onChange={(e) => setTilePricePerPiece(Number(e.target.value))} />
+                            </div>
                           </div>
                         </div>
 
@@ -355,30 +422,157 @@ export default function LandingPage({ onNavigateToLogin, onNavigateToRegister })
                       </div>
                     ) : (
                       <div>
-                        <div className="row g-2 mb-3">
-                          <div className="col-12 col-sm-3">
-                            <label className="form-label small fw-bold text-secondary">Target Area (SQ.FT)</label>
-                            <input type="number" className="form-control form-control-sm fw-bold text-primary" value={targetAreaSqFt} onChange={(e) => setTargetAreaSqFt(Number(e.target.value))} />
+                        {/* Target Area Specification Card */}
+                        <div className="card border-0 bg-light-subtle rounded-3 p-3 mb-3 shadow-2xs">
+                          <div className="d-flex flex-wrap align-items-center justify-content-between gap-1 pb-2 mb-2 border-bottom">
+                            <div className="d-flex align-items-center gap-1.5">
+                              <i className="fa-solid fa-layer-group text-primary small"></i>
+                              <span className="fw-bold text-dark small mb-0" style={{ fontSize: '0.8rem' }}>Area Input Method</span>
+                            </div>
+
+                            {/* Radio Buttons Control */}
+                            <div className="d-flex align-items-center gap-3.5">
+                              <div className="form-check form-check-inline mb-0 d-flex align-items-center gap-2 ps-0 me-0">
+                                <input
+                                  className="form-check-input cursor-pointer m-0"
+                                  type="radio"
+                                  name="areaInputModeLanding"
+                                  id="areaModeDirectLanding"
+                                  value="direct"
+                                  checked={areaInputMode === 'direct'}
+                                  onChange={() => setAreaInputMode('direct')}
+                                  style={{ width: '1.05em', height: '1.05em' }}
+                                />
+                                <label className="form-check-label small fw-bold text-dark cursor-pointer mb-0 user-select-none d-flex align-items-center gap-1.5" htmlFor="areaModeDirectLanding" style={{ fontSize: '0.78rem' }}>
+                                  <i className="fa-solid fa-chart-area text-primary"></i>
+                                  <span>Total SQ.FT</span>
+                                </label>
+                              </div>
+                              <div className="form-check form-check-inline mb-0 d-flex align-items-center gap-2 ps-0 me-0">
+                                <input
+                                  className="form-check-input cursor-pointer m-0"
+                                  type="radio"
+                                  name="areaInputModeLanding"
+                                  id="areaModeDimensionsLanding"
+                                  value="dimensions"
+                                  checked={areaInputMode === 'dimensions'}
+                                  onChange={() => setAreaInputMode('dimensions')}
+                                  style={{ width: '1.05em', height: '1.05em' }}
+                                />
+                                <label className="form-check-label small fw-bold text-dark cursor-pointer mb-0 user-select-none d-flex align-items-center gap-1.5" htmlFor="areaModeDimensionsLanding" style={{ fontSize: '0.78rem' }}>
+                                  <i className="fa-solid fa-ruler-combined text-primary"></i>
+                                  <span>Length × Breadth</span>
+                                </label>
+                              </div>
+                            </div>
                           </div>
-                          <div className="col-12 col-sm-4">
-                            <label className="form-label small fw-bold text-secondary">Tile Size (mm)</label>
+
+                          {/* Input Controls */}
+                          {areaInputMode === 'direct' ? (
+                            <div className="row align-items-center g-2">
+                              <div className="col-12 col-sm-6">
+                                <label className="form-label small fw-bold text-secondary mb-1">Target Area (SQ.FT)</label>
+                                <div className="input-group input-group-sm">
+                                  <span className="input-group-text bg-white border-end-0 text-muted"><i className="fa-solid fa-vector-square"></i></span>
+                                  <input
+                                    type="number"
+                                    className="form-control form-control-sm fw-extrabold text-primary border-start-0"
+                                    value={targetAreaSqFt}
+                                    onChange={(e) => setTargetAreaSqFt(Number(e.target.value))}
+                                    placeholder="e.g. 500"
+                                  />
+                                  <span className="input-group-text bg-white fw-bold text-secondary">SQ.FT</span>
+                                </div>
+                              </div>
+                              <div className="col-12 col-sm-6">
+                                <div className="p-2 rounded-2 bg-body border d-flex align-items-center gap-2">
+                                  <i className="fa-solid fa-circle-info text-primary small"></i>
+                                  <span className="text-muted" style={{ fontSize: '0.74rem' }}>
+                                    Direct area mode. Enter total square feet needed.
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="row align-items-center g-2">
+                              <div className="col-12 col-sm-7">
+                                <label className="form-label small fw-bold text-secondary mb-1">Space Dimensions</label>
+                                <div className="input-group input-group-sm">
+                                  <span className="input-group-text bg-white text-muted px-2" title="Length">L</span>
+                                  <input
+                                    type="number"
+                                    className="form-control fw-bold"
+                                    placeholder="Length"
+                                    value={roomLength}
+                                    onChange={(e) => setRoomLength(Number(e.target.value))}
+                                  />
+                                  <span className="input-group-text bg-white text-muted fw-bold">×</span>
+                                  <span className="input-group-text bg-white text-muted px-2" title="Breadth">B</span>
+                                  <input
+                                    type="number"
+                                    className="form-control fw-bold"
+                                    placeholder="Breadth"
+                                    value={roomBreadth}
+                                    onChange={(e) => setRoomBreadth(Number(e.target.value))}
+                                  />
+                                  <select
+                                    className="form-select fw-bold bg-white border-secondary-subtle"
+                                    value={roomUnit}
+                                    onChange={(e) => handleRoomUnitChange(e.target.value)}
+                                    style={{ maxWidth: '65px', paddingLeft: '4px', paddingRight: '4px' }}
+                                  >
+                                    <option value="ft">ft</option>
+                                    <option value="m">m</option>
+                                    <option value="in">in</option>
+                                    <option value="cm">cm</option>
+                                  </select>
+                                </div>
+                              </div>
+                              <div className="col-12 col-sm-5">
+                                <label className="form-label small fw-bold text-secondary mb-1">Calculated Area</label>
+                                <div className="p-1.5 rounded-2 bg-primary-subtle border border-primary-subtle d-flex align-items-center justify-content-between px-2.5">
+                                  <span className="small text-primary fw-bold" style={{ fontSize: '0.72rem' }}>Total:</span>
+                                  <span className="fs-6 fw-extrabold text-primary font-monospace">
+                                    {calculatedAreaSqFt.toFixed(1)} <small className="fw-semibold">SQ.FT</small>
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Tile Parameters Row - Fixed Layout */}
+                        <div className="row g-2 mb-3">
+                          <div className="col-6 col-md-5">
+                            <label className="form-label small fw-bold text-secondary">Tile Size ({tileUnit})</label>
                             <div className="input-group input-group-sm">
                               <input type="number" className="form-control fw-bold" value={tileLength} onChange={(e) => setTileLength(Number(e.target.value))} />
                               <span className="input-group-text">x</span>
                               <input type="number" className="form-control fw-bold" value={tileWidth} onChange={(e) => setTileWidth(Number(e.target.value))} />
+                              <select className="form-select fw-bold border-secondary-subtle" value={tileUnit} onChange={(e) => handleTileUnitChange(e.target.value)} style={{ maxWidth: '65px', paddingLeft: '4px', paddingRight: '4px' }}>
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="ft">ft</option>
+                              </select>
                             </div>
                           </div>
-                          <div className="col-4 col-sm-2">
+                          <div className="col-4 col-md-2">
                             <label className="form-label small fw-bold text-secondary">Pcs/Box</label>
                             <input type="number" className="form-control form-control-sm fw-bold" value={pcsPerBox} onChange={(e) => setPcsPerBox(Number(e.target.value))} />
                           </div>
-                          <div className="col-4 col-sm-1.5">
+                          <div className="col-4 col-md-2">
                             <label className="form-label small fw-bold text-secondary">Wastage %</label>
-                            <input type="number" className="form-control form-control-sm fw-bold text-warning" value={wastagePercent} onChange={(e) => setWastagePercent(Number(e.target.value))} />
+                            <div className="input-group input-group-sm">
+                              <input type="number" className="form-control form-control-sm fw-bold text-warning" value={wastagePercent} onChange={(e) => setWastagePercent(Number(e.target.value))} />
+                              <span className="input-group-text px-1">%</span>
+                            </div>
                           </div>
-                          <div className="col-4 col-sm-1.5">
+                          <div className="col-4 col-md-3">
                             <label className="form-label small fw-bold text-secondary">Price/Piece (₹)</label>
-                            <input type="number" className="form-control form-control-sm fw-bold text-success" value={tilePricePerPiece} onChange={(e) => setTilePricePerPiece(Number(e.target.value))} />
+                            <div className="input-group input-group-sm" style={{ maxWidth: '140px' }}>
+                              <span className="input-group-text">₹</span>
+                              <input type="number" className="form-control form-control-sm fw-bold text-success" value={tilePricePerPiece} onChange={(e) => setTilePricePerPiece(Number(e.target.value))} />
+                            </div>
                           </div>
                         </div>
 
