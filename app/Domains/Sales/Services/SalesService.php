@@ -538,6 +538,21 @@ class SalesService
                 );
             }
 
+            // Post Cost of Goods Sold (COGS) Entry
+            $cogsAccount = $this->resolveAccount($organizationId, 'EXP-COGS-01', 'Cost of Goods Sold A/c', 'EXPENSE', 'Direct Expenses');
+            $inventoryAssetAccount = $this->resolveAccount($organizationId, 'INV-01', 'Inventory Asset A/c', 'ASSET', 'Current Assets');
+            $cogsAmount = (float) $totalSubtotal * 0.70;
+
+            $this->postingService->postCOGS(
+                $organizationId,
+                $cogsAmount,
+                $cogsAccount->id,
+                $inventoryAssetAccount->id,
+                $invoiceNumber,
+                $invoiceDate,
+                $invoice->id
+            );
+
             return $invoice->load(['organization', 'customer', 'warehouse', 'items.unit', 'items.variant', 'dispatches']);
         });
     }
@@ -547,30 +562,7 @@ class SalesService
      */
     protected function resolveAccount(int $organizationId, string $code, string $name, string $groupType, string $groupName): Account
     {
-        $account = Account::where('organization_id', $organizationId)
-            ->where(function ($q) use ($code, $name) {
-                $q->where('code', $code)->orWhere('name', $name);
-            })->first();
-
-        if (!$account) {
-            $group = AccountGroup::firstOrCreate([
-                'organization_id' => $organizationId,
-                'type' => $groupType,
-            ], [
-                'name' => $groupName,
-                'code' => strtoupper(substr($groupName, 0, 3)) . '-01',
-            ]);
-
-            $account = Account::create([
-                'organization_id' => $organizationId,
-                'account_group_id' => $group->id,
-                'code' => $code,
-                'name' => $name,
-                'currency' => 'INR',
-            ]);
-        }
-
-        return $account;
+        return $this->postingService->resolveOrCreateAccount($organizationId, $code, $name, $groupType, $groupName);
     }
 
     /**

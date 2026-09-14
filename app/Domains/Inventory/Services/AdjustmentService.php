@@ -150,6 +150,50 @@ class AdjustmentService
                 ]);
             }
 
+            // Post Accounting Journal Entry for Stock Adjustment
+            $postingService = app(\App\Domains\Accounting\Services\PostingService::class);
+            $totalAdjustmentValue = 0.0;
+            $isLoss = in_array(strtoupper($adj->adjustment_type), ['DAMAGE', 'SCRAP', 'NEGATIVE', 'THEFT', 'LOSS']);
+
+            foreach ($adj->items as $item) {
+                $unitCost = (float) ($item->inventoryObject?->variant?->cost_price ?? 100.0);
+                $totalAdjustmentValue += abs((float) $item->quantity_delta) * $unitCost;
+            }
+
+            if ($totalAdjustmentValue > 0) {
+                $inventoryAccountId = $postingService->resolveOrCreateAccount(
+                    $adj->organization_id,
+                    'INV-01',
+                    'Inventory Asset A/c',
+                    'ASSET',
+                    'Current Assets'
+                )->id;
+
+                $adjAccCode = $isLoss ? 'EXP-ADJ-LOSS-01' : 'REV-ADJ-GAIN-01';
+                $adjAccName = $isLoss ? 'Inventory Adjustment Loss A/c' : 'Inventory Adjustment Gain A/c';
+                $adjGroupType = $isLoss ? 'EXPENSE' : 'INCOME';
+                $adjGroupName = $isLoss ? 'Direct Expenses' : 'Direct Income';
+
+                $adjustmentAccountId = $postingService->resolveOrCreateAccount(
+                    $adj->organization_id,
+                    $adjAccCode,
+                    $adjAccName,
+                    $adjGroupType,
+                    $adjGroupName
+                )->id;
+
+                $postingService->postInventoryAdjustment(
+                    $adj->organization_id,
+                    $totalAdjustmentValue,
+                    $isLoss,
+                    $inventoryAccountId,
+                    $adjustmentAccountId,
+                    $adj->reason ?? "Stock Adjustment {$adj->adjustment_number}",
+                    $adj->adjustment_date ?? now()->toDateString(),
+                    $adj->id
+                );
+            }
+
             event(new InventoryAdjusted($adj));
         });
     }
