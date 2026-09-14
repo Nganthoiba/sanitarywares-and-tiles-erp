@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import QuickCustomerModal from "../sales/QuickCustomerModal";
 
 export default function InventoryManager() {
     const [viewMode, setViewMode] = useState("stock"); // 'stock' | 'reservations' | 'history'
@@ -81,6 +82,19 @@ export default function InventoryManager() {
     // Action Modals State
     const [activeModal, setActiveModal] = useState(null); // 'reserve' | 'lowStockSettings' | 'transfer' | 'adjust' | 'count' | null
     const [submittingAction, setSubmittingAction] = useState(false);
+    const [showCustomerModal, setShowCustomerModal] = useState(false);
+
+    const handleCustomerCreated = (newCust) => {
+        if (!newCust) return;
+        setContexts(prev => ({
+            ...prev,
+            customers: [newCust, ...(prev.customers || [])]
+        }));
+        setReserveForm(prev => ({
+            ...prev,
+            customer_id: newCust.id || newCust.data?.id || ""
+        }));
+    };
 
     // Reserve Form
     const [reserveForm, setReserveForm] = useState({
@@ -1601,16 +1615,26 @@ export default function InventoryManager() {
 
                                         <div className="col-12 col-md-6">
                                             <label className="form-label small fw-semibold text-secondary">Customer (Optional)</label>
-                                            <select
-                                                className="form-select"
-                                                value={reserveForm.customer_id}
-                                                onChange={e => setReserveForm({ ...reserveForm, customer_id: e.target.value })}
-                                            >
-                                                <option value="">Select Customer</option>
-                                                {contexts.customers.map(c => (
-                                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                                ))}
-                                            </select>
+                                            <div className="input-group">
+                                                <select
+                                                    className="form-select"
+                                                    value={reserveForm.customer_id}
+                                                    onChange={e => setReserveForm({ ...reserveForm, customer_id: e.target.value })}
+                                                >
+                                                    <option value="">Select Customer</option>
+                                                    {contexts.customers.map(c => (
+                                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                                    ))}
+                                                </select>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-outline-primary"
+                                                    title="Add a new customer quickly"
+                                                    onClick={() => setShowCustomerModal(true)}
+                                                >
+                                                    <i className="fa fa-plus"></i>
+                                                </button>
+                                            </div>
                                         </div>
 
                                         <div className="col-12 col-md-4">
@@ -2195,6 +2219,13 @@ export default function InventoryManager() {
                     </div>
                 </div>
             )}
+
+            {/* Quick Add Customer Modal */}
+            <QuickCustomerModal
+                show={showCustomerModal}
+                onClose={() => setShowCustomerModal(false)}
+                onCustomerCreated={handleCustomerCreated}
+            />
         </div>
     );
 }
