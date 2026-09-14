@@ -286,11 +286,17 @@ export default function InventoryPage() {
 
     // Fulfill Reservation wrapper
     const handleFulfillReservationClick = async (reservation) => {
-        const remaining = reservation.remaining_quantity !== undefined ? reservation.remaining_quantity : reservation.quantity;
-        const unitSym = reservation.product?.base_unit?.symbol || reservation.product?.sales_unit?.symbol || 'Units';
+        const resObj = (typeof reservation === 'object' && reservation !== null)
+            ? reservation
+            : reservations.find(r => r.id === reservation);
+
+        if (!resObj) return;
+
+        const remaining = resObj.remaining_quantity !== undefined ? resObj.remaining_quantity : resObj.quantity;
+        const unitSym = resObj.product?.base_unit?.symbol || resObj.product?.sales_unit?.symbol || 'Units';
 
         const inputQty = prompt(
-            `Fulfill / Dispatch Reservation (${reservation.reservation_number || '#' + reservation.id}):\n\nTotal Reserved: ${reservation.quantity} ${unitSym}\nAlready Fulfilled: ${reservation.fulfilled_quantity || 0} ${unitSym}\nRemaining: ${remaining} ${unitSym}\n\nEnter quantity to fulfill now:`,
+            `Fulfill / Dispatch Reservation (${resObj.reservation_number || '#' + resObj.id}):\n\nTotal Reserved: ${resObj.quantity} ${unitSym}\nAlready Fulfilled: ${resObj.fulfilled_quantity || 0} ${unitSym}\nRemaining: ${remaining} ${unitSym}\n\nEnter quantity to fulfill now:`,
             remaining
         );
 
@@ -301,7 +307,7 @@ export default function InventoryPage() {
             return;
         }
 
-        const result = await fulfillReservation(reservation.id, qtyVal);
+        const result = await fulfillReservation(resObj.id, qtyVal);
         if (result.success) {
             setSuccessMessage(result.data?.message || "Reservation fulfilled successfully.");
             loadStockData();

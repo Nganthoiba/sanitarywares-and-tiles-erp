@@ -1,17 +1,32 @@
 import React from 'react';
 
 export default function ReservationList({
-    reservations,
+    reservations = [],
+    loading,
     reservationsLoading,
-    reservationsFilter,
-    setReservationsFilter,
+    pagination,
     reservationsPagination,
+    filter,
+    reservationsFilter,
+    setFilter,
+    setReservationsFilter,
+    onPageChange,
     loadReservations,
+    onFulfill,
     handleFulfillReservation,
+    onCancel,
     handleCancelReservation,
     openReserveModal,
-    contexts
+    contexts = {}
 }) {
+    const isLoading = loading ?? reservationsLoading ?? false;
+    const pag = pagination || reservationsPagination || { current_page: 1, last_page: 1, total: 0 };
+    const flt = filter || reservationsFilter || { search: '', status: 'ALL', warehouse_id: '' };
+    const updateFilter = setFilter || setReservationsFilter || (() => {});
+    const changePage = onPageChange || loadReservations || (() => {});
+    const fulfillAction = onFulfill || handleFulfillReservation || (() => {});
+    const cancelAction = onCancel || handleCancelReservation || (() => {});
+
     return (
         <div className="card border-0 shadow-sm">
             <div className="card-header bg-white py-3">
@@ -19,13 +34,15 @@ export default function ReservationList({
                     <div className="d-flex align-items-center gap-2">
                         <span className="fw-bold fs-5 text-dark">Active & Historical Reservations</span>
                         <span className="badge bg-secondary-subtle text-secondary font-monospace ms-2">
-                            {reservationsPagination.total} Total
+                            {pag.total || 0} Total
                         </span>
                     </div>
 
-                    <button className="btn btn-primary btn-sm d-flex align-items-center gap-1" onClick={openReserveModal}>
-                        <i className="bi bi-bookmark-plus me-1"></i> Reserve Stock
-                    </button>
+                    {openReserveModal && (
+                        <button className="btn btn-primary btn-sm d-flex align-items-center gap-1" onClick={openReserveModal}>
+                            <i className="bi bi-bookmark-plus me-1"></i> Reserve Stock
+                        </button>
+                    )}
                 </div>
 
                 {/* Filter bar */}
@@ -39,8 +56,8 @@ export default function ReservationList({
                                 type="text"
                                 className="form-control border-start-0"
                                 placeholder="Search reservation #, reference, product..."
-                                value={reservationsFilter.search}
-                                onChange={e => setReservationsFilter({ ...reservationsFilter, search: e.target.value })}
+                                value={flt.search || ''}
+                                onChange={e => updateFilter({ ...flt, search: e.target.value })}
                             />
                         </div>
                     </div>
@@ -48,8 +65,8 @@ export default function ReservationList({
                     <div className="col-md-3">
                         <select
                             className="form-select form-select-sm"
-                            value={reservationsFilter.status}
-                            onChange={e => setReservationsFilter({ ...reservationsFilter, status: e.target.value })}
+                            value={flt.status || 'ALL'}
+                            onChange={e => updateFilter({ ...flt, status: e.target.value })}
                         >
                             <option value="ALL">All Statuses</option>
                             <option value="ACTIVE">Active Only</option>
@@ -63,8 +80,8 @@ export default function ReservationList({
                     <div className="col-md-3">
                         <select
                             className="form-select form-select-sm"
-                            value={reservationsFilter.warehouse_id}
-                            onChange={e => setReservationsFilter({ ...reservationsFilter, warehouse_id: e.target.value })}
+                            value={flt.warehouse_id || ''}
+                            onChange={e => updateFilter({ ...flt, warehouse_id: e.target.value })}
                         >
                             <option value="">All Warehouses</option>
                             {(contexts?.warehouses || []).map(w => (
@@ -91,14 +108,14 @@ export default function ReservationList({
                             </tr>
                         </thead>
                         <tbody className="divide-y">
-                            {reservationsLoading ? (
+                            {isLoading ? (
                                 <tr>
                                     <td colSpan="8" className="text-center py-5 text-muted">
                                         <div className="spinner-border spinner-border-sm me-2 text-primary" role="status"></div>
                                         Loading reservations...
                                     </td>
                                 </tr>
-                            ) : reservations.length === 0 ? (
+                            ) : (reservations || []).length === 0 ? (
                                 <tr>
                                     <td colSpan="8" className="text-center py-5 text-muted">
                                         No reservations found matching filters.
@@ -158,14 +175,14 @@ export default function ReservationList({
                                                     <div className="btn-group btn-group-sm">
                                                         <button
                                                             className="btn btn-sm btn-light text-success border-0 px-2"
-                                                            onClick={() => handleFulfillReservation(res.id)}
+                                                            onClick={() => fulfillAction(res)}
                                                             title="Fulfill Reservation"
                                                         >
                                                             <i className="fa-solid fa-circle-check me-1"></i> Fulfill
                                                         </button>
                                                         <button
                                                             className="btn btn-sm btn-light text-danger border-0 px-2"
-                                                            onClick={() => handleCancelReservation(res.id)}
+                                                            onClick={() => cancelAction(res.id)}
                                                             title="Cancel Reservation"
                                                         >
                                                             <i className="fa-solid fa-ban me-1"></i> Cancel
@@ -183,23 +200,23 @@ export default function ReservationList({
             </div>
 
             {/* Pagination Footer */}
-            {reservationsPagination.last_page > 1 && (
+            {(pag.last_page || 1) > 1 && (
                 <div className="card-footer bg-white border-top py-2 px-4 d-flex justify-content-between align-items-center">
                     <span className="small text-muted">
-                        Page {reservationsPagination.current_page} of {reservationsPagination.last_page} ({reservationsPagination.total} total items)
+                        Page {pag.current_page || 1} of {pag.last_page || 1} ({pag.total || 0} total items)
                     </span>
                     <div className="btn-group btn-group-sm">
                         <button
                             className="btn btn-outline-secondary"
-                            disabled={reservationsPagination.current_page === 1 || reservationsLoading}
-                            onClick={() => loadReservations(reservationsPagination.current_page - 1)}
+                            disabled={(pag.current_page || 1) === 1 || isLoading}
+                            onClick={() => changePage((pag.current_page || 1) - 1)}
                         >
                             <i className="bi bi-chevron-left"></i> Previous
                         </button>
                         <button
                             className="btn btn-outline-secondary"
-                            disabled={reservationsPagination.current_page === reservationsPagination.last_page || reservationsLoading}
-                            onClick={() => loadReservations(reservationsPagination.current_page + 1)}
+                            disabled={(pag.current_page || 1) === (pag.last_page || 1) || isLoading}
+                            onClick={() => changePage((pag.current_page || 1) + 1)}
                         >
                             Next <i className="bi bi-chevron-right"></i>
                         </button>
