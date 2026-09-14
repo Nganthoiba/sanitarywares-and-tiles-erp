@@ -4,6 +4,8 @@ namespace App\Domains\Master\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+use App\Domains\Master\Services\UnitDimensionService;
+
 class Unit extends Model {
     use SoftDeletes;
 
@@ -19,29 +21,21 @@ class Unit extends Model {
     }
 
     public function getDimensionCategoryAttribute(): string {
-        $sym = strtolower(trim($this->symbol ?? ''));
-        
-        if (in_array($sym, ['mm', 'cm', 'm', 'in', 'ft', 'feet', 'milimeter', 'meter'])) {
-            return 'LENGTH';
-        }
-        if (in_array($sym, ['sq.mm', 'sq.cm', 'sq.m', 'sq.in', 'sq.ft.', 'sqft', 'sq.ft'])) {
-            return 'AREA';
-        }
-        if (in_array($sym, ['l', 'ltr', 'litre', 'liter', 'cu.mm', 'cu.cm', 'cu.m', 'cu.ft'])) {
-            return 'VOLUME';
-        }
-        if (in_array($sym, ['g', 'gm', 'gram', 'kg', 'ton', 'mt'])) {
-            return 'MASS';
-        }
-        if (in_array($sym, ['pcs', 'box', 'bag', 'set', 'slab', 'roll', 'piece'])) {
-            return 'COUNT';
-        }
+        return UnitDimensionService::getDimensionCategory($this->symbol, $this->type);
+    }
 
-        $type = strtoupper(trim($this->type ?? ''));
-        if (in_array($type, ['LENGTH', 'AREA', 'VOLUME', 'MASS', 'MEASUREMENT'])) {
-            return $type;
-        }
+    public function isPackagingUnit(): bool {
+        return $this->dimension_category === UnitDimensionService::DIMENSION_PACKAGING_COUNT;
+    }
 
-        return 'NONE';
+    public function isSameDimension(Unit $other): bool {
+        $catA = $this->dimension_category;
+        $catB = $other->dimension_category;
+
+        return $catA !== UnitDimensionService::DIMENSION_NONE && $catA === $catB;
+    }
+
+    public function getUniversalMultiplierWith(Unit $other): ?float {
+        return UnitDimensionService::getUniversalMultiplier($this, $other);
     }
 }

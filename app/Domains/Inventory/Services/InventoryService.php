@@ -260,7 +260,18 @@ class InventoryService
             return $quantity / (float) $conversion->multiplier;
         }
 
-        // 5. Try product variant pieces_per_box conversion fallback & auto-persist
+        $fromUnit = Unit::find($fromUnitId);
+        $toUnit = Unit::find($toUnitId);
+
+        // 5. Try universal physical dimension conversion (e.g. CM -> MM, SQM -> SQFT, KG -> G)
+        if ($fromUnit && $toUnit) {
+            $universalMultiplier = \App\Domains\Master\Services\UnitDimensionService::getUniversalMultiplier($fromUnit, $toUnit);
+            if ($universalMultiplier !== null) {
+                return $quantity * $universalMultiplier;
+            }
+        }
+
+        // 6. Try product variant pieces_per_box packaging conversion fallback & auto-persist
         $variant = Product::find($variantId);
         $ppb = $variant ? $variant->getPiecesPerBox() : null;
         if ($variant && $ppb && (float) $ppb > 0) {
