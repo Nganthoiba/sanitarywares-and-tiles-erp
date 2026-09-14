@@ -72,25 +72,49 @@ class Product extends Model {
             ->where('is_current', true);
     }
 
+    /**
+     * Authoritative resolution for pieces_per_box.
+     * Order of precedence:
+     * 1. Commercial Pricing (organization_product_pricings.pieces_per_box)
+     * 2. Unit Conversions (unit_conversions multiplier)
+     * 3. Legacy column fallback (product_variants.pieces_per_box)
+     */
+    public function getPiecesPerBox(): ?int {
+        if ($this->relationLoaded('currentCommercialPricing') && $this->currentCommercialPricing && $this->currentCommercialPricing->pieces_per_box > 0) {
+            return (int) $this->currentCommercialPricing->pieces_per_box;
+        }
+
+        $pricing = $this->currentCommercialPricing;
+        if ($pricing && $pricing->pieces_per_box > 0) {
+            return (int) $pricing->pieces_per_box;
+        }
+
+        $legacyVal = $this->attributes['pieces_per_box'] ?? null;
+        return $legacyVal ? (int) $legacyVal : null;
+    }
+
     public function calculatePiecesFromBoxes(float|int $boxes): ?int {
-        if (!$this->pieces_per_box || $this->pieces_per_box <= 0) {
+        $ppb = $this->getPiecesPerBox();
+        if (!$ppb || $ppb <= 0) {
             return null;
         }
-        return (int) round($boxes * $this->pieces_per_box);
+        return (int) round($boxes * $ppb);
     }
 
     public function calculateBoxesFromPieces(int $pieces): ?float {
-        if (!$this->pieces_per_box || $this->pieces_per_box <= 0) {
+        $ppb = $this->getPiecesPerBox();
+        if (!$ppb || $ppb <= 0) {
             return null;
         }
-        return (float) ($pieces / $this->pieces_per_box);
+        return (float) ($pieces / $ppb);
     }
 
     public function calculateAreaPerBox(float $areaPerPiece): ?float {
-        if (!$this->pieces_per_box || $this->pieces_per_box <= 0) {
+        $ppb = $this->getPiecesPerBox();
+        if (!$ppb || $ppb <= 0) {
             return null;
         }
-        return (float) ($areaPerPiece * $this->pieces_per_box);
+        return (float) ($areaPerPiece * $ppb);
     }
 
     /**

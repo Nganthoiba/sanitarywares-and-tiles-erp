@@ -262,8 +262,9 @@ class InventoryService
 
         // 5. Try product variant pieces_per_box conversion fallback & auto-persist
         $variant = Product::find($variantId);
-        if ($variant && $variant->pieces_per_box && (float) $variant->pieces_per_box > 0) {
-            $ppb = (float) $variant->pieces_per_box;
+        $ppb = $variant ? $variant->getPiecesPerBox() : null;
+        if ($variant && $ppb && (float) $ppb > 0) {
+            $ppb = (float) $ppb;
             $fromUnit = Unit::find($fromUnitId);
             $toUnit = Unit::find($toUnitId);
 
