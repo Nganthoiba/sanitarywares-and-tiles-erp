@@ -1427,7 +1427,7 @@ export default function InventoryManager() {
                     </div>
                     <div className="card-body p-0">
                         <div className="table-responsive">
-                            <table className="table table-hover table-borderless align-middle mb-0">
+                            <table id="stock-history-table" className="table table-hover table-border align-middle mb-0">
                                 <thead className="bg-light border-bottom">
                                     <tr>
                                         <th className="ps-4 py-3 text-secondary text-uppercase fs-7 fw-bold">Date & Time</th>
@@ -1475,7 +1475,20 @@ export default function InventoryManager() {
                                                 <td className={`py-3 text-end fw-bold ${m.quantity_delta > 0 ? "text-success" : "text-danger"}`}>
                                                     {m.quantity_delta > 0 ? `+${m.quantity_delta}` : m.quantity_delta} {m.unit_symbol}
                                                 </td>
-                                                <td className="py-3 text-muted fs-7">{m.reference_label}</td>
+                                                <td className="py-3">
+                                                    {m.reference_number && m.reference_number !== '-' ? (
+                                                        <>
+                                                            <div className="fw-semibold text-dark font-monospace" style={{ fontSize: "0.82rem" }}>
+                                                                {m.reference_number}
+                                                            </div>
+                                                            <div className="text-muted fs-7">
+                                                                ({m.reference_type_label || m.reference_type})
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-muted fs-7">{m.reference_label || '-'}</span>
+                                                    )}
+                                                </td>
                                                 <td className="pe-4 py-3 text-muted fs-7">{m.user_name}</td>
                                             </tr>
                                         ))

@@ -24,6 +24,9 @@ use App\Domains\Master\Models\Category;
 use App\Domains\Master\Models\StorageLocation;
 use App\Domains\Master\Models\Customer;
 use App\Domains\Product\Models\Product;
+use App\Domains\Purchase\Models\GoodsReceiptNote;
+use App\Domains\Purchase\Models\PurchaseOrder;
+use App\Domains\Sales\Models\Invoice;
 use App\Http\Resources\InventoryObjectResource;
 use Carbon\Carbon;
 use Exception;
@@ -432,7 +435,9 @@ class InventoryApiController extends Controller
 
         $movements = $query->orderBy('created_at', 'desc')->paginate($request->query('per_page', 25));
 
-        $items = collect($movements->items())->map(function ($m) {
+        $referenceMaps = $this->resolveReferenceNumbers($movements->items());
+
+        $items = collect($movements->items())->map(function ($m) use ($referenceMaps) {
             $label = match ($m->movement_type) {
                 'PURCHASE', 'RECEIPT' => 'Receipt',
                 'SALE' => 'Sale',
@@ -445,8 +450,22 @@ class InventoryApiController extends Controller
             };
 
             $referenceStr = '-';
+            $referenceNumber = '-';
+            $typeLabel = '-';
             if ($m->reference_type && $m->reference_id) {
-                $referenceStr = "{$m->reference_type} #{$m->reference_id}";
+                $typeLabel = match ($m->reference_type) {
+                    'GoodsReceiptNote', GoodsReceiptNote::class => 'Goods Receipt Note',
+                    'Invoice', Invoice::class => 'Invoice',
+                    'PurchaseOrder', PurchaseOrder::class => 'Purchase Order',
+                    'InventoryReservation', 'Reservation', InventoryReservation::class => 'Reservation',
+                    'InventoryAdjustment', 'Adjustment', InventoryAdjustment::class => 'Adjustment',
+                    'InventoryTransfer', 'Transfer', InventoryTransfer::class => 'Transfer',
+                    default => $m->reference_type,
+                };
+
+                $docNumber = $referenceMaps[$m->reference_type][$m->reference_id] ?? null;
+                $referenceNumber = $docNumber ?: "#{$m->reference_id}";
+                $referenceStr = "{$referenceNumber}\n({$typeLabel})";
             }
 
             return [
@@ -465,6 +484,8 @@ class InventoryApiController extends Controller
                 'location_code' => $m->toStorageLocation?->code ?? $m->fromStorageLocation?->code ?? '-',
                 'reference_type' => $m->reference_type,
                 'reference_id' => $m->reference_id,
+                'reference_number' => $referenceNumber,
+                'reference_type_label' => $typeLabel,
                 'reference_label' => $referenceStr,
                 'user_name' => $m->user?->name ?? 'System',
             ];
@@ -480,6 +501,50 @@ class InventoryApiController extends Controller
                 'total' => $movements->total(),
             ]
         ]);
+    }
+
+    /**
+     * Resolve document reference numbers (invoice_number, grn_number, etc.) for a collection of movements.
+     */
+    protected function resolveReferenceNumbers($movements): array
+    {
+        $referenceMaps = [];
+        $groupedReferences = collect($movements)
+            ->filter(fn($m) => !empty($m->reference_type) && !empty($m->reference_id))
+            ->groupBy('reference_type');
+
+        foreach ($groupedReferences as $type => $group) {
+            $ids = $group->pluck('reference_id')->unique()->all();
+            if (empty($ids)) continue;
+
+            if (in_array($type, ['Invoice', Invoice::class])) {
+                $referenceMaps[$type] = Invoice::whereIn('id', $ids)
+                    ->pluck('invoice_number', 'id')
+                    ->all();
+            } elseif (in_array($type, ['GoodsReceiptNote', GoodsReceiptNote::class])) {
+                $referenceMaps[$type] = GoodsReceiptNote::whereIn('id', $ids)
+                    ->pluck('grn_number', 'id')
+                    ->all();
+            } elseif (in_array($type, ['PurchaseOrder', PurchaseOrder::class])) {
+                $referenceMaps[$type] = PurchaseOrder::whereIn('id', $ids)
+                    ->pluck('po_number', 'id')
+                    ->all();
+            } elseif (in_array($type, ['InventoryReservation', 'Reservation', InventoryReservation::class])) {
+                $referenceMaps[$type] = InventoryReservation::whereIn('id', $ids)
+                    ->pluck('reservation_number', 'id')
+                    ->all();
+            } elseif (in_array($type, ['InventoryAdjustment', 'Adjustment', InventoryAdjustment::class])) {
+                $referenceMaps[$type] = InventoryAdjustment::whereIn('id', $ids)
+                    ->pluck('adjustment_number', 'id')
+                    ->all();
+            } elseif (in_array($type, ['InventoryTransfer', 'Transfer', InventoryTransfer::class])) {
+                $referenceMaps[$type] = InventoryTransfer::whereIn('id', $ids)
+                    ->pluck('transfer_number', 'id')
+                    ->all();
+            }
+        }
+
+        return $referenceMaps;
     }
 
     /**
