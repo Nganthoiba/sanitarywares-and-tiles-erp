@@ -58,7 +58,7 @@ export default function InventoryManager() {
     // History Ledger state
     const [movements, setMovements] = useState([]);
     const [movementsLoading, setMovementsLoading] = useState(false);
-    const [movementsPerPage, setMovementsPerPage] = useState(25);
+    const [movementsPerPage, setMovementsPerPage] = useState(10);
     const [movementsPagination, setMovementsPagination] = useState({
         current_page: 1,
         last_page: 1,
@@ -273,6 +273,12 @@ export default function InventoryManager() {
         } finally {
             setMovementsLoading(false);
         }
+    };
+
+    const handleMovementsPerPageChange = (e) => {
+        const val = parseInt(e.target.value, 10);
+        setMovementsPerPage(val);
+        loadMovements(1, val);
     };
 
     useEffect(() => {
@@ -1426,6 +1432,27 @@ export default function InventoryManager() {
                         </div>
                     </div>
                     <div className="card-body p-0">
+                        {/* Top Pagination Summary Bar */}
+                        <div className="bg-white px-4 py-2 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <div className="d-flex align-items-center gap-2 text-muted small">
+                                <span className="ms-1 fw-semibold text-secondary">Select number of records per page:</span>
+                                <select
+                                    className="form-select form-select-sm py-0 border-secondary-subtle font-monospace"
+                                    style={{ width: "80px", height: "28px", fontSize: "0.8rem" }}
+                                    value={movementsPerPage}
+                                    onChange={handleMovementsPerPageChange}
+                                    title="Records per page"
+                                >
+                                    <option value={10}>10</option>
+                                    <option value={15}>15</option>
+                                    <option value={20}>20</option>
+                                    <option value={25}>25</option>
+                                    <option value={50}>50</option>
+                                    <option value={100}>100</option>
+                                </select>
+                            </div>
+                        </div>
+
                         <div className="table-responsive">
                             <table id="stock-history-table" className="table table-hover table-border align-middle mb-0">
                                 <thead className="bg-light border-bottom">
@@ -1499,27 +1526,89 @@ export default function InventoryManager() {
                     </div>
 
                     {/* Pagination Footer for Movements */}
-                    {movementsPagination.last_page > 1 && (
-                        <div className="card-footer bg-white border-top py-2 px-4 d-flex justify-content-between align-items-center">
-                            <span className="small text-muted">
-                                Page {movementsPagination.current_page} of {movementsPagination.last_page} ({movementsPagination.total} total items)
-                            </span>
-                            <div className="btn-group btn-group-sm">
-                                <button
-                                    className="btn btn-outline-secondary"
-                                    disabled={movementsPagination.current_page === 1 || movementsLoading}
-                                    onClick={() => loadMovements(movementsPagination.current_page - 1)}
-                                >
-                                    <i className="bi bi-chevron-left"></i> Previous
-                                </button>
-                                <button
-                                    className="btn btn-outline-secondary"
-                                    disabled={movementsPagination.current_page === movementsPagination.last_page || movementsLoading}
-                                    onClick={() => loadMovements(movementsPagination.current_page + 1)}
-                                >
-                                    Next <i className="bi bi-chevron-right"></i>
-                                </button>
+                    {!movementsLoading && movementsPagination.total > 0 && (
+                        <div className="card-footer bg-white border-top py-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <div className="d-flex align-items-center gap-2 text-muted small">
+                                <span>
+                                    Showing <strong>{movementsPagination.total > 0 ? (movementsPagination.current_page - 1) * movementsPerPage + 1 : 0}</strong> to <strong>{Math.min(movementsPagination.current_page * movementsPerPage, movementsPagination.total)}</strong> of <strong>{movementsPagination.total}</strong> stock movements
+                                </span>
                             </div>
+
+                            {movementsPagination.last_page > 1 && (
+                                <nav aria-label="Stock history pagination">
+                                    <ul className="pagination pagination-sm mb-0">
+                                        <li className={`page-item ${movementsPagination.current_page === 1 ? 'disabled' : ''}`}>
+                                            <button
+                                                className="page-link"
+                                                onClick={() => loadMovements(1, movementsPerPage)}
+                                                disabled={movementsPagination.current_page === 1 || movementsLoading}
+                                                title="First Page"
+                                            >
+                                                <i className="fa-solid fa-angles-left"></i>
+                                            </button>
+                                        </li>
+                                        <li className={`page-item ${movementsPagination.current_page === 1 ? 'disabled' : ''}`}>
+                                            <button
+                                                className="page-link"
+                                                onClick={() => loadMovements(movementsPagination.current_page - 1, movementsPerPage)}
+                                                disabled={movementsPagination.current_page === 1 || movementsLoading}
+                                            >
+                                                Prev
+                                            </button>
+                                        </li>
+
+                                        {Array.from({ length: movementsPagination.last_page }, (_, i) => i + 1)
+                                            .filter(p => p === 1 || p === movementsPagination.last_page || Math.abs(p - movementsPagination.current_page) <= 1)
+                                            .reduce((acc, p, idx, arr) => {
+                                                if (idx > 0 && p - arr[idx - 1] > 1) {
+                                                    acc.push('...');
+                                                }
+                                                acc.push(p);
+                                                return acc;
+                                            }, [])
+                                            .map((item, idx) => {
+                                                if (item === '...') {
+                                                    return (
+                                                        <li key={`ellipsis-${idx}`} className="page-item disabled">
+                                                            <span className="page-link">...</span>
+                                                        </li>
+                                                    );
+                                                }
+                                                return (
+                                                    <li key={item} className={`page-item ${movementsPagination.current_page === item ? 'active' : ''}`}>
+                                                        <button
+                                                            className="page-link"
+                                                            onClick={() => loadMovements(item, movementsPerPage)}
+                                                            disabled={movementsLoading}
+                                                        >
+                                                            {item}
+                                                        </button>
+                                                    </li>
+                                                );
+                                            })}
+
+                                        <li className={`page-item ${movementsPagination.current_page === movementsPagination.last_page ? 'disabled' : ''}`}>
+                                            <button
+                                                className="page-link"
+                                                onClick={() => loadMovements(movementsPagination.current_page + 1, movementsPerPage)}
+                                                disabled={movementsPagination.current_page === movementsPagination.last_page || movementsLoading}
+                                            >
+                                                Next
+                                            </button>
+                                        </li>
+                                        <li className={`page-item ${movementsPagination.current_page === movementsPagination.last_page ? 'disabled' : ''}`}>
+                                            <button
+                                                className="page-link"
+                                                onClick={() => loadMovements(movementsPagination.last_page, movementsPerPage)}
+                                                disabled={movementsPagination.current_page === movementsPagination.last_page || movementsLoading}
+                                                title="Last Page"
+                                            >
+                                                <i className="fa-solid fa-angles-right"></i>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </nav>
+                            )}
                         </div>
                     )}
                 </div>
