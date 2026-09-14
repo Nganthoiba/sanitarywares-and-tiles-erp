@@ -134,13 +134,30 @@ export default function TaxInvoiceModal({ invoice, show, onClose }) {
                             <div className="row border-bottom pb-3 mb-3">
                                 <div className="col-7">
                                     <h3 className="fw-bold text-primary mb-1">
-                                        {invoice.organization?.name || 'TILES & SANITARYWARES ERP'}
+                                        {invoice.organization?.name || invoice.organization?.legal_name || 'Organization'}
                                     </h3>
                                     <p className="text-muted mb-1 small">
-                                        {invoice.organization?.address || 'Main Showroom & Depot'}
+                                        {invoice.organization?.address ? (
+                                            <>
+                                                {invoice.organization.address}
+                                                {invoice.organization.city ? `, ${invoice.organization.city}` : ''}
+                                                {invoice.organization.state ? `, ${invoice.organization.state}` : ''}
+                                            </>
+                                        ) : 'Main Showroom & Depot'}
                                     </p>
                                     <p className="mb-0 small">
-                                        <strong>GSTIN:</strong> {invoice.organization?.gstin || '24AAAAA0000A1Z5'} | <strong>Phone:</strong> {invoice.organization?.phone || '+91 98765 43210'}
+                                        {invoice.organization?.gstin && (
+                                            <span><strong>GSTIN:</strong> {invoice.organization.gstin}</span>
+                                        )}
+                                        {invoice.organization?.phone && (
+                                            <span>{(invoice.organization?.gstin) ? ' | ' : ''}<strong>Phone:</strong> {invoice.organization.phone}</span>
+                                        )}
+                                        {invoice.organization?.email && (
+                                            <span>{(invoice.organization?.gstin || invoice.organization?.phone) ? ' | ' : ''}<strong>Email:</strong> {invoice.organization.email}</span>
+                                        )}
+                                        {!invoice.organization?.gstin && !invoice.organization?.phone && !invoice.organization?.email && (
+                                            <span><strong>GSTIN:</strong> N/A</span>
+                                        )}
                                     </p>
                                 </div>
                                 <div className="col-5 text-end">
@@ -321,7 +338,7 @@ export default function TaxInvoiceModal({ invoice, show, onClose }) {
                                 <div className="col-4 text-center pt-3">
                                     <div style={{ height: '40px' }}></div>
                                     <p className="border-top pt-1 fw-bold text-dark mb-0">Authorized Signatory</p>
-                                    <span className="small text-muted">{invoice.organization?.name}</span>
+                                    <span className="small text-muted">{invoice.organization?.name || invoice.organization?.legal_name}</span>
                                 </div>
                             </div>
                         </div>

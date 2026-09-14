@@ -538,7 +538,7 @@ class SalesService
                 );
             }
 
-            return $invoice->load(['customer', 'warehouse', 'items.unit', 'items.variant', 'dispatches']);
+            return $invoice->load(['organization', 'customer', 'warehouse', 'items.unit', 'items.variant', 'dispatches']);
         });
     }
 
@@ -579,7 +579,7 @@ class SalesService
     public function listInvoices(int $organizationId, array $filters = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         $query = Invoice::where('organization_id', $organizationId)
-            ->with(['customer', 'warehouse']);
+            ->with(['organization', 'customer', 'warehouse']);
 
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -620,7 +620,7 @@ class SalesService
     public function getInvoiceDetails(int $invoiceId, int $organizationId): Invoice
     {
         return Invoice::where('organization_id', $organizationId)
-            ->with(['customer', 'warehouse', 'items.unit', 'items.variant.taxProfile', 'dispatches.items'])
+            ->with(['organization', 'customer', 'warehouse', 'items.unit', 'items.variant.taxProfile', 'dispatches.items'])
             ->findOrFail($invoiceId);
     }
 }
