@@ -269,8 +269,6 @@ class ManufacturerApiController extends Controller
 
         $manufacturer->update($validated);
 
-        $manufacturer->update($validated);
-
         return response()->json([
             'message' => 'Global manufacturer record updated successfully.',
             'manufacturer' => $manufacturer

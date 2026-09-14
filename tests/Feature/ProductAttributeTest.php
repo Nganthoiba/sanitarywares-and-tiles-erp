@@ -111,7 +111,7 @@ class ProductAttributeTest extends TestCase
     public function test_unit_dimension_categories()
     {
         $this->assertEquals('LENGTH', $this->mmUnit->dimension_category);
-        $this->assertEquals('COUNT', $this->boxUnit->dimension_category);
+        $this->assertEquals('PACKAGING_COUNT', $this->boxUnit->dimension_category);
         $this->assertEquals('AREA', $this->sqftUnit->dimension_category);
     }
 
