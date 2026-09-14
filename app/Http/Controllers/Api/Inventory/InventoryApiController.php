@@ -587,7 +587,12 @@ class InventoryApiController extends Controller
                 'data' => $res,
                 'message' => 'Stock reserved successfully.'
             ]);
-        } catch (\Exception $e) {
+        } catch (\App\Domains\Inventory\Exceptions\InventoryDomainException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], $e->getStatusCode());
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -603,6 +608,11 @@ class InventoryApiController extends Controller
         try {
             $this->reservationService->release($id);
             return response()->json(['success' => true, 'message' => 'Reservation successfully cancelled and released.']);
+        } catch (\App\Domains\Inventory\Exceptions\InventoryDomainException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], $e->getStatusCode());
         } catch (Exception $e) {
             return response()->json([
                 'success' => false,
@@ -635,7 +645,12 @@ class InventoryApiController extends Controller
                     ? 'Reservation fully fulfilled and marked as complete.'
                     : 'Reservation partially fulfilled successfully.'
             ]);
-        } catch (\Exception $e) {
+        } catch (\App\Domains\Inventory\Exceptions\InventoryDomainException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], $e->getStatusCode());
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),

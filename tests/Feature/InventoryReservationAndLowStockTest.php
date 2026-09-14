@@ -144,7 +144,7 @@ class InventoryReservationAndLowStockTest extends TestCase
             'quantity' => 30,
         ]);
 
-        $failResponse->assertStatus(422);
+        $failResponse->assertStatus(400);
         $this->assertStringContainsString('Cannot reserve 30 Box because only 20 Box is available.', $failResponse->json('message'));
     }
 
@@ -161,6 +161,10 @@ class InventoryReservationAndLowStockTest extends TestCase
 
         $cancelResponse = $this->postJson("/api/inventory/reservations/{$res->id}/cancel");
         $cancelResponse->assertStatus(200);
+
+        // Attempting to cancel an already cancelled reservation returns 409 Conflict
+        $conflictResponse = $this->postJson("/api/inventory/reservations/{$res->id}/cancel");
+        $conflictResponse->assertStatus(409);
 
         $this->assertDatabaseHas('inventory_reservations', [
             'id' => $res->id,

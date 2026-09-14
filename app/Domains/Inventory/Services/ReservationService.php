@@ -7,6 +7,9 @@ use App\Domains\Inventory\Models\InventoryObject;
 use App\Domains\Product\Models\Product;
 use App\Domains\Inventory\Events\InventoryReserved;
 use App\Domains\Inventory\Events\InventoryReleased;
+use App\Domains\Inventory\Exceptions\InsufficientStockException;
+use App\Domains\Inventory\Exceptions\InvalidReservationException;
+use App\Domains\Inventory\Exceptions\ReservationConflictException;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Exception;
@@ -32,7 +35,7 @@ class ReservationService
             }
 
             if (!$variantId) {
-                throw new Exception("Product variant ID is required for reservation.");
+                throw new InvalidReservationException("Product variant ID is required for reservation.");
             }
 
             $product = Product::where('id', $variantId)
@@ -47,7 +50,7 @@ class ReservationService
 
             $requestedQty = (float) ($data['quantity'] ?? 0);
             if ($requestedQty <= 0) {
-                throw new Exception("Reservation quantity must be greater than zero.");
+                throw new InvalidReservationException("Reservation quantity must be greater than zero.");
             }
 
             // Lock inventory objects for this variant & optional warehouse/location
@@ -93,7 +96,7 @@ class ReservationService
             if ($requestedQty > $availableQty) {
                 $formattedReq = rtrim(rtrim(number_format($requestedQty, 4, '.', ''), '0'), '.');
                 $formattedAvail = rtrim(rtrim(number_format($availableQty, 4, '.', ''), '0'), '.');
-                throw new Exception("Cannot reserve {$formattedReq} {$unitSymbol} because only {$formattedAvail} {$unitSymbol} is available.");
+                throw new InsufficientStockException("Cannot reserve {$formattedReq} {$unitSymbol} because only {$formattedAvail} {$unitSymbol} is available.");
             }
 
             // Generate sequential reservation number
@@ -142,7 +145,7 @@ class ReservationService
             $res = InventoryReservation::where('id', $reservationId)->firstOrFail();
 
             if (!in_array($res->status, ['ACTIVE', 'PENDING', 'PARTIALLY_FULFILLED'])) {
-                throw new Exception("Reservation #{$res->reservation_number} is already {$res->status}.");
+                throw new ReservationConflictException("Reservation #{$res->reservation_number} is already {$res->status}.");
             }
 
             if ((float) $res->fulfilled_quantity > 0) {
@@ -167,7 +170,7 @@ class ReservationService
                 : InventoryReservation::where('id', $reservation)->firstOrFail();
 
             if (!in_array($res->status, ['ACTIVE', 'PENDING', 'PARTIALLY_FULFILLED'])) {
-                throw new Exception("Reservation #{$res->reservation_number} is currently {$res->status} and cannot be fulfilled.");
+                throw new ReservationConflictException("Reservation #{$res->reservation_number} is currently {$res->status} and cannot be fulfilled.");
             }
 
             $remainingQty = $res->remaining_quantity;
