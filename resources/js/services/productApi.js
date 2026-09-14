@@ -134,7 +134,7 @@ export const productApi = {
     },
 
     deleteProductAttribute: async (productId, attributeId) => {
-        const response = await axios.delete(`/api/products/${productId}/attributes/${attributeId}`, {
+        const response = await axios.delete(`/api/product/variants/${productId}/attributes/${attributeId}`, {
             headers: getAuthHeaders()
         });
         return response.data;

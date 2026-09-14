@@ -104,10 +104,10 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::get('/inventory/form-data', [InventoryApiController::class, 'getFormData']);
         Route::get('/inventory/movements', [InventoryApiController::class, 'getMovements']);
         Route::get('/granite/slabs', [GraniteSlabApiController::class, 'index']);
+        Route::post('/granite/slabs', [GraniteSlabApiController::class, 'store']);
+        Route::post('/granite/slabs/new', [GraniteSlabApiController::class, 'store']);
         Route::get('/granite/slabs/{id}', [GraniteSlabApiController::class, 'show']);
         Route::post('/granite/slabs/{id}/cut', [GraniteSlabApiController::class, 'cut']);
-        Route::post('/granite/slabs/new', [InventoryApiController::class, 'createSlab']);
-        Route::post('/granite/slabs/{id}/cut', [InventoryApiController::class, 'cutSlab']); // override/new handler
 
         Route::get('/inventory/reservations', [InventoryApiController::class, 'listReservations']);
         Route::get('/inventory/reservations/{id}', [InventoryApiController::class, 'showReservation']);
@@ -150,10 +150,10 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::get('/product/variants', [ProductApiController::class, 'listVariants']);
     Route::post('/product/variants', [ProductApiController::class, 'storeVariant']);
     Route::post('/product/attributes', [ProductApiController::class, 'storeAttribute']);
-    Route::post('/products/{productId}/attributes', [ProductApiController::class, 'assignProductAttribute']);
     Route::post('/product/variants/{productId}/attributes', [ProductApiController::class, 'assignProductAttribute']);
-    Route::delete('/products/{productId}/attributes/{attributeId}', [ProductApiController::class, 'removeProductAttribute']);
     Route::delete('/product/variants/{productId}/attributes/{attributeId}', [ProductApiController::class, 'removeProductAttribute']);
+    Route::post('/products/{productId}/attributes', [ProductApiController::class, 'assignProductAttribute']);
+    Route::delete('/products/{productId}/attributes/{attributeId}', [ProductApiController::class, 'removeProductAttribute']);
     Route::get('/product/variants/{id}', [ProductApiController::class, 'showVariant']);
     Route::put('/product/variants/{id}', [ProductApiController::class, 'updateVariant']);
     Route::get('/product/variants/{id}/conversions', [ProductApiController::class, 'listConversions']);

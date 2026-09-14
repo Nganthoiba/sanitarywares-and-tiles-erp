@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\Inventory;
 use App\Http\Controllers\Controller;
 use App\Domains\Inventory\Models\InventoryObject;
 use App\Domains\Inventory\Services\GraniteService;
-use App\Http\Requests\CutSlabRequest;
 use App\Http\Resources\InventoryObjectResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -63,19 +62,47 @@ class GraniteSlabApiController extends Controller
     }
 
     /**
+     * POST /api/granite/slabs/new or POST /api/granite/slabs
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'warehouse_id' => 'required|exists:warehouses,id',
+            'product_variant_id' => 'required|exists:product_variants,id',
+            'slab_code' => 'required|string',
+            'length' => 'required|numeric',
+            'width' => 'required|numeric',
+            'thickness' => 'nullable|numeric',
+            'area' => 'nullable|numeric',
+            'finish' => 'nullable|string',
+            'origin' => 'nullable|string'
+        ]);
+
+        $slab = $this->graniteService->createSlab(array_merge($validated, [
+            'organization_id' => $request->header('X-Organization-Id', 1)
+        ]));
+
+        return response()->json(['success' => true, 'data' => $slab]);
+    }
+
+    /**
      * POST /api/granite/slabs/{id}/cut
      */
-    public function cut(CutSlabRequest $request, int $id): JsonResponse
+    public function cut(Request $request, int $id): JsonResponse
     {
-        $result = $this->graniteService->splitSlab($id, $request->input('splits'));
+        $validated = $request->validate([
+            'cuts' => 'required|array',
+            'cuts.*.length' => 'required|numeric',
+            'cuts.*.width' => 'required|numeric',
+            'cuts.*.area' => 'required|numeric'
+        ]);
+
+        $result = $this->graniteService->cutSlab($id, $validated['cuts']);
 
         return response()->json([
             'success' => true,
-            'message' => 'Slab split transaction successfully processed.',
-            'data' => [
-                'parent' => new InventoryObjectResource($result['parent']),
-                'children' => InventoryObjectResource::collection($result['children']),
-            ]
+            'message' => 'Slab cut transaction successfully processed.',
+            'data' => $result
         ]);
     }
 }
