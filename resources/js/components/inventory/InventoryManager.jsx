@@ -1647,6 +1647,7 @@ export default function InventoryManager() {
                                                 value={reserveForm.expires_at}
                                                 onChange={e => setReserveForm({ ...reserveForm, expires_at: e.target.value })}
                                             />
+                                            <div className="form-text text-muted" style={{ fontSize: '0.75rem' }}>Leave blank for indefinite hold (Never Expires).</div>
                                         </div>
 
                                         <div className="col-12 col-md-6">

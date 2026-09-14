@@ -199,12 +199,15 @@ class ReservationService
     }
 
     /**
-     * Expire active reservations past their expiration date.
+     * Expire active reservations past their explicit expiration date.
+     * Note: Reservations with expires_at = NULL do NOT auto-expire (Never Expires).
      */
-    public function expireOldReservations(int $hoursThreshold = 24): int
+    public function expireOldReservations(?int $hoursThreshold = null): int
     {
-        $expiredList = InventoryReservation::whereIn('status', ['ACTIVE', 'PENDING', 'PARTIALLY_FULFILLED'])
-            ->where(function ($q) use ($hoursThreshold) {
+        $query = InventoryReservation::whereIn('status', ['ACTIVE', 'PENDING', 'PARTIALLY_FULFILLED']);
+
+        if ($hoursThreshold !== null && $hoursThreshold > 0) {
+            $query->where(function ($q) use ($hoursThreshold) {
                 $q->where(function ($sub) {
                     $sub->whereNotNull('expires_at')
                         ->where('expires_at', '<', Carbon::now());
@@ -213,8 +216,13 @@ class ReservationService
                     $sub->whereNull('expires_at')
                         ->where('created_at', '<', Carbon::now()->subHours($hoursThreshold));
                 });
-            })
-            ->get();
+            });
+        } else {
+            $query->whereNotNull('expires_at')
+                ->where('expires_at', '<', Carbon::now());
+        }
+
+        $expiredList = $query->get();
 
         $count = 0;
         foreach ($expiredList as $res) {
