@@ -26,6 +26,7 @@ use App\Domains\Master\Models\Customer;
 use App\Domains\Product\Models\Product;
 use App\Http\Resources\InventoryObjectResource;
 use Carbon\Carbon;
+use Exception;
 
 class InventoryApiController extends Controller
 {
@@ -85,7 +86,7 @@ class InventoryApiController extends Controller
         $reservationQuery = InventoryReservation::whereIn('status', ['ACTIVE', 'PENDING'])
             ->where(function ($q) {
                 $q->whereNull('expires_at')
-                  ->orWhere('expires_at', '>=', Carbon::now());
+                    ->orWhere('expires_at', '>=', Carbon::now());
             });
 
         if ($orgId) {
@@ -402,7 +403,7 @@ class InventoryApiController extends Controller
             $search = $request->input('search');
             $query->whereHas('inventoryObject.variant', function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('sku', 'like', "%{$search}%");
+                    ->orWhere('sku', 'like', "%{$search}%");
             });
         }
 
@@ -411,7 +412,7 @@ class InventoryApiController extends Controller
             $wId = $request->input('warehouse_id');
             $query->where(function ($q) use ($wId) {
                 $q->where('from_warehouse_id', $wId)
-                  ->orWhere('to_warehouse_id', $wId);
+                    ->orWhere('to_warehouse_id', $wId);
             });
         }
 
@@ -420,7 +421,7 @@ class InventoryApiController extends Controller
             $locId = $request->input('storage_location_id');
             $query->where(function ($q) use ($locId) {
                 $q->where('from_storage_location_id', $locId)
-                  ->orWhere('to_storage_location_id', $locId);
+                    ->orWhere('to_storage_location_id', $locId);
             });
         }
 
@@ -516,9 +517,9 @@ class InventoryApiController extends Controller
             $search = strtolower(trim($request->input('search')));
             $query->where(function ($q) use ($search) {
                 $q->where('reservation_number', 'like', "%{$search}%")
-                  ->orWhere('reference_number', 'like', "%{$search}%")
-                  ->orWhereHas('product', fn($pq) => $pq->where('name', 'like', "%{$search}%")->orWhere('sku', 'like', "%{$search}%"))
-                  ->orWhereHas('customer', fn($cq) => $cq->where('name', 'like', "%{$search}%"));
+                    ->orWhere('reference_number', 'like', "%{$search}%")
+                    ->orWhereHas('product', fn($pq) => $pq->where('name', 'like', "%{$search}%")->orWhere('sku', 'like', "%{$search}%"))
+                    ->orWhereHas('customer', fn($cq) => $cq->where('name', 'like', "%{$search}%"));
             });
         }
 
@@ -575,16 +576,23 @@ class InventoryApiController extends Controller
             'source_id' => 'nullable|integer',
         ]);
 
-        $res = $this->reservationService->reserve(array_merge($validated, [
-            'organization_id' => $request->user()->organization_id ?? 1,
-            'created_by' => $request->user()?->id,
-        ]));
+        try {
+            $res = $this->reservationService->reserve(array_merge($validated, [
+                'organization_id' => $request->user()->organization_id ?? 1,
+                'created_by' => $request->user()?->id,
+            ]));
 
-        return response()->json([
-            'success' => true,
-            'data' => $res,
-            'message' => 'Stock reserved successfully.'
-        ]);
+            return response()->json([
+                'success' => true,
+                'data' => $res,
+                'message' => 'Stock reserved successfully.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 
     /**
@@ -592,8 +600,15 @@ class InventoryApiController extends Controller
      */
     public function releaseReservation($id)
     {
-        $this->reservationService->release($id);
-        return response()->json(['success' => true, 'message' => 'Reservation successfully cancelled and released.']);
+        try {
+            $this->reservationService->release($id);
+            return response()->json(['success' => true, 'message' => 'Reservation successfully cancelled and released.']);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 
     /**
@@ -606,19 +621,26 @@ class InventoryApiController extends Controller
             'area' => 'nullable|numeric|min:0',
         ]);
 
-        $res = $this->reservationService->fulfill(
-            $id,
-            $validated['quantity'] ?? null,
-            $validated['area'] ?? null
-        );
+        try {
+            $res = $this->reservationService->fulfill(
+                (int) $id,
+                $validated['quantity'] ?? null,
+                $validated['area'] ?? null
+            );
 
-        return response()->json([
-            'success' => true,
-            'data' => $res,
-            'message' => $res->status === 'FULFILLED'
-                ? 'Reservation fully fulfilled and marked as complete.'
-                : 'Reservation partially fulfilled successfully.'
-        ]);
+            return response()->json([
+                'success' => true,
+                'data' => $res,
+                'message' => $res->status === 'FULFILLED'
+                    ? 'Reservation fully fulfilled and marked as complete.'
+                    : 'Reservation partially fulfilled successfully.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 
     /**

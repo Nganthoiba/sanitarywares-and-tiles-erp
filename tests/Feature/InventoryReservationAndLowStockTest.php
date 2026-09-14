@@ -144,7 +144,7 @@ class InventoryReservationAndLowStockTest extends TestCase
             'quantity' => 30,
         ]);
 
-        $failResponse->assertStatus(500);
+        $failResponse->assertStatus(422);
         $this->assertStringContainsString('Cannot reserve 30 Box because only 20 Box is available.', $failResponse->json('message'));
     }
 
