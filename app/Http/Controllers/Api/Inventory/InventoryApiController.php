@@ -162,7 +162,7 @@ class InventoryApiController extends Controller
                     'product_specs' => $productSpecs,
                     'packaging_info' => $packagingInfo,
                     'unit_symbol' => $unitSymbol,
-                    'low_stock_warning_level' => (float) ($variant->low_stock_warning_level ?? 0),
+                    'low_stock_warning_level' => $variant->getLowStockThreshold($obj->warehouse_id),
                     'warehouse_id' => $obj->warehouse_id,
                     'warehouse_name' => $obj->warehouse?->name ?? 'Main Warehouse',
                     'storage_location_id' => $obj->storage_location_id,

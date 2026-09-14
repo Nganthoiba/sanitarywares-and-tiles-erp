@@ -92,4 +92,14 @@ class Product extends Model {
         }
         return (float) ($areaPerPiece * $this->pieces_per_box);
     }
+
+    /**
+     * Get the low stock warning threshold for this product variant.
+     * Designed to support future warehouse-specific or organization-level overrides.
+     */
+    public function getLowStockThreshold(?int $warehouseId = null): float {
+        // Currently retrieves product-level threshold.
+        // Can be extended to query organization_product_inventory_settings or warehouse overrides when needed.
+        return (float) ($this->low_stock_warning_level ?? 0.0);
+    }
 }

@@ -338,4 +338,16 @@ class InventoryService
             return 0.0000;
         }
     }
+
+    /**
+     * Resolve low stock warning threshold for a product variant and optional warehouse.
+     */
+    public function getLowStockThreshold(Product|int $productVariant, ?int $warehouseId = null): float
+    {
+        $product = $productVariant instanceof Product
+            ? $productVariant
+            : Product::find($productVariant);
+
+        return $product ? $product->getLowStockThreshold($warehouseId) : 0.0;
+    }
 }
