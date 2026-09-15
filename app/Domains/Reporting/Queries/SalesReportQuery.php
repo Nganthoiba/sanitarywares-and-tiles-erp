@@ -8,7 +8,10 @@ class SalesReportQuery
 {
     public function getSalesRegister(array $filters): array
     {
-        $orgId = $filters['organization_id'] ?? 1;
+        if (empty($filters['organization_id'])) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
+        $orgId = (int) $filters['organization_id'];
 
         $query = DB::table('invoices')
             ->join('customers', 'invoices.customer_id', '=', 'customers.id')
@@ -39,7 +42,10 @@ class SalesReportQuery
 
     public function getSalesByCategory(array $filters): array
     {
-        $orgId = $filters['organization_id'] ?? 1;
+        if (empty($filters['organization_id'])) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
+        $orgId = (int) $filters['organization_id'];
 
         $query = DB::table('invoice_items')
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')

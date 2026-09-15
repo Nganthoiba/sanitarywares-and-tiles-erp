@@ -20,13 +20,17 @@ class RefreshSnapshotsJob implements ShouldQueue
 
     public function handle(): void
     {
+        if (empty($this->parameters['organization_id'])) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required for snapshot refresh.");
+        }
+
         Log::info("Starting background Report Snapshot Refresh Job...", $this->parameters);
 
         // Simulate materialized view / cached aggregation table refresh
         // e.g. DB::statement("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_inventory_valuation");
 
         DB::table('report_audit_logs')->insert([
-            'organization_id' => $this->parameters['organization_id'] ?? 1,
+            'organization_id' => $this->parameters['organization_id'],
             'user_id' => $this->parameters['user_id'] ?? 1,
             'report_type' => 'background',
             'report_name' => 'Snapshot Cache Refresh (Automated Queue Run)',

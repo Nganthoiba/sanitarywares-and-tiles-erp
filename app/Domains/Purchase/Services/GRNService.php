@@ -39,7 +39,10 @@ class GRNService
             if (isset($data['grn_number'])) {
                 $grnNumber = $data['grn_number'];
             } else {
-                $orgId = $data['organization_id'] ?? Warehouse::where('id', $data['warehouse_id'])->value('organization_id') ?? 1;
+                $orgId = $data['organization_id'] ?? Warehouse::where('id', $data['warehouse_id'])->value('organization_id');
+                if (empty($orgId)) {
+                    throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+                }
                 $grnNumber = $this->documentNumberService->generateNextNumber($orgId, 'GRN', $data['received_date'] ?? null);
             }
 

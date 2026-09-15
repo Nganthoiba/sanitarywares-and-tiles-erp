@@ -642,8 +642,13 @@ class InventoryApiController extends Controller
         ]);
 
         try {
+            $orgId = $request->user()?->organization_id ?? $request->header('X-Organization-Id');
+            if (empty($orgId)) {
+                throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+            }
+
             $res = $this->reservationService->reserve(array_merge($validated, [
-                'organization_id' => $request->user()->organization_id ?? 1,
+                'organization_id' => (int) $orgId,
                 'created_by' => $request->user()?->id,
             ]));
 
@@ -732,7 +737,7 @@ class InventoryApiController extends Controller
             'low_stock_warning_level' => 'required|numeric|min:0',
         ]);
 
-        $orgId = $request->user()?->organization_id;
+        $orgId = $request->user()?->organization_id ?? $request->header('X-Organization-Id');
         $product = Product::where('id', $id)
             ->when($orgId, fn($q) => $q->where('organization_id', $orgId))
             ->firstOrFail();
@@ -758,8 +763,13 @@ class InventoryApiController extends Controller
             'reference_id' => 'nullable|integer'
         ]);
 
+        $orgId = $request->user()?->organization_id ?? $request->header('X-Organization-Id');
+        if (empty($orgId)) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
+
         $alloc = $this->allocationService->allocate(array_merge($validated, [
-            'organization_id' => $request->header('X-Organization-Id', 1)
+            'organization_id' => (int) $orgId
         ]));
 
         return response()->json(['success' => true, 'data' => $alloc]);
@@ -783,11 +793,14 @@ class InventoryApiController extends Controller
             'items.*.quantity' => 'required|numeric|min:0.0001'
         ]);
 
-        $orgId = $request->user()?->organization_id ?? $request->header('X-Organization-Id', 1);
+        $orgId = $request->user()?->organization_id ?? $request->header('X-Organization-Id');
+        if (empty($orgId)) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
 
         $trf = $this->transferService->initiateTransfer(array_merge($validated, [
-            'organization_id' => $orgId,
-            'user_id' => $request->user()?->id ?? 1
+            'organization_id' => (int) $orgId,
+            'user_id' => $request->user()?->id
         ]));
 
         return response()->json(['success' => true, 'data' => $trf]);
@@ -813,11 +826,14 @@ class InventoryApiController extends Controller
             'items.*.area_delta' => 'nullable|numeric'
         ]);
 
-        $orgId = $request->user()?->organization_id ?? $request->header('X-Organization-Id', 1);
+        $orgId = $request->user()?->organization_id ?? $request->header('X-Organization-Id');
+        if (empty($orgId)) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
 
         $adj = $this->adjustmentService->initiateAdjustment(array_merge($validated, [
-            'organization_id' => $orgId,
-            'user_id' => $request->user()?->id ?? 1
+            'organization_id' => (int) $orgId,
+            'user_id' => $request->user()?->id
         ]));
 
         return response()->json(['success' => true, 'data' => $adj]);
@@ -825,7 +841,7 @@ class InventoryApiController extends Controller
 
     public function approveAdjustment(Request $request, $id)
     {
-        $approverId = $request->user()?->id ?? 1;
+        $approverId = $request->user()?->id;
         $this->adjustmentService->approveAdjustment($id, $approverId);
         return response()->json(['success' => true, 'message' => 'Stock adjustment approved and posted.']);
     }
@@ -839,9 +855,14 @@ class InventoryApiController extends Controller
             'remarks' => 'nullable|string'
         ]);
 
+        $orgId = $request->user()?->organization_id ?? $request->header('X-Organization-Id');
+        if (empty($orgId)) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
+
         $cnt = $this->countService->initiateCount(array_merge($validated, [
-            'organization_id' => $request->header('X-Organization-Id', 1),
-            'user_id' => $request->user()?->id ?? 1
+            'organization_id' => (int) $orgId,
+            'user_id' => $request->user()?->id
         ]));
 
         return response()->json(['success' => true, 'data' => $cnt]);
@@ -860,7 +881,7 @@ class InventoryApiController extends Controller
 
     public function approveCount(Request $request, $id)
     {
-        $approverId = $request->user()?->id ?? 1;
+        $approverId = $request->user()?->id;
         $this->countService->approveCount($id, $approverId);
         return response()->json(['success' => true, 'message' => 'Physical stock count verified, variations adjusted.']);
     }
@@ -880,8 +901,13 @@ class InventoryApiController extends Controller
             'origin' => 'nullable|string'
         ]);
 
+        $orgId = $request->user()?->organization_id ?? $request->header('X-Organization-Id');
+        if (!$orgId) {
+            return response()->json(['message' => 'Organization ID is required.'], 422);
+        }
+
         $slab = $this->graniteService->createSlab(array_merge($validated, [
-            'organization_id' => $request->header('X-Organization-Id', 1)
+            'organization_id' => (int) $orgId
         ]));
 
         return response()->json(['success' => true, 'data' => $slab]);

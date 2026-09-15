@@ -25,7 +25,10 @@ class TransferService
     public function initiateTransfer(array $data): InventoryTransfer
     {
         return DB::transaction(function () use ($data) {
-            $orgId = $data['organization_id'] ?? 1;
+            if (empty($data['organization_id'])) {
+                throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+            }
+            $orgId = (int) $data['organization_id'];
             $trfDate = $data['transfer_date'] ?? now()->toDateString();
             $trfNumber = $data['transfer_number'] ?? $this->documentNumberService->generateNextNumber($orgId, 'TRF', $trfDate);
 

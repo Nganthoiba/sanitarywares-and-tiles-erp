@@ -9,8 +9,12 @@ class DashboardService
 {
     public function getDashboardSummary(array $filters): array
     {
+        if (empty($filters['organization_id'])) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
+
         $startTime = microtime(true);
-        $orgId = $filters['organization_id'] ?? 1;
+        $orgId = (int) $filters['organization_id'];
 
         // Sales totals
         $salesSum = DB::table('invoices')

@@ -14,8 +14,12 @@ class AccountingReportService
 
     public function generateTrialBalanceReport(array $filters): array
     {
+        if (empty($filters['organization_id'])) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
+
         $startTime = microtime(true);
-        $orgId = $filters['organization_id'] ?? 1;
+        $orgId = (int) $filters['organization_id'];
 
         $data = $this->coreService->getTrialBalance($orgId);
 
@@ -45,8 +49,12 @@ class AccountingReportService
 
     public function generateProfitLossReport(array $filters): array
     {
+        if (empty($filters['organization_id'])) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
+
         $startTime = microtime(true);
-        $orgId = $filters['organization_id'] ?? 1;
+        $orgId = (int) $filters['organization_id'];
 
         $data = $this->coreService->getProfitLoss($orgId);
 
@@ -76,8 +84,12 @@ class AccountingReportService
 
     public function generateBalanceSheetReport(array $filters): array
     {
+        if (empty($filters['organization_id'])) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
+
         $startTime = microtime(true);
-        $orgId = $filters['organization_id'] ?? 1;
+        $orgId = (int) $filters['organization_id'];
 
         $data = $this->coreService->getBalanceSheet($orgId);
 

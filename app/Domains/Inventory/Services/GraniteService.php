@@ -15,8 +15,12 @@ class GraniteService
 
     public function createSlab(array $data): InventoryObject
     {
+        if (empty($data['organization_id'])) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
+
         $slab = InventoryObject::create([
-            'organization_id' => $data['organization_id'] ?? 1,
+            'organization_id' => (int) $data['organization_id'],
             'warehouse_id' => $data['warehouse_id'],
             'product_variant_id' => $data['product_variant_id'],
             'status' => 'ON_HAND',

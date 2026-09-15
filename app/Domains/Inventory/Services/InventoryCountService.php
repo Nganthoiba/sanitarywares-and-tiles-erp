@@ -27,7 +27,10 @@ class InventoryCountService
     public function initiateCount(array $data): InventoryCount
     {
         return DB::transaction(function () use ($data) {
-            $orgId = $data['organization_id'] ?? 1;
+            if (empty($data['organization_id'])) {
+                throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+            }
+            $orgId = (int) $data['organization_id'];
             $countDate = $data['count_date'] ?? now()->toDateString();
             $countNumber = $data['count_number'] ?? $this->documentNumberService->generateNextNumber($orgId, 'CNT', $countDate);
 

@@ -8,7 +8,10 @@ class GraniteReportQuery
 {
     public function getGraniteSlabs(array $filters): array
     {
-        $orgId = $filters['organization_id'] ?? 1;
+        if (empty($filters['organization_id'])) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
+        $orgId = (int) $filters['organization_id'];
 
         $query = DB::table('inventory_objects')
             ->join('product_variants', 'inventory_objects.product_variant_id', '=', 'product_variants.id')

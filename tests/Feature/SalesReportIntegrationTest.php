@@ -35,6 +35,7 @@ class SalesReportIntegrationTest extends TestCase
         parent::setUp();
 
         $this->org = Organization::create(['code' => 'TEST-ORG-2', 'name' => 'Report Test Sanitaryware Org']);
+        app(\App\Shared\Context\TenantContext::class)->setOrganization($this->org);
 
         $this->branch1 = Branch::create([
             'organization_id' => $this->org->id,

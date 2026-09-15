@@ -14,6 +14,10 @@ class SalesReportService
 
     public function generateSalesRegisterReport(array $filters): array
     {
+        if (empty($filters['organization_id'])) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
+
         $startTime = microtime(true);
 
         $data = $this->query->getSalesRegister($filters);
@@ -21,7 +25,7 @@ class SalesReportService
         $executionTimeMs = (microtime(true) - $startTime) * 1000;
 
         ReportAuditLog::create([
-            'organization_id' => $filters['organization_id'] ?? 1,
+            'organization_id' => $filters['organization_id'],
             'user_id' => $filters['user_id'] ?? 1,
             'report_type' => 'sales',
             'report_name' => 'Sales Register Report',
@@ -44,6 +48,10 @@ class SalesReportService
 
     public function generateSalesByCategoryReport(array $filters): array
     {
+        if (empty($filters['organization_id'])) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
+
         $startTime = microtime(true);
 
         $data = $this->query->getSalesByCategory($filters);
@@ -51,7 +59,7 @@ class SalesReportService
         $executionTimeMs = (microtime(true) - $startTime) * 1000;
 
         ReportAuditLog::create([
-            'organization_id' => $filters['organization_id'] ?? 1,
+            'organization_id' => $filters['organization_id'],
             'user_id' => $filters['user_id'] ?? 1,
             'report_type' => 'sales',
             'report_name' => 'Sales By Category Report',

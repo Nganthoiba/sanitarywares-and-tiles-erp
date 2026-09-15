@@ -25,7 +25,10 @@ class AdjustmentService
     public function initiateAdjustment(array $data): InventoryAdjustment
     {
         return DB::transaction(function () use ($data) {
-            $orgId = $data['organization_id'] ?? 1;
+            if (empty($data['organization_id'])) {
+                throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+            }
+            $orgId = (int) $data['organization_id'];
             $adjDate = $data['adjustment_date'] ?? now()->toDateString();
             $adjNumber = $data['adjustment_number'] ?? $this->documentNumberService->generateNextNumber($orgId, 'ADJ', $adjDate);
 

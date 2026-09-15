@@ -8,7 +8,10 @@ class InventoryReportQuery
 {
     public function getStockLedger(array $filters): array
     {
-        $orgId = $filters['organization_id'] ?? 1;
+        if (empty($filters['organization_id'])) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
+        $orgId = (int) $filters['organization_id'];
 
         $query = DB::table('inventory_movements')
             ->join('inventory_objects', 'inventory_movements.inventory_object_id', '=', 'inventory_objects.id')
@@ -39,7 +42,10 @@ class InventoryReportQuery
 
     public function getCurrentStock(array $filters): array
     {
-        $orgId = $filters['organization_id'] ?? 1;
+        if (empty($filters['organization_id'])) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
+        $orgId = (int) $filters['organization_id'];
 
         $query = DB::table('inventory_objects')
             ->join('product_variants', 'inventory_objects.product_variant_id', '=', 'product_variants.id')

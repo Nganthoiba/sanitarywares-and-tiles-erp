@@ -30,7 +30,10 @@ class ReservationService
     public function reserve(array $data): InventoryReservation
     {
         return DB::transaction(function () use ($data) {
-            $orgId = $data['organization_id'] ?? 1;
+            if (empty($data['organization_id'])) {
+                throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+            }
+            $orgId = (int) $data['organization_id'];
             $variantId = $data['product_variant_id'] ?? $data['product_id'] ?? null;
             $objectId = $data['inventory_object_id'] ?? null;
 

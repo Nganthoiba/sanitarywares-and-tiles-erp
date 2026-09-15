@@ -18,8 +18,12 @@ class AllocationService
             throw new Exception("Inventory item is currently not available for allocation.");
         }
 
+        if (empty($data['organization_id'])) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
+
         $alloc = InventoryAllocation::create([
-            'organization_id' => $data['organization_id'] ?? 1,
+            'organization_id' => (int) $data['organization_id'],
             'inventory_reservation_id' => $data['inventory_reservation_id'],
             'inventory_object_id' => $obj->id,
             'quantity' => $data['quantity'],

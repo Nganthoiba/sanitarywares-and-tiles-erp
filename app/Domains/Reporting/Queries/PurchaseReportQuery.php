@@ -8,7 +8,10 @@ class PurchaseReportQuery
 {
     public function getPurchaseRegister(array $filters): array
     {
-        $orgId = $filters['organization_id'] ?? 1;
+        if (empty($filters['organization_id'])) {
+            throw new \InvalidArgumentException("Organization context (organization_id) is required.");
+        }
+        $orgId = (int) $filters['organization_id'];
 
         $query = DB::table('supplier_invoices')
             ->join('suppliers', 'supplier_invoices.supplier_id', '=', 'suppliers.id')

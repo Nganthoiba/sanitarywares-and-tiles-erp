@@ -13,11 +13,28 @@ use App\Models\User;
 
 class OrganizationScope implements Scope
 {
+    protected static bool $bypass = false;
+
+    public static function bypass(callable $callback)
+    {
+        $previous = static::$bypass;
+        static::$bypass = true;
+        try {
+            return $callback();
+        } finally {
+            static::$bypass = $previous;
+        }
+    }
+
     /**
      * Apply the scope to a given Eloquent query builder.
      */
     public function apply(Builder $builder, Model $model): void
     {
+        if (static::$bypass) {
+            return;
+        }
+
         // 1. Skip tenant filtering for global platform entities
         if (
             $model instanceof \App\Domains\Security\Models\Permission ||
@@ -82,7 +99,7 @@ class OrganizationScope implements Scope
             return;
         }
 
-        // 5. Default fallback: do not filter if no tenant context, auth, or header is active
-        return;
+        // 5. Strict Default Fallback: DENY query for tenant-owned entities if context is completely missing
+        $builder->whereRaw('1 = 0');
     }
 }

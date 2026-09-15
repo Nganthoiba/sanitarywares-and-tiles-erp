@@ -26,16 +26,28 @@ class ReportingApiController extends Controller
         protected DashboardService $dashboardService
     ) {}
 
+    protected function extractFilters(Request $request): array
+    {
+        $filters = $request->all();
+        $orgId = $filters['organization_id'] ?? $request->user()?->organization_id ?? $request->header('X-Organization-Id');
+        if (!empty($orgId)) {
+            $filters['organization_id'] = (int) $orgId;
+        }
+        if ($request->user() && empty($filters['user_id'])) {
+            $filters['user_id'] = $request->user()->id;
+        }
+        return $filters;
+    }
+
     public function getInventoryReports(Request $request)
     {
-        if ($request->user()?->organization_id === null) {
+        if ($request->user()?->organization_id === null && !$request->header('X-Organization-Id')) {
             return response()->json([
-                'message' => 'Platform users without an organization are not authorized to access inventory.'
+                'message' => 'Platform users without an organization context are not authorized to access inventory reports.'
             ], 403);
         }
 
-        $filters = $request->all();
-        $filters['user_id'] = $request->user()?->id ?? 1;
+        $filters = $this->extractFilters($request);
 
         if ($request->query('report_name') === 'Current Stock') {
             return response()->json($this->inventoryService->generateCurrentStockReport($filters));
@@ -46,8 +58,7 @@ class ReportingApiController extends Controller
 
     public function getSalesReports(Request $request)
     {
-        $filters = $request->all();
-        $filters['user_id'] = $request->user()?->id ?? 1;
+        $filters = $this->extractFilters($request);
 
         if ($request->query('report_name') === 'Sales By Category') {
             return response()->json($this->salesService->generateSalesByCategoryReport($filters));
@@ -58,30 +69,27 @@ class ReportingApiController extends Controller
 
     public function getPurchaseReports(Request $request)
     {
-        $filters = $request->all();
-        $filters['user_id'] = $request->user()?->id ?? 1;
+        $filters = $this->extractFilters($request);
 
         return response()->json($this->purchaseService->generatePurchaseRegisterReport($filters));
     }
 
     public function getGraniteReports(Request $request)
     {
-        if ($request->user()?->organization_id === null) {
+        if ($request->user()?->organization_id === null && !$request->header('X-Organization-Id')) {
             return response()->json([
-                'message' => 'Platform users without an organization are not authorized to access inventory.'
+                'message' => 'Platform users without an organization context are not authorized to access granite reports.'
             ], 403);
         }
 
-        $filters = $request->all();
-        $filters['user_id'] = $request->user()?->id ?? 1;
+        $filters = $this->extractFilters($request);
 
         return response()->json($this->graniteService->generateGraniteSlabReport($filters));
     }
 
     public function getAccountingReports(Request $request)
     {
-        $filters = $request->all();
-        $filters['user_id'] = $request->user()?->id ?? 1;
+        $filters = $this->extractFilters($request);
 
         $reportName = $request->query('report_name');
         if ($reportName === 'Profit & Loss') {
@@ -95,24 +103,21 @@ class ReportingApiController extends Controller
 
     public function getManagementReports(Request $request)
     {
-        $filters = $request->all();
-        $filters['user_id'] = $request->user()?->id ?? 1;
+        $filters = $this->extractFilters($request);
 
         return response()->json($this->managementService->generatePerformanceReport($filters));
     }
 
     public function getAuditReports(Request $request)
     {
-        $filters = $request->all();
-        $filters['user_id'] = $request->user()?->id ?? 1;
+        $filters = $this->extractFilters($request);
 
         return response()->json($this->auditService->generateReportAuditLogReport($filters));
     }
 
     public function getDashboardSummary(Request $request)
     {
-        $filters = $request->all();
-        $filters['user_id'] = $request->user()?->id ?? 1;
+        $filters = $this->extractFilters($request);
 
         return response()->json($this->dashboardService->getDashboardSummary($filters));
     }

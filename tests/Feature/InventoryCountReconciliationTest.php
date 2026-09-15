@@ -33,6 +33,7 @@ class InventoryCountReconciliationTest extends TestCase
         parent::setUp();
 
         $this->org = Organization::create(['code' => 'TEST-ORG-1', 'name' => 'Test Tile & Sanitaryware Corp']);
+        app(\App\Shared\Context\TenantContext::class)->setOrganization($this->org);
         $this->branch = Branch::create([
             'organization_id' => $this->org->id,
             'code' => 'MAIN-BR',

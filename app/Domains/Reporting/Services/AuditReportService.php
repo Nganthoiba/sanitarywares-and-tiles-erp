@@ -9,8 +9,11 @@ class AuditReportService
 {
     public function generateReportAuditLogReport(array $filters): array
     {
+        if (empty($filters['organization_id'])) {
+            throw new \InvalidArgumentException("organization_id parameter is required for reporting context.");
+        }
+        $orgId = (int) $filters['organization_id'];
         $startTime = microtime(true);
-        $orgId = $filters['organization_id'] ?? 1;
 
         $query = ReportAuditLog::with('user')
             ->where('organization_id', $orgId);

@@ -10,8 +10,10 @@ class ManagementReportService
 {
     public function generatePerformanceReport(array $filters): array
     {
-        $startTime = microtime(true);
-        $orgId = $filters['organization_id'] ?? 1;
+        if (empty($filters['organization_id'])) {
+            throw new \InvalidArgumentException("organization_id parameter is required for reporting context.");
+        }
+        $orgId = (int) $filters['organization_id'];
 
         // Management performance metrics: counting dispatches, invoices, and purchase records
         $totalSales = DB::table('invoices')

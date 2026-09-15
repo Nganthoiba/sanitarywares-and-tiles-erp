@@ -25,6 +25,7 @@ echo "--- Bootstrapped Laravel 12 workspace context for Reporting Engine Validat
 \Illuminate\Support\Facades\DB::transaction(function () {
     // 1. Setup multi-tenant seed records
     $org = Organization::firstOrCreate(['id' => 1]);
+    app(\App\Shared\Context\TenantContext::class)->setOrganization($org);
     $branch = Branch::firstOrCreate([
         'organization_id' => $org->id,
         'code' => 'REP-BR-1',
