@@ -105,7 +105,8 @@ class TransferService
                         $orgId,
                         $variantId,
                         $transfer->from_warehouse_id,
-                        $transferQty
+                        $transferQty,
+                        $item['unit_id'] ?? null
                     );
 
                     foreach ($allocations as $alloc) {

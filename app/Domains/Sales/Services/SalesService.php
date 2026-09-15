@@ -281,12 +281,12 @@ class SalesService
                 } else {
                     $convFactor = 1.0;
                     if ($unitId !== $variant->base_unit_id) {
-                        $conversion = \App\Domains\Master\Models\UnitConversion::where('product_variant_id', $variant->id)
+                        $conversion = \App\Domains\Product\Models\UnitConversion::where('product_variant_id', $variant->id)
                             ->where('from_unit_id', $unitId)
                             ->where('to_unit_id', $variant->base_unit_id)
                             ->first();
                         if ($conversion) {
-                            $convFactor = (float) $conversion->factor;
+                            $convFactor = (float) $conversion->multiplier;
                         }
                     }
                     $baseUnitQty = $quantity * $convFactor;
