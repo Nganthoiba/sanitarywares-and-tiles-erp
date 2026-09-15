@@ -543,13 +543,14 @@ class SalesService
                 $paymentAccName = ($paymentMethod === 'CASH') ? 'Cash in Hand' : 'Main Bank Account';
                 $paymentAccount = $this->resolveAccount($organizationId, $paymentAccCode, $paymentAccName, 'ASSET', 'Bank Accounts');
 
+                $rcpNumber = $this->documentNumberService->generateNextNumber($organizationId, 'RCP', $invoiceDate);
                 $this->postingService->postReceipt(
                     $organizationId,
                     1,
                     $paidAmount,
                     $paymentAccount->id,
                     $customerAccount->id,
-                    'RCP-' . $invoiceNumber,
+                    $rcpNumber,
                     $invoiceDate
                 );
             }
@@ -1186,13 +1187,14 @@ class SalesService
                 $paymentAccName = ($paymentMethod === 'CASH') ? 'Cash in Hand' : 'Main Bank Account';
                 $paymentAccount = $this->resolveAccount($organizationId, $paymentAccCode, $paymentAccName, 'ASSET', 'Bank Accounts');
 
+                $rcpNumber = $this->documentNumberService->generateNextNumber($organizationId, 'RCP', $invoiceDate);
                 $this->postingService->postReceipt(
                     $organizationId,
                     1,
                     $paidAmount,
                     $paymentAccount->id,
                     $customerAccount->id,
-                    'RCP-' . $invoiceNumber,
+                    $rcpNumber,
                     $invoiceDate
                 );
             }

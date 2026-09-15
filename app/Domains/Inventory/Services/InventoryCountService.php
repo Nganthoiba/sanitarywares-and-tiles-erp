@@ -7,19 +7,31 @@ use App\Domains\Inventory\Models\InventoryCountItem;
 use App\Domains\Inventory\Models\InventoryObject;
 use App\Domains\Inventory\Models\InventoryMovement;
 use App\Domains\Inventory\Events\InventoryCountCompleted;
+use App\Domains\Master\Services\DocumentNumberService;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
 class InventoryCountService
 {
+    protected DocumentNumberService $documentNumberService;
+
+    public function __construct(?DocumentNumberService $documentNumberService = null)
+    {
+        $this->documentNumberService = $documentNumberService ?? new DocumentNumberService();
+    }
+
     public function initiateCount(array $data): InventoryCount
     {
         return DB::transaction(function () use ($data) {
+            $orgId = $data['organization_id'] ?? 1;
+            $countDate = $data['count_date'] ?? now()->toDateString();
+            $countNumber = $data['count_number'] ?? $this->documentNumberService->generateNextNumber($orgId, 'CNT', $countDate);
+
             $count = InventoryCount::create([
-                'organization_id' => $data['organization_id'] ?? 1,
+                'organization_id' => $orgId,
                 'warehouse_id' => $data['warehouse_id'],
-                'count_number' => $data['count_number'] ?? 'CNT-' . uniqid(),
-                'count_date' => $data['count_date'] ?? now()->toDateString(),
+                'count_number' => $countNumber,
+                'count_date' => $countDate,
                 'count_type' => $data['count_type'] ?? 'CYCLE', // CYCLE, ANNUAL, BLIND
                 'status' => 'PENDING',
                 'remarks' => $data['remarks'] ?? null,

@@ -7,28 +7,34 @@ use App\Domains\Inventory\Models\InventoryTransferItem;
 use App\Domains\Inventory\Models\InventoryObject;
 use App\Domains\Inventory\Models\InventoryMovement;
 use App\Domains\Inventory\Events\InventoryTransferred;
+use App\Domains\Master\Services\DocumentNumberService;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
 class TransferService
 {
     protected StockResolverService $stockResolver;
+    protected DocumentNumberService $documentNumberService;
 
-    public function __construct(?StockResolverService $stockResolver = null)
+    public function __construct(?StockResolverService $stockResolver = null, ?DocumentNumberService $documentNumberService = null)
     {
         $this->stockResolver = $stockResolver ?? new StockResolverService();
+        $this->documentNumberService = $documentNumberService ?? new DocumentNumberService();
     }
 
     public function initiateTransfer(array $data): InventoryTransfer
     {
         return DB::transaction(function () use ($data) {
             $orgId = $data['organization_id'] ?? 1;
+            $trfDate = $data['transfer_date'] ?? now()->toDateString();
+            $trfNumber = $data['transfer_number'] ?? $this->documentNumberService->generateNextNumber($orgId, 'TRF', $trfDate);
+
             $transfer = InventoryTransfer::create([
                 'organization_id' => $orgId,
                 'from_warehouse_id' => $data['from_warehouse_id'],
                 'to_warehouse_id' => $data['to_warehouse_id'],
-                'transfer_number' => $data['transfer_number'] ?? 'TRF-' . uniqid(),
-                'transfer_date' => $data['transfer_date'] ?? now()->toDateString(),
+                'transfer_number' => $trfNumber,
+                'transfer_date' => $trfDate,
                 'status' => 'PENDING',
                 'remarks' => $data['remarks'] ?? null,
                 'created_by' => $data['user_id'] ?? null
