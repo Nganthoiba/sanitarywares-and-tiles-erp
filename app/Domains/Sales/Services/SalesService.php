@@ -231,7 +231,7 @@ class SalesService
                     throw new Exception("Quantity must be greater than zero for product: {$variant->name}");
                 }
 
-                // Inventory Stock Check
+                // Inventory Stock Check with Concurrency Protection (lockForUpdate)
                 if ($variant->inventory_behavior === 'SLAB') {
                     $slabIds = $item['slab_ids'] ?? [];
                     if (count($slabIds) !== (int) $quantity) {
@@ -242,6 +242,7 @@ class SalesService
                         ->where('warehouse_id', $warehouseId)
                         ->where('status', 'AVAILABLE')
                         ->whereIn('id', $slabIds)
+                        ->lockForUpdate()
                         ->get();
 
                     if ($slabs->count() !== count($slabIds)) {
@@ -257,13 +258,17 @@ class SalesService
                     // Convert selling qty to base unit for stock deduction
                     $baseUnitQty = $this->inventoryService->convertQuantity($quantity, $unitId, $variant->base_unit_id, $variant->id, $organizationId);
 
-                    // Check total available bulk stock in warehouse
-                    $totalAvailableStock = DB::table('inventory_objects')
-                        ->where('organization_id', $organizationId)
+                    // Lock & calculate total available bulk stock in warehouse atomically
+                    $availableObjects = InventoryObject::where('organization_id', $organizationId)
                         ->where('product_variant_id', $variant->id)
                         ->where('warehouse_id', $warehouseId)
                         ->where('status', 'AVAILABLE')
-                        ->sum('quantity');
+                        ->where('quantity', '>', 0)
+                        ->orderBy('id', 'asc')
+                        ->lockForUpdate()
+                        ->get();
+
+                    $totalAvailableStock = $availableObjects->sum('quantity');
 
                     if ((float)$totalAvailableStock < $baseUnitQty) {
                         throw new Exception("Insufficient stock for product {$variant->name} in selected warehouse. Available: {$totalAvailableStock}, Requested: {$baseUnitQty}");
@@ -275,6 +280,7 @@ class SalesService
                         'unit_id' => $unitId,
                         'quantity' => $quantity,
                         'base_quantity' => $baseUnitQty,
+                        'objects' => $availableObjects,
                     ];
                 }
 
@@ -436,12 +442,13 @@ class SalesService
                     }
                 } else {
                     $remainingQtyToDeduct = $task['base_quantity'];
-
-                    $availableObjects = InventoryObject::where('organization_id', $organizationId)
+                    $availableObjects = $task['objects'] ?? InventoryObject::where('organization_id', $organizationId)
                         ->where('product_variant_id', $task['variant']->id)
                         ->where('warehouse_id', $warehouseId)
                         ->where('status', 'AVAILABLE')
+                        ->where('quantity', '>', 0)
                         ->orderBy('id', 'asc')
+                        ->lockForUpdate()
                         ->get();
 
                     foreach ($availableObjects as $obj) {
@@ -902,8 +909,13 @@ class SalesService
                         ->where('warehouse_id', $warehouseId)
                         ->where('product_variant_id', $variant->id)
                         ->where('status', 'AVAILABLE')
+                        ->lockForUpdate()
                         ->take((int) $qtyToDispatch)
                         ->get();
+
+                    if ($slabs->count() < (int) $qtyToDispatch) {
+                        throw new Exception("Insufficient available slabs for product {$variant->name} during dispatch. Required: {$qtyToDispatch}, Available: {$slabs->count()}");
+                    }
 
                     foreach ($slabs as $slab) {
                         $slab->status = 'DISPATCHED';
@@ -930,14 +942,22 @@ class SalesService
                     }
                 } else {
                     $baseQty = $this->inventoryService->convertQuantity($qtyToDispatch, $soItem->unit_id, $variant->base_unit_id, $variant->id, $organizationId);
-                    $remaining = $baseQty;
 
                     $objects = InventoryObject::where('organization_id', $organizationId)
                         ->where('product_variant_id', $variant->id)
                         ->where('warehouse_id', $warehouseId)
                         ->where('status', 'AVAILABLE')
+                        ->where('quantity', '>', 0)
                         ->orderBy('id', 'asc')
+                        ->lockForUpdate()
                         ->get();
+
+                    $totalAvailable = $objects->sum('quantity');
+                    if ((float) $totalAvailable < $baseQty) {
+                        throw new Exception("Insufficient stock for product {$variant->name} during dispatch. Available: {$totalAvailable}, Required: {$baseQty}");
+                    }
+
+                    $remaining = $baseQty;
 
                     foreach ($objects as $obj) {
                         if ($remaining <= 0) break;
