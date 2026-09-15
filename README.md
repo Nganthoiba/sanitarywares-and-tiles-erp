@@ -37,17 +37,18 @@ The primary objective of this system is to digitize and automate the complete op
 - [3. Tenant Model](#3-tenant-model)
 - [4. Product Model](#4-product-model)
 - [5. Procurement](#5-procurement)
-- [6. Inventory](#6-inventory)
-- [7. Sales](#7-sales)
-- [8. Accounting](#8-accounting)
-- [9. Reporting](#9-reporting)
-- [10. Security/RBAC](#10-securityrbac)
-- [11. Installation](#11-installation)
-- [12. Configuration](#12-configuration)
-- [13. Development Workflow](#13-development-workflow)
-- [14. Testing](#14-testing)
-- [15. Current Status](#15-current-status)
-- [16. Roadmap](#16-roadmap)
+- [6. Goods Receipt Notes](#6-goods-receipt-notes)
+- [7. Inventory](#7-inventory)
+- [8. Sales](#8-sales)
+- [9. Accounting](#9-accounting)
+- [10. Reporting](#10-reporting)
+- [11. Security/RBAC](#11-securityrbac)
+- [12. Installation](#12-installation)
+- [13. Configuration](#13-configuration)
+- [14. Development Workflow](#14-development-workflow)
+- [15. Testing](#15-testing)
+- [16. Current Status](#16-current-status)
+- [17. Roadmap](#17-roadmap)
 
 ---
 
@@ -63,6 +64,7 @@ This ERP provides an integrated, domain-tailored solution:
 - **Traceable Transaction Chains:** Full audit trail connecting supplier procurement through stock movements down to final sales invoices and financial reports.
 
 ### Target Businesses
+
 - **Product Domains:** Ceramic & Vitrified Tiles, Sanitaryware & Bathroom Fixtures, Granite & Marble Slabs, CP Fittings & Plumbing Hardware, Building Material Accessories.
 - **Enterprise Formats:** Single-Location Retail Showrooms, Wholesale Distributors, Hybrid Retail-Wholesale Dealers, Multi-Branch Enterprises.
 
@@ -98,15 +100,16 @@ The application is built using a modern **Domain-Driven Design (DDD)** backend c
 ```
 
 ### Key Architectural Layers
+
 1. **Frontend Layer (`resources/js/`)**: Single Page Application written in React 19, powered by React Router v7, Vite, and Bootstrap 5.
 2. **Controller Layer (`app/Http/Controllers/Api/`)**: Thin API controllers handling request validation, routing, HTTP responses, and delegating business logic to domain services.
 3. **Domain Layer (`app/Domains/`)**: Encapsulated business domain modules:
-   - `Master`: Organizations, Branches, Warehouses, Categories, Brands, Tax Profiles, Units, Customers, Suppliers.
-   - `Product`: Unified Product models, attributes, values, unit conversions, organization pricing.
-   - `Procurement`: Purchase Orders, GRNs, line items, receiving logic.
-   - `Inventory`: InventoryObjects, InventoryMovements, stock adjustments, stock transfers.
-   - `Sales`: Invoices, InvoiceItems, sales state machine, tax computation, customer ledgers.
-   - `Reporting`: Optimized report queries (`SalesReportQuery`, `GraniteReportQuery`), DTOs, audit logs.
+    - `Master`: Organizations, Branches, Warehouses, Categories, Brands, Tax Profiles, Units, Customers, Suppliers.
+    - `Product`: Unified Product models, attributes, values, unit conversions, organization pricing.
+    - `Procurement`: Purchase Orders, GRNs, line items, receiving logic.
+    - `Inventory`: InventoryObjects, InventoryMovements, stock adjustments, stock transfers.
+    - `Sales`: Invoices, InvoiceItems, sales state machine, tax computation, customer ledgers.
+    - `Reporting`: Optimized report queries (`SalesReportQuery`, `GraniteReportQuery`), DTOs, audit logs.
 4. **Database Layer**: Migration scripts supporting dual-database compatibility (PostgreSQL 16+ primary, MySQL 8.0+ / MariaDB supported).
 
 ---
@@ -126,6 +129,7 @@ The platform is designed around strict multi-tenancy with a multi-tiered organiz
 ```
 
 ### Multi-Tenancy Rules
+
 - **Data Isolation:** Organization-owned models (`Product`, `InventoryObject`, `PurchaseOrder`, `GRN`, `Invoice`, `Supplier`, `Customer`, `Branch`, `Warehouse`) enforce strict `organization_id` tenant scoping.
 - **Tenant Context (`TenantContext`):** Automatically injects and resolves active tenant context per request to prevent cross-tenant data leakage.
 - **Operational Hierarchy:** An Organization contains multiple **Branches**, and each Branch contains one or more **Warehouses** (storage locations).
@@ -155,47 +159,106 @@ The Product Catalog represents a streamlined, unified domain model. The legacy P
 ```
 
 ### Product Behaviors
+
 - **`STANDARD`**: Uniform items with consistent unit counts (e.g., Tiles, Sanitaryware, Accessories, CP Fittings).
 - **`MEASURED_MATERIAL`**: Dimensional items where individual pieces (slabs) have unique length, width, thickness, and calculated surface areas (e.g., Granite & Marble Slabs).
 
 ### Dynamic Units of Measurement (UOM) & Commercial Conversions
+
 - **Dimensions:** Length (`MM`, `CM`, `M`, `FT`), Area (`SQ.MM`, `SQ.M`, `SQ.FT`), Mass (`KG`, `TON`), Count (`PCS`, `BOX`, `SLAB`).
 - **Product Commercial Conversions:** Defined per product (e.g., `1 BOX = 4 PCS = 15.5 SQ.FT`). Orders can be entered in Boxes, Pieces, or Square Feet, and the system automatically calculates stock movements and pricing.
 
 ### Global Manufacturer Registry vs. Tenant Suppliers
-- **Global Manufacturer Master:** Shared global registry of real-world manufacturers (e.g., *Kajaria*, *Somany*, *Jaquar*). Super Admins maintain verification status (`VERIFIED`, `UNVERIFIED`).
+
+- **Global Manufacturer Master:** Shared global registry of real-world manufacturers (e.g., _Kajaria_, _Somany_, _Jaquar_). Super Admins maintain verification status (`VERIFIED`, `UNVERIFIED`).
 - **Tenant Suppliers:** Commercial vendors registered per tenant organization for purchasing transactions.
 
 ---
 
 ## 5. Procurement
 
-The Procurement module manages purchasing activities from external suppliers.
+The Purchase domain manages the receipt of goods from suppliers.
 
-```text
-  PO Draft ──► PO Submitted ──► PO Approved ──► PO Sent ──► Goods Receipt (GRN) ──► Stock Updated
-```
+The primary procurement workflow supports direct receiving because many
+organizations purchase and receive goods without creating a Purchase
+Requisition or Purchase Order first.
 
-### Purchase Order (PO) Lifecycle
+The primary workflow is:
 
-| Status | Description |
-| :--- | :--- |
-| `DRAFT` | Order creation and item entry; editable by procurement staff. |
-| `SUBMITTED` | Submitted for internal manager review. |
-| `APPROVED` | Approved by authorized organization manager. |
-| `SENT` | Formally dispatched to supplier. |
-| `PARTIALLY_RECEIVED` | Goods partially delivered; matching GRN recorded. |
-| `FULLY_RECEIVED` | All ordered line items fully received in warehouse. |
-| `CLOSED` | Order completed or manually concluded. |
-| `CANCELLED` | Order voided prior to fulfillment. |
+Supplier
+↓
+Goods Receipt Note (GRN)
+↓
+GRN Approval / Posting
+↓
+Inventory
+↓
+Supplier Invoice
+↓
+Accounts Payable
+↓
+Payment
 
-### Goods Receipt Note (GRN) & Direct GRN
-- **PO-Linked GRN:** Matches physical deliveries against PO ordered quantities and automatically maintains outstanding balances.
-- **Direct GRN:** Supports receiving stock directly without a prior PO for cash purchases or emergency deliveries, subject to manager authorization audit logs.
+Purchase Requisitions and Purchase Orders are supported as optional
+procurement workflows for organizations that require advance purchasing,
+approval, supplier commitments, or expected-quantity controls.
+
+The optional workflow is:
+
+Purchase Requisition
+↓
+Purchase Order
+↓
+Goods Receipt Note
+↓
+Inventory
+↓
+Supplier Invoice
+↓
+Accounts Payable
+↓
+Payment
 
 ---
 
-## 6. Inventory
+## 6. Goods Receipt Notes
+
+The Goods Receipt Note (GRN) represents the physical receipt of goods from a supplier.
+
+A GRN can be created in two ways:
+
+1. Direct GRN
+2. Purchase Order-based GRN
+
+A Direct GRN does not require a Purchase Order.
+
+A Purchase Order-based GRN references the relevant Purchase Order and validates received quantities against the outstanding order quantity according to the organization's over-receipt policy.
+
+Inventory is created or increased when the GRN is approved/posted according to the applicable workflow.
+
+Purchase Orders do not increase physical inventory.
+
+The GRN process supports:
+
+- Supplier
+- Warehouse
+- Receiving date
+- Receipt source
+- Products
+- Received quantities
+- Units
+- Purchase prices
+- Taxes
+- Batch information
+- Packaging information
+- Purchase Order reference when applicable
+- Approval
+- Inventory posting
+- Reversal/cancellation where supported
+
+---
+
+## 7. Inventory
 
 Inventory tracking is fully stateful, real-time, and auditable across branches and warehouses.
 
@@ -214,6 +277,7 @@ Inventory tracking is fully stateful, real-time, and auditable across branches a
 ```
 
 ### Inventory Capabilities
+
 - **Batch & Box Stock:** Standard products are tracked by piece/box quantity and warehouse bin location.
 - **Dimensional Slab Stock:** Granite/Marble slabs are tracked as discrete physical slab records (`InventoryObject`) recording exact Length × Width dimensions, thickness, and total square footage.
 - **Stock Transfers:** Formal inter-warehouse transfer notes with dispatch and receipt confirmations.
@@ -221,7 +285,7 @@ Inventory tracking is fully stateful, real-time, and auditable across branches a
 
 ---
 
-## 7. Sales
+## 8. Sales
 
 The Sales & Invoicing module provides point-of-sale execution, customer tax invoice generation, and real-time inventory deduction.
 
@@ -230,20 +294,21 @@ The Sales & Invoicing module provides point-of-sale execution, customer tax invo
 ```
 
 ### Sales Workflow
+
 1. **Order Entry (`NewSaleForm.jsx` / `SalesApiController`):**
-   - Select Customer, Branch, and Warehouse.
-   - Add line items with choice of sale unit (`BOX`, `PCS`, `SQ.FT`, `SLAB`).
-   - Auto-calculate item subtotal, discounts, and GST tax breakdown based on customer state vs warehouse state (CGST + SGST for intra-state, IGST for inter-state).
+    - Select Customer, Branch, and Warehouse.
+    - Add line items with choice of sale unit (`BOX`, `PCS`, `SQ.FT`, `SLAB`).
+    - Auto-calculate item subtotal, discounts, and GST tax breakdown based on customer state vs warehouse state (CGST + SGST for intra-state, IGST for inter-state).
 2. **Invoice Posting (`SalesService`):**
-   - Creates `Invoice` and `InvoiceItem` records.
-   - Reserves and deducts inventory immediately from the designated warehouse.
-   - Records an `InventoryMovement` entry of type `SALE`.
+    - Creates `Invoice` and `InvoiceItem` records.
+    - Reserves and deducts inventory immediately from the designated warehouse.
+    - Records an `InventoryMovement` entry of type `SALE`.
 3. **Invoice & Billing (`TaxInvoiceModal.jsx`):**
-   - Generates GST-compliant Tax Invoices displaying HSN/SAC codes, tax rates, vehicle/dispatch details, and customer billing address.
+    - Generates GST-compliant Tax Invoices displaying HSN/SAC codes, tax rates, vehicle/dispatch details, and customer billing address.
 
 ---
 
-## 8. Accounting
+## 9. Accounting
 
 The Accounting layer links commercial transactions directly to financial tracking and GST reporting.
 
@@ -254,11 +319,12 @@ The Accounting layer links commercial transactions directly to financial trackin
 
 ---
 
-## 9. Reporting
+## 10. Reporting
 
 The Reporting module provides real-time business intelligence, dashboard metrics, and audit log tracking.
 
 ### Core Reporting Features
+
 - **Sales Analytics (`SalesReportQuery`):** Sales by Category, Brand, Branch, Date Range, and Revenue analysis.
 - **Inventory Reporting (`InventoryReportService`):** Stock valuation, low-stock alerts, movement summaries, slab coverage reports (`GraniteReportQuery`).
 - **Dashboard Service (`DashboardService`):** High-level KPI aggregations for executive dashboards (total sales, total inventory value, pending POs).
@@ -266,23 +332,25 @@ The Reporting module provides real-time business intelligence, dashboard metrics
 
 ---
 
-## 10. Security/RBAC
+## 11. Security/RBAC
 
 Security and access control are enforced at both API and UI levels.
 
 ### Authentication & Authorization
+
 - **API Authentication:** Laravel Sanctum token-based authentication.
 - **Role-Based Access Control (RBAC):**
-  - `super-admin`: Global platform management, system seeders, global manufacturer verification.
-  - `administrator`: Full administrative authority over organization setup, branches, staff, catalog, procurement, sales, and reports.
-  - `staff`: Role-restricted operational permissions (e.g., Inventory Store Manager, Sales Operator, Purchasing Agent).
+    - `super-admin`: Global platform management, system seeders, global manufacturer verification.
+    - `administrator`: Full administrative authority over organization setup, branches, staff, catalog, procurement, sales, and reports.
+    - `staff`: Role-restricted operational permissions (e.g., Inventory Store Manager, Sales Operator, Purchasing Agent).
 - **Tenant Authorization Guard:** Prevents authorized users of Organization A from reading or modifying resources belonging to Organization B.
 
 ---
 
-## 11. Installation
+## 12. Installation
 
 ### Prerequisites
+
 - **PHP:** 8.2 or 8.3+ (with `pdo`, `pdo_pgsql` / `pdo_mysql`, `mbstring`, `bcmath`, `xml`, `curl` extensions)
 - **Composer:** 2.x
 - **Node.js:** 18.x or 20.x+ & `npm`
@@ -291,62 +359,67 @@ Security and access control are enforced at both API and UI levels.
 ### Step-by-Step Installation Guide
 
 1. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/Nganthoiba/sanitarywares-and-tiles-erp.git
-   cd sanitarywares-and-tiles-erp
-   ```
+
+    ```bash
+    git clone https://github.com/Nganthoiba/sanitarywares-and-tiles-erp.git
+    cd sanitarywares-and-tiles-erp
+    ```
 
 2. **Install PHP Dependencies:**
-   ```bash
-   composer install
-   ```
+
+    ```bash
+    composer install
+    ```
 
 3. **Install JavaScript Dependencies:**
-   ```bash
-   npm install
-   ```
+
+    ```bash
+    npm install
+    ```
 
 4. **Environment Setup:**
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   ```
+
+    ```bash
+    cp .env.example .env
+    php artisan key:generate
+    ```
 
 5. **Configure Database in `.env`:**
-   ```env
-   DB_CONNECTION=pgsql
-   DB_HOST=127.0.0.1
-   DB_PORT=5432
-   DB_DATABASE=tiles_and_sanitary
-   DB_USERNAME=postgres
-   DB_PASSWORD=your_password
-   ```
+
+    ```env
+    DB_CONNECTION=pgsql
+    DB_HOST=127.0.0.1
+    DB_PORT=5432
+    DB_DATABASE=tiles_and_sanitary
+    DB_USERNAME=postgres
+    DB_PASSWORD=your_password
+    ```
 
 6. **Run Database Migrations & Seeders:**
-   ```bash
-   php artisan migrate --seed
-   ```
-   *Seeds default units, sample organization, super-admin account, tax profiles, and sample categories.*
+    ```bash
+    php artisan migrate --seed
+    ```
+    _Seeds default units, sample organization, super-admin account, tax profiles, and sample categories._
 
 ---
 
-## 12. Configuration
+## 13. Configuration
 
 ### Key Environment Variables (`.env`)
 
-| Variable | Description | Example |
-| :--- | :--- | :--- |
-| `APP_NAME` | Application Title | `Sanitarywares & Tiles ERP` |
-| `APP_ENV` | Environment Mode | `local` / `production` |
-| `APP_URL` | Base URL | `http://localhost:8000` |
-| `DB_CONNECTION` | Database Driver | `pgsql` / `mysql` / `sqlite` |
-| `DB_HOST` | Database Server Host | `127.0.0.1` |
-| `DB_PORT` | Database Port | `5432` (PostgreSQL) / `3306` (MySQL) |
-| `SANCTUM_STATEFUL_DOMAINS` | Sanctum CORS Domains | `localhost:8000,127.0.0.1:8000` |
+| Variable                   | Description          | Example                              |
+| :------------------------- | :------------------- | :----------------------------------- |
+| `APP_NAME`                 | Application Title    | `Sanitarywares & Tiles ERP`          |
+| `APP_ENV`                  | Environment Mode     | `local` / `production`               |
+| `APP_URL`                  | Base URL             | `http://localhost:8000`              |
+| `DB_CONNECTION`            | Database Driver      | `pgsql` / `mysql` / `sqlite`         |
+| `DB_HOST`                  | Database Server Host | `127.0.0.1`                          |
+| `DB_PORT`                  | Database Port        | `5432` (PostgreSQL) / `3306` (MySQL) |
+| `SANCTUM_STATEFUL_DOMAINS` | Sanctum CORS Domains | `localhost:8000,127.0.0.1:8000`      |
 
 ---
 
-## 13. Development Workflow
+## 14. Development Workflow
 
 ### Starting the Development Environment
 
@@ -365,17 +438,19 @@ npm run dev
 ```
 
 ### Production Build
+
 ```bash
 npm run build
 ```
 
 ---
 
-## 14. Testing
+## 15. Testing
 
 The project maintains an extensive PHPUnit automated test suite covering master records, procurement, inventory, sales, and reporting.
 
 ### Tech Stack Specifications
+
 - **PHPUnit Version:** PHPUnit 11 (`^11.5.50`)
 - **Framework:** Laravel 12 Testing Suite
 
@@ -393,7 +468,7 @@ The project maintains an extensive PHPUnit automated test suite covering master 
 
 ---
 
-## 15. Current Status
+## 16. Current Status
 
 The application is in active, stable production-ready state with all core operational modules implemented:
 
@@ -413,7 +488,7 @@ The application is in active, stable production-ready state with all core operat
 
 ---
 
-## 16. Roadmap
+## 17. Roadmap
 
 Planned future features and enhancements:
 
@@ -424,4 +499,4 @@ Planned future features and enhancements:
 
 ---
 
-*Licensed under the [MIT License](LICENSE).*
+_Licensed under the [MIT License](LICENSE)._
