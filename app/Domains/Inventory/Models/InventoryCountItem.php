@@ -15,7 +15,8 @@ class InventoryCountItem extends Model
         'variance_quantity',
         'recorded_area',
         'counted_area',
-        'variance_area'
+        'variance_area',
+        'reason'
     ];
 
     public function countHeader(): BelongsTo

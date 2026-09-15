@@ -14,10 +14,14 @@ use Exception;
 class InventoryCountService
 {
     protected DocumentNumberService $documentNumberService;
+    protected AdjustmentService $adjustmentService;
 
-    public function __construct(?DocumentNumberService $documentNumberService = null)
-    {
+    public function __construct(
+        ?DocumentNumberService $documentNumberService = null,
+        ?AdjustmentService $adjustmentService = null
+    ) {
         $this->documentNumberService = $documentNumberService ?? new DocumentNumberService();
+        $this->adjustmentService = $adjustmentService ?? new AdjustmentService();
     }
 
     public function initiateCount(array $data): InventoryCount
@@ -40,7 +44,7 @@ class InventoryCountService
 
             // Auto-populate all active inventory items in that warehouse for reconciliation
             $objects = InventoryObject::where('warehouse_id', $count->warehouse_id)
-                ->where('status', 'ON_HAND')
+                ->whereIn('status', ['AVAILABLE', 'ON_HAND'])
                 ->get();
 
             foreach ($objects as $obj) {
@@ -60,16 +64,20 @@ class InventoryCountService
         });
     }
 
-    public function updateCountQuantity(int $itemId, float $countedQty, float $countedArea = 0): void
+    public function updateCountQuantity(int $itemId, float $countedQty, float $countedArea = 0, ?string $reason = null): void
     {
         $item = InventoryCountItem::findOrFail($itemId);
 
         $item->counted_quantity = $countedQty;
         $item->variance_quantity = $countedQty - $item->recorded_quantity;
 
-        if ($item->recorded_area > 0) {
+        if ($item->recorded_area > 0 || $countedArea > 0) {
             $item->counted_area = $countedArea;
             $item->variance_area = $countedArea - $item->recorded_area;
+        }
+
+        if ($reason !== null) {
+            $item->reason = $reason;
         }
 
         $item->save();
@@ -87,31 +95,31 @@ class InventoryCountService
             $count->approved_by = $approverId;
             $count->save();
 
-            // Resolve variances
+            // Resolve variances via Adjustment Movement instead of direct stock overwrite
+            $varianceItems = [];
             foreach ($count->items as $item) {
-                if ($item->variance_quantity != 0 || $item->variance_area != 0) {
-                    $obj = $item->inventoryObject;
-
-                    // Sync database balance
-                    $obj->quantity = $item->counted_quantity;
-                    if ($obj->area > 0) {
-                        $obj->area = $item->counted_area;
-                    }
-
-                    if ($obj->quantity <= 0 && $obj->area <= 0) {
-                        $obj->status = 'SCRAPPED';
-                    }
-                    $obj->save();
-
-                    // Log movements adjust differences
-                    InventoryMovement::create([
-                        'organization_id' => $count->organization_id,
-                        'inventory_object_id' => $obj->id,
-                        'movement_type' => 'ADJUSTMENT',
-                        'quantity_delta' => $item->variance_quantity,
-                        'area_delta' => $item->variance_area
-                    ]);
+                if ((float)$item->variance_quantity != 0 || (float)$item->variance_area != 0) {
+                    $varianceItems[] = [
+                        'inventory_object_id' => $item->inventory_object_id,
+                        'quantity_delta' => (float)$item->variance_quantity,
+                        'area_delta' => (float)$item->variance_area,
+                        'reason' => $item->reason ?? "Stock Count Variance ({$count->count_number})"
+                    ];
                 }
+            }
+
+            if (!empty($varianceItems)) {
+                $adjustment = $this->adjustmentService->initiateAdjustment([
+                    'organization_id' => $count->organization_id,
+                    'warehouse_id' => $count->warehouse_id,
+                    'adjustment_date' => $count->count_date,
+                    'adjustment_type' => 'ADJUSTMENT',
+                    'reason' => $count->remarks ?? "Reconciliation for Stock Count {$count->count_number}",
+                    'user_id' => $approverId,
+                    'items' => $varianceItems,
+                ]);
+
+                $this->adjustmentService->approveAdjustment($adjustment->id, $approverId);
             }
 
             event(new InventoryCountCompleted($count));

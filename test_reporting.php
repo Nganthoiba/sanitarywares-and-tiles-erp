@@ -46,7 +46,6 @@ echo "--- Bootstrapped Laravel 12 workspace context for Reporting Engine Validat
     ]);
 
     $unit = Unit::firstOrCreate([
-        'organization_id' => $org->id,
         'symbol' => 'PCS'
     ], [
         'name' => 'Pieces',
@@ -55,7 +54,6 @@ echo "--- Bootstrapped Laravel 12 workspace context for Reporting Engine Validat
     ]);
 
     $gst18 = \App\Domains\Master\Models\TaxProfile::firstOrCreate([
-        'organization_id' => $org->id,
         'name' => 'GST 18%'
     ], [
         'hsn_code' => '6907',

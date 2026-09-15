@@ -24,7 +24,8 @@ class SalesReportQuery
             ->where('invoices.organization_id', $orgId);
 
         if (!empty($filters['branch_id'])) {
-            $query->where('invoices.branch_id', $filters['branch_id']);
+            $query->leftJoin('sales_orders', 'invoices.sales_order_id', '=', 'sales_orders.id')
+                ->where('sales_orders.branch_id', $filters['branch_id']);
         }
         if (!empty($filters['start_date'])) {
             $query->whereDate('invoices.invoice_date', '>=', $filters['start_date']);
@@ -40,7 +41,7 @@ class SalesReportQuery
     {
         $orgId = $filters['organization_id'] ?? 1;
 
-        return DB::table('invoice_items')
+        $query = DB::table('invoice_items')
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
             ->join('product_variants', 'invoice_items.product_variant_id', '=', 'product_variants.id')
             ->join('categories', 'product_variants.category_id', '=', 'categories.id')
@@ -49,8 +50,20 @@ class SalesReportQuery
                 DB::raw('sum(invoice_items.quantity) as total_qty'),
                 DB::raw('sum(invoice_items.subtotal) as total_revenue')
             )
-            ->where('invoices.organization_id', $orgId)
-            ->groupBy('categories.name')
+            ->where('invoices.organization_id', $orgId);
+
+        if (!empty($filters['branch_id'])) {
+            $query->leftJoin('sales_orders', 'invoices.sales_order_id', '=', 'sales_orders.id')
+                ->where('sales_orders.branch_id', $filters['branch_id']);
+        }
+        if (!empty($filters['start_date'])) {
+            $query->whereDate('invoices.invoice_date', '>=', $filters['start_date']);
+        }
+        if (!empty($filters['end_date'])) {
+            $query->whereDate('invoices.invoice_date', '<=', $filters['end_date']);
+        }
+
+        return $query->groupBy('categories.name')
             ->orderBy('total_revenue', 'desc')
             ->get()
             ->toArray();

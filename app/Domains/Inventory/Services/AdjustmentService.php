@@ -160,7 +160,9 @@ class AdjustmentService
             $postingService = app(\App\Domains\Accounting\Services\PostingService::class);
             $valuationService = app(\App\Domains\Inventory\Services\ValuationService::class);
             $totalAdjustmentValue = 0.0;
-            $isLoss = in_array(strtoupper($adj->adjustment_type), ['DAMAGE', 'SCRAP', 'NEGATIVE', 'THEFT', 'LOSS']);
+            $netQtyDelta = (float) $adj->items->sum('quantity_delta');
+            $isLoss = in_array(strtoupper($adj->adjustment_type), ['DAMAGE', 'SCRAP', 'NEGATIVE', 'THEFT', 'LOSS'])
+                || ($netQtyDelta < 0);
 
             foreach ($adj->items as $item) {
                 $obj = $item->inventoryObject;
