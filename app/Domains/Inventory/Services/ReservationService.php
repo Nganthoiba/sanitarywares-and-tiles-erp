@@ -10,12 +10,20 @@ use App\Domains\Inventory\Events\InventoryReleased;
 use App\Domains\Inventory\Exceptions\InsufficientStockException;
 use App\Domains\Inventory\Exceptions\InvalidReservationException;
 use App\Domains\Inventory\Exceptions\ReservationConflictException;
+use App\Domains\Master\Services\DocumentNumberService;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Exception;
 
 class ReservationService
 {
+    protected DocumentNumberService $documentNumberService;
+
+    public function __construct(?DocumentNumberService $documentNumberService = null)
+    {
+        $this->documentNumberService = $documentNumberService ?? new DocumentNumberService();
+    }
+
     /**
      * Create stock reservation transactionally with concurrency protection.
      */
@@ -99,13 +107,8 @@ class ReservationService
                 throw new InsufficientStockException("Cannot reserve {$formattedReq} {$unitSymbol} because only {$formattedAvail} {$unitSymbol} is available.");
             }
 
-            // Generate sequential reservation number
-            $todayStr = Carbon::now()->format('Ymd');
-            $countToday = InventoryReservation::where('organization_id', $orgId)
-                ->whereDate('created_at', Carbon::today())
-                ->count();
-            $seqNumber = str_pad($countToday + 1, 4, '0', STR_PAD_LEFT);
-            $resNumber = "RES-{$todayStr}-{$seqNumber}";
+            // Generate concurrency-safe FY-integrated reservation number
+            $resNumber = $this->documentNumberService->generateNextNumber($orgId, 'RES');
 
             $res = InventoryReservation::create([
                 'organization_id' => $orgId,

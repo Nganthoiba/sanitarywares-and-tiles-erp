@@ -7,11 +7,17 @@ use App\Domains\Purchase\Models\PurchaseOrderItem;
 use App\Domains\Purchase\Models\PurchaseRequisition;
 use Illuminate\Support\Facades\DB;
 use App\Domains\Product\Models\Product;
+use App\Domains\Master\Services\DocumentNumberService;
 use Exception;
 
 class PurchaseOrderService
 {
-    public function __construct() {}
+    protected DocumentNumberService $documentNumberService;
+
+    public function __construct(?DocumentNumberService $documentNumberService = null)
+    {
+        $this->documentNumberService = $documentNumberService ?? new DocumentNumberService();
+    }
 
     /**
      * Create a new Purchase Order.
@@ -19,7 +25,7 @@ class PurchaseOrderService
     public function createPO(array $data, int $organizationId): PurchaseOrder
     {
         return DB::transaction(function () use ($data, $organizationId) {
-            $poNumber = $data['po_number'] ?? 'PO-' . strtoupper(uniqid());
+            $poNumber = $data['po_number'] ?? $this->documentNumberService->generateNextNumber($organizationId, 'PO', $data['po_date'] ?? null);
 
             // Check uniqueness per organization
             $exists = PurchaseOrder::where('organization_id', $organizationId)

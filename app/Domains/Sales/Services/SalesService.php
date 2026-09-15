@@ -27,17 +27,22 @@ use Exception;
 
 use App\Domains\Inventory\Services\ReservationService;
 use App\Domains\Inventory\Services\ValuationService;
+use App\Domains\Master\Services\DocumentNumberService;
 
 class SalesService
 {
+    protected DocumentNumberService $documentNumberService;
+
     public function __construct(
         protected InventoryService $inventoryService,
         protected PostingService $postingService,
         protected ?ReservationService $reservationService = null,
-        protected ?ValuationService $valuationService = null
+        protected ?ValuationService $valuationService = null,
+        ?DocumentNumberService $documentNumberService = null
     ) {
         $this->reservationService = $reservationService ?? new ReservationService();
         $this->valuationService = $valuationService ?? new ValuationService();
+        $this->documentNumberService = $documentNumberService ?? new DocumentNumberService();
     }
 
     /**
@@ -367,10 +372,9 @@ class SalesService
                 $paymentStatus = 'PARTIALLY_PAID';
             }
 
-            // Generate unique numbers
-            $invSeq = DB::table('invoices')->where('organization_id', $organizationId)->count() + 1;
-            $invoiceNumber = 'INV-' . date('Ymd') . '-' . str_pad($invSeq, 4, '0', STR_PAD_LEFT);
-            $dispatchNumber = 'DSP-' . date('Ymd') . '-' . str_pad($invSeq, 4, '0', STR_PAD_LEFT);
+            // Generate concurrency-safe FY-integrated document numbers
+            $invoiceNumber = $this->documentNumberService->generateNextNumber($organizationId, 'INV', $invoiceDate);
+            $dispatchNumber = $this->documentNumberService->generateNextNumber($organizationId, 'DSP', $invoiceDate);
 
             // Create Invoice
             $invoice = Invoice::create([
@@ -667,8 +671,7 @@ class SalesService
                 throw new Exception("Quotation must contain at least one line item.");
             }
 
-            $seq = DB::table('quotations')->where('organization_id', $organizationId)->count() + 1;
-            $quotationNumber = 'QTN-' . date('Ymd') . '-' . str_pad($seq, 4, '0', STR_PAD_LEFT);
+            $quotationNumber = $this->documentNumberService->generateNextNumber($organizationId, 'QTN', $quotationDate);
 
             $totalAmount = 0.0;
             $processedItems = [];
@@ -742,8 +745,7 @@ class SalesService
                 throw new Exception("Sales order must contain at least one line item.");
             }
 
-            $seq = DB::table('sales_orders')->where('organization_id', $organizationId)->count() + 1;
-            $soNumber = 'SO-' . date('Ymd') . '-' . str_pad($seq, 4, '0', STR_PAD_LEFT);
+            $soNumber = $this->documentNumberService->generateNextNumber($organizationId, 'SO', $soDate);
 
             $totalAmount = 0.0;
             $processedItems = [];
@@ -886,8 +888,7 @@ class SalesService
                 ->with('items.variant')
                 ->findOrFail($salesOrderId);
 
-            $seq = DB::table('dispatches')->where('organization_id', $organizationId)->count() + 1;
-            $dispatchNumber = 'DSP-' . date('Ymd') . '-' . str_pad($seq, 4, '0', STR_PAD_LEFT);
+            $dispatchNumber = $this->documentNumberService->generateNextNumber($organizationId, 'DSP', $dispatchDate);
 
             $dispatch = Dispatch::create([
                 'organization_id' => $organizationId,
@@ -1114,8 +1115,7 @@ class SalesService
                 ];
             }
 
-            $seq = DB::table('invoices')->where('organization_id', $organizationId)->count() + 1;
-            $invoiceNumber = 'INV-' . date('Ymd') . '-' . str_pad($seq, 4, '0', STR_PAD_LEFT);
+            $invoiceNumber = $this->documentNumberService->generateNextNumber($organizationId, 'INV', $invoiceDate);
 
             $dueAmount = max(0, $totalInvoiceAmount - $paidAmount);
             $paymentStatus = 'UNPAID';
@@ -1230,8 +1230,7 @@ class SalesService
                 ->with(['items.variant', 'customer'])
                 ->findOrFail($invoiceId);
 
-            $seq = DB::table('sales_returns')->where('organization_id', $organizationId)->count() + 1;
-            $returnNumber = 'RET-' . date('Ymd') . '-' . str_pad($seq, 4, '0', STR_PAD_LEFT);
+            $returnNumber = $this->documentNumberService->generateNextNumber($organizationId, 'RET', $returnDate);
 
             $totalReturnAmount = 0.0;
             $processedReturnItems = [];

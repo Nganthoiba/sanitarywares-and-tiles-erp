@@ -143,17 +143,20 @@ class TwoTrackSalesWorkflowTest extends TestCase
         ], $orgId);
 
         $this->assertNotNull($quotation->id);
+        $this->assertMatchesRegularExpression('/^QTN\/\d{2}-\d{2}\/\d{6}$/', $quotation->quotation_number);
         $this->assertEquals('DRAFT', $quotation->status);
 
         // 2. Convert Quotation to Sales Order
         $salesOrder = $this->salesService->convertQuotationToSalesOrder($quotation->id, $orgId);
         $this->assertNotNull($salesOrder->id);
+        $this->assertMatchesRegularExpression('/^SO\/\d{2}-\d{2}\/\d{6}$/', $salesOrder->so_number);
         $this->assertEquals('CONFIRMED', $salesOrder->status);
         $this->assertEquals('ACCEPTED', $quotation->fresh()->status);
 
         // 3. Reserve Stock for Sales Order
         $reservations = $this->salesService->reserveStockForSalesOrder($salesOrder->id, $this->warehouse->id, $orgId);
         $this->assertCount(1, $reservations);
+        $this->assertMatchesRegularExpression('/^RES\/\d{2}-\d{2}\/\d{6}$/', $reservations[0]->reservation_number);
         $this->assertEquals('RESERVED', $salesOrder->fresh()->status);
 
         // 4. Dispatch Goods
@@ -163,6 +166,7 @@ class TwoTrackSalesWorkflowTest extends TestCase
         ], $orgId);
 
         $this->assertNotNull($dispatch->id);
+        $this->assertMatchesRegularExpression('/^DSP\/\d{2}-\d{2}\/\d{6}$/', $dispatch->dispatch_number);
         $this->assertEquals('DISPATCHED', $salesOrder->fresh()->status);
         $this->assertEquals(90.0, InventoryObject::where('warehouse_id', $this->warehouse->id)->first()->quantity);
 
@@ -173,6 +177,7 @@ class TwoTrackSalesWorkflowTest extends TestCase
         ], $orgId);
 
         $this->assertNotNull($invoice->id);
+        $this->assertMatchesRegularExpression('/^INV\/\d{2}-\d{2}\/\d{6}$/', $invoice->invoice_number);
         $this->assertEquals('PAID', $invoice->payment_status);
 
         // Verify Journal Postings (Sales Revenue, Bank Receipt, COGS)
@@ -221,6 +226,7 @@ class TwoTrackSalesWorkflowTest extends TestCase
         ], $orgId);
 
         $this->assertNotNull($invoice->id);
+        $this->assertMatchesRegularExpression('/^INV\/\d{2}-\d{2}\/\d{6}$/', $invoice->invoice_number);
         $this->assertTrue((bool) $invoice->is_direct_sale);
         $this->assertEquals('PAID', $invoice->payment_status);
         $this->assertEquals(95.0, InventoryObject::where('warehouse_id', $this->warehouse->id)->first()->quantity);

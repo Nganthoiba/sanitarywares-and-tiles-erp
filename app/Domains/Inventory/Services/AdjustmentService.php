@@ -7,27 +7,33 @@ use App\Domains\Inventory\Models\InventoryAdjustmentItem;
 use App\Domains\Inventory\Models\InventoryObject;
 use App\Domains\Inventory\Models\InventoryMovement;
 use App\Domains\Inventory\Events\InventoryAdjusted;
+use App\Domains\Master\Services\DocumentNumberService;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
 class AdjustmentService
 {
     protected StockResolverService $stockResolver;
+    protected DocumentNumberService $documentNumberService;
 
-    public function __construct(?StockResolverService $stockResolver = null)
+    public function __construct(?StockResolverService $stockResolver = null, ?DocumentNumberService $documentNumberService = null)
     {
         $this->stockResolver = $stockResolver ?? new StockResolverService();
+        $this->documentNumberService = $documentNumberService ?? new DocumentNumberService();
     }
 
     public function initiateAdjustment(array $data): InventoryAdjustment
     {
         return DB::transaction(function () use ($data) {
             $orgId = $data['organization_id'] ?? 1;
+            $adjDate = $data['adjustment_date'] ?? now()->toDateString();
+            $adjNumber = $data['adjustment_number'] ?? $this->documentNumberService->generateNextNumber($orgId, 'ADJ', $adjDate);
+
             $adjustment = InventoryAdjustment::create([
                 'organization_id' => $orgId,
                 'warehouse_id' => $data['warehouse_id'],
-                'adjustment_number' => $data['adjustment_number'] ?? 'ADJ-' . uniqid(),
-                'adjustment_date' => $data['adjustment_date'] ?? now()->toDateString(),
+                'adjustment_number' => $adjNumber,
+                'adjustment_date' => $adjDate,
                 'adjustment_type' => $data['adjustment_type'], // POSITIVE, NEGATIVE, DAMAGE, SCRAP
                 'status' => 'PENDING',
                 'reason' => $data['reason'] ?? null,

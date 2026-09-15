@@ -13,15 +13,22 @@ use App\Domains\Accounting\Services\PostingService;
 use App\Domains\Accounting\Models\Account;
 use App\Domains\Accounting\Models\AccountGroup;
 use App\Domains\Product\Models\Product;
+use App\Domains\Master\Models\Warehouse;
+use App\Domains\Master\Services\DocumentNumberService;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
 class GRNService
 {
+    protected DocumentNumberService $documentNumberService;
+
     public function __construct(
         protected InventoryService $inventoryService,
-        protected PostingService $postingService
-    ) {}
+        protected PostingService $postingService,
+        ?DocumentNumberService $documentNumberService = null
+    ) {
+        $this->documentNumberService = $documentNumberService ?? new DocumentNumberService();
+    }
 
     /**
      * Create a draft Goods Receipt Note.
@@ -29,7 +36,12 @@ class GRNService
     public function createDraft(array $data): GoodsReceiptNote
     {
         return DB::transaction(function () use ($data) {
-            $grnNumber = $data['grn_number'] ?? 'GRN-' . strtoupper(uniqid());
+            if (isset($data['grn_number'])) {
+                $grnNumber = $data['grn_number'];
+            } else {
+                $orgId = $data['organization_id'] ?? Warehouse::where('id', $data['warehouse_id'])->value('organization_id') ?? 1;
+                $grnNumber = $this->documentNumberService->generateNextNumber($orgId, 'GRN', $data['received_date'] ?? null);
+            }
 
             // 1. Create GRN Header
             $grn = GoodsReceiptNote::create([
