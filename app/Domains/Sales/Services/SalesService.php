@@ -1408,4 +1408,157 @@ class SalesService
             return $salesReturn->load(['customer', 'invoice', 'items']);
         });
     }
+
+    /**
+     * Calculate authoritative tax and pricing preview from backend tax engine.
+     * Note: Backend is sole source of truth; frontend calculation is display-only.
+     */
+    public function calculatePreview(array $data, int $organizationId): array
+    {
+        $customerId = isset($data['customer_id']) ? (int) $data['customer_id'] : null;
+        $customer = $customerId ? Customer::where('organization_id', $organizationId)->find($customerId) : null;
+        $organization = Organization::findOrFail($organizationId);
+
+        $placeOfSupplyState = $data['place_of_supply_state'] ?? $customer->state ?? $organization->state ?? 'Manipur';
+        $supplierGstin = $data['supplier_gstin'] ?? $organization->gstin ?? null;
+        $customerGstin = $data['customer_gstin'] ?? $customer->gstin ?? null;
+        $gstRegistrationType = $data['gst_registration_type'] ?? $customer->gst_registration_type ?? (!empty($customerGstin) ? 'REGISTERED_REGULAR' : 'UNREGISTERED');
+        $invoiceType = $data['invoice_type'] ?? 'REGULAR';
+        $isReverseCharge = (bool) ($data['is_reverse_charge'] ?? false);
+        $isTaxInclusive = (bool) ($data['is_tax_inclusive'] ?? true);
+
+        $posState = trim(strtolower($placeOfSupplyState));
+        $orgState = trim(strtolower($organization->state ?? ''));
+        $isInterState = isset($data['is_inter_state']) ? (bool) $data['is_inter_state'] : (!empty($posState) && !empty($orgState) && $posState !== $orgState);
+        $supplyType = $isInterState ? 'INTER_STATE' : 'INTRA_STATE';
+
+        $totalSubtotal = 0.0;
+        $totalDiscount = 0.0;
+        $totalTaxable = 0.0;
+        $totalCGST = 0.0;
+        $totalSGST = 0.0;
+        $totalIGST = 0.0;
+        $totalTax = 0.0;
+        $totalInvoiceAmount = 0.0;
+
+        $processedItems = [];
+
+        foreach ($data['items'] ?? [] as $item) {
+            if (empty($item['product_variant_id'])) continue;
+            $variantId = (int) $item['product_variant_id'];
+            $variant = Product::where('organization_id', $organizationId)->with('taxProfile')->find($variantId);
+            if (!$variant) continue;
+
+            $unitId = isset($item['unit_id']) ? (int) $item['unit_id'] : $variant->base_unit_id;
+            $priceBasis = $item['price_basis'] ?? 'PCS';
+            $quantity = (float) ($item['quantity'] ?? 0);
+            $unitPrice = (float) ($item['unit_price'] ?? 0);
+            $discountAmount = (float) ($item['discount_amount'] ?? 0);
+
+            $taxCategory = $item['tax_category'] ?? 'TAXABLE';
+            $itemTaxInclusive = isset($item['is_tax_inclusive']) ? (bool) $item['is_tax_inclusive'] : $isTaxInclusive;
+            $hsnSacCode = $item['hsn_sac_code'] ?? $variant->taxProfile->hsn_code ?? $variant->sku;
+
+            if (in_array($taxCategory, ['EXEMPT', 'NIL_RATED', 'NON_GST'])) {
+                $taxRate = 0.0;
+            } else {
+                $taxRate = isset($item['tax_rate']) ? (float) $item['tax_rate'] : (float) ($variant->taxProfile->rate ?? 18.00);
+            }
+
+            $lineGross = $quantity * $unitPrice;
+            $lineGrossAfterDiscount = max(0, $lineGross - $discountAmount);
+
+            $cgstRate = 0.0;
+            $cgstAmount = 0.0;
+            $sgstRate = 0.0;
+            $sgstAmount = 0.0;
+            $igstRate = 0.0;
+            $igstAmount = 0.0;
+            $lineTaxable = $lineGrossAfterDiscount;
+            $lineTax = 0.0;
+
+            if ($taxRate > 0) {
+                if ($itemTaxInclusive) {
+                    $lineTaxable = round($lineGrossAfterDiscount / (1 + ($taxRate / 100.0)), 4);
+                    $lineTax = $lineGrossAfterDiscount - $lineTaxable;
+                    $lineSubtotal = $lineGrossAfterDiscount;
+                } else {
+                    $lineTaxable = $lineGrossAfterDiscount;
+                    $lineTax = round($lineTaxable * ($taxRate / 100.0), 4);
+                    $lineSubtotal = $lineTaxable + $lineTax;
+                }
+
+                if ($isInterState) {
+                    $igstRate = $taxRate;
+                    $igstAmount = round($lineTax, 4);
+                } else {
+                    $cgstRate = round($taxRate / 2.0, 2);
+                    $sgstRate = round($taxRate / 2.0, 2);
+                    $cgstAmount = round($lineTax / 2.0, 4);
+                    $sgstAmount = round($lineTax / 2.0, 4);
+                }
+            } else {
+                $lineSubtotal = $lineGrossAfterDiscount;
+            }
+
+            $totalSubtotal += $lineGross;
+            $totalDiscount += $discountAmount;
+            $totalTaxable += $lineTaxable;
+            $totalCGST += $cgstAmount;
+            $totalSGST += $sgstAmount;
+            $totalIGST += $igstAmount;
+            $totalTax += $lineTax;
+            $totalInvoiceAmount += $lineSubtotal;
+
+            $processedItems[] = [
+                'product_variant_id' => $variant->id,
+                'product_name' => $variant->name,
+                'sku' => $variant->sku,
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,
+                'discount_amount' => $discountAmount,
+                'taxable_amount' => round($lineTaxable, 4),
+                'tax_rate' => $taxRate,
+                'cgst_rate' => $cgstRate,
+                'cgst_amount' => round($cgstAmount, 4),
+                'sgst_rate' => $sgstRate,
+                'sgst_amount' => round($sgstAmount, 4),
+                'igst_rate' => $igstRate,
+                'igst_amount' => round($igstAmount, 4),
+                'tax_amount' => round($lineTax, 4),
+                'subtotal' => round($lineSubtotal, 4),
+                'hsn_sac_code' => $hsnSacCode,
+                'tax_category' => $taxCategory,
+                'is_tax_inclusive' => $itemTaxInclusive,
+            ];
+        }
+
+        $overallDiscount = isset($data['total_discount_amount']) ? (float) $data['total_discount_amount'] : (isset($data['discount_amount']) ? (float) $data['discount_amount'] : 0.0);
+        $finalDiscount = $totalDiscount + $overallDiscount;
+        $unroundedTotal = max(0, $totalInvoiceAmount - $overallDiscount);
+
+        $roundedTotal = round($unroundedTotal);
+        $roundOffAmount = round($roundedTotal - $unroundedTotal, 4);
+
+        return [
+            'subtotal' => round($totalSubtotal, 4),
+            'discount_amount' => round($finalDiscount, 4),
+            'taxable_amount' => round(max(0, $totalTaxable - $overallDiscount), 4),
+            'tax_amount' => round($totalTax, 4),
+            'cgst_amount' => round($totalCGST, 4),
+            'sgst_amount' => round($totalSGST, 4),
+            'igst_amount' => round($totalIGST, 4),
+            'round_off_amount' => $roundOffAmount,
+            'grand_total' => $roundedTotal,
+            'supply_type' => $supplyType,
+            'place_of_supply_state' => $placeOfSupplyState,
+            'supplier_gstin' => $supplierGstin,
+            'customer_gstin' => $customerGstin,
+            'gst_registration_type' => $gstRegistrationType,
+            'invoice_type' => $invoiceType,
+            'is_reverse_charge' => $isReverseCharge,
+            'is_tax_inclusive' => $isTaxInclusive,
+            'items' => $processedItems,
+        ];
+    }
 }

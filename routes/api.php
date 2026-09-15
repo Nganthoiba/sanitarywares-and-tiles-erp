@@ -189,6 +189,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
 
     // Core Sales Routes (Two-Track Sales Architecture)
     Route::get('/sales/form-data', [SalesApiController::class, 'getFormData']);
+    Route::post('/sales/calculate-preview', [SalesApiController::class, 'calculatePreview']);
     Route::get('/sales', [SalesApiController::class, 'index']);
     Route::post('/sales/direct', [SalesApiController::class, 'storeDirectSale']);
     Route::get('/sales/{id}', [SalesApiController::class, 'show']);

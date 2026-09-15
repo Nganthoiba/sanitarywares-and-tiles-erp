@@ -227,11 +227,48 @@ export default function NewSaleForm({ onSaleCompleted }) {
         }));
     };
 
-    // Calculate totals dynamically
-    const selectedCustomer = context.customers?.find(c => c.id === parseInt(formData.customer_id));
-    const customerState = trimString(selectedCustomer?.state);
-    const orgState = trimString(context.organization?.state);
-    const isInterState = customerState && orgState && customerState !== orgState;
+    // Calculate totals dynamically    // ARCHITECTURAL RULE: Backend pricing/tax engine (/api/sales/calculate-preview & /api/sales/direct) is sole source of truth.
+    // Frontend calculations are strictly for instant display preview.
+    const [backendPreview, setBackendPreview] = useState(null);
+
+    useEffect(() => {
+        if (formData.items.length === 0) {
+            setBackendPreview(null);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const res = await axios.post('/api/sales/calculate-preview', {
+                    customer_id: formData.customer_id,
+                    total_discount_amount: parseFloat(formData.total_discount_amount || 0),
+                    items: formData.items.map(item => ({
+                        product_variant_id: item.product_variant_id,
+                        unit_id: item.unit_id,
+                        price_basis: item.price_basis,
+                        quantity: parseFloat(item.quantity || 0),
+                        unit_price: parseFloat(item.unit_price || 0),
+                        discount_amount: parseFloat(item.discount_amount || 0),
+                        tax_rate: showGst ? parseFloat(item.tax_rate || 18) : 0,
+                    }))
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setBackendPreview(res.data);
+            } catch (err) {
+                // Silently ignore preview API errors & fallback to display calculation
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [formData.items, formData.customer_id, formData.total_discount_amount, showGst]);
+
+    // Determine Tax Split (Intra-state vs Inter-state)
+    const selectedCustomer = context.customers.find(c => String(c.id) === String(formData.customer_id));
+    const customerState = selectedCustomer?.state ? selectedCustomer.state.trim().toLowerCase() : '';
+    const orgState = context.organization?.state ? context.organization.state.trim().toLowerCase() : '';
+    const isInterState = backendPreview ? (backendPreview.supply_type === 'INTER_STATE') : (customerState && orgState && customerState !== orgState);
 
     let totalSubtotal = 0;
     let totalDiscount = 0;
@@ -280,7 +317,7 @@ export default function NewSaleForm({ onSaleCompleted }) {
     });
 
     const overallDiscount = Math.max(0, parseFloat(formData.total_discount_amount || 0) - totalDiscount);
-    const grandTotal = Math.max(0, (totalSubtotal - totalDiscount) - overallDiscount);
+    const grandTotal = backendPreview ? backendPreview.grand_total : Math.max(0, (totalSubtotal - totalDiscount) - overallDiscount);
 
     const balanceDue = Math.max(0, grandTotal - parseFloat(formData.paid_amount || 0));
 

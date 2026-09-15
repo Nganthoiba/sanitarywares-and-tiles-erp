@@ -233,4 +233,36 @@ class GSTInvoicingArchitectureTest extends TestCase
         $this->assertEquals(0.0, (float) $exemptInvoice->tax_amount);
         $this->assertEquals('EXEMPT', $exemptInvoice->items->first()->tax_category);
     }
+
+    /** @test */
+    public function it_provides_authoritative_backend_tax_preview_endpoint()
+    {
+        $user = User::factory()->create([
+            'organization_id' => $this->org->id,
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/sales/calculate-preview', [
+                'is_tax_inclusive' => true,
+                'items' => [
+                    [
+                        'product_variant_id' => $this->product->id,
+                        'quantity' => 2,
+                        'unit_price' => 1000.00,
+                        'discount_amount' => 0.0,
+                    ]
+                ]
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'subtotal', 'discount_amount', 'taxable_amount', 'tax_amount',
+                'cgst_amount', 'sgst_amount', 'igst_amount', 'grand_total',
+                'supply_type', 'items'
+            ]);
+
+        $this->assertEquals(2000.00, $response->json('subtotal'));
+        $this->assertEquals(2000.00, $response->json('grand_total'));
+        $this->assertEquals('INTRA_STATE', $response->json('supply_type'));
+    }
 }

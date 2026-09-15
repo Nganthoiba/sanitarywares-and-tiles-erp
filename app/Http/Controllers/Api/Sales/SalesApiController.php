@@ -73,6 +73,35 @@ class SalesApiController extends Controller
     }
 
     /**
+     * Preview authoritative sales tax & price calculation from backend tax engine.
+     * Note: Frontend calculation is display-only; backend is sole authority.
+     */
+    public function calculatePreview(Request $request)
+    {
+        $orgId = $request->user()->organization_id;
+        if (is_null($orgId)) {
+            return response()->json(['message' => 'Unauthorized organization context.'], 401);
+        }
+
+        $validated = $request->validate([
+            'customer_id' => 'nullable|exists:customers,id',
+            'place_of_supply_state' => 'nullable|string',
+            'is_tax_inclusive' => 'nullable|boolean',
+            'total_discount_amount' => 'nullable|numeric|min:0',
+            'items' => 'nullable|array',
+            'items.*.product_variant_id' => 'required_with:items|exists:product_variants,id',
+            'items.*.quantity' => 'nullable|numeric',
+            'items.*.unit_price' => 'nullable|numeric',
+            'items.*.discount_amount' => 'nullable|numeric',
+            'items.*.tax_rate' => 'nullable|numeric',
+            'items.*.tax_category' => 'nullable|string',
+        ]);
+
+        $preview = $this->salesService->calculatePreview($validated, $orgId);
+        return response()->json($preview);
+    }
+
+    /**
      * List sales invoices.
      */
     public function index(Request $request)
