@@ -152,11 +152,17 @@ class AdjustmentService
 
             // Post Accounting Journal Entry for Stock Adjustment
             $postingService = app(\App\Domains\Accounting\Services\PostingService::class);
+            $valuationService = app(\App\Domains\Inventory\Services\ValuationService::class);
             $totalAdjustmentValue = 0.0;
             $isLoss = in_array(strtoupper($adj->adjustment_type), ['DAMAGE', 'SCRAP', 'NEGATIVE', 'THEFT', 'LOSS']);
 
             foreach ($adj->items as $item) {
-                $unitCost = (float) ($item->inventoryObject?->variant?->cost_price ?? 100.0);
+                $obj = $item->inventoryObject;
+                $variant = $obj?->variant;
+                $unitCost = $variant ? $valuationService->getUnitCost($variant, $obj) : 0.0;
+                if ($unitCost <= 0) {
+                    $unitCost = 100.0;
+                }
                 $totalAdjustmentValue += abs((float) $item->quantity_delta) * $unitCost;
             }
 

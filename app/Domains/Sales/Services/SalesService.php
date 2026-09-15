@@ -24,15 +24,18 @@ use Illuminate\Support\Facades\DB;
 use Exception;
 
 use App\Domains\Inventory\Services\ReservationService;
+use App\Domains\Inventory\Services\ValuationService;
 
 class SalesService
 {
     public function __construct(
         protected InventoryService $inventoryService,
         protected PostingService $postingService,
-        protected ?ReservationService $reservationService = null
+        protected ?ReservationService $reservationService = null,
+        protected ?ValuationService $valuationService = null
     ) {
         $this->reservationService = $reservationService ?? new ReservationService();
+        $this->valuationService = $valuationService ?? new ValuationService();
     }
 
     /**
@@ -545,15 +548,13 @@ class SalesService
             $cogsAmount = 0.0;
             foreach ($stockDeductionTasks as $task) {
                 $variant = $task['variant'];
-                if (!$variant->relationLoaded('currentCommercialPricing')) {
-                    $variant->load('currentCommercialPricing');
-                }
-                $unitCost = (float) ($variant->currentCommercialPricing?->cost_price ?? $variant->pricings->first()?->cost_price ?? 0.0);
-
                 if ($task['behavior'] === 'SLAB') {
-                    $qty = count($task['slabs']);
-                    $cogsAmount += $qty * $unitCost;
+                    foreach ($task['slabs'] as $slab) {
+                        $unitCost = $this->valuationService->getUnitCost($variant, $slab);
+                        $cogsAmount += $unitCost;
+                    }
                 } else {
+                    $unitCost = $this->valuationService->getUnitCost($variant);
                     $baseQty = (float) $task['base_quantity'];
                     $cogsAmount += $baseQty * $unitCost;
                 }
