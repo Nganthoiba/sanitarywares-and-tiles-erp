@@ -541,7 +541,27 @@ class SalesService
             // Post Cost of Goods Sold (COGS) Entry
             $cogsAccount = $this->resolveAccount($organizationId, 'EXP-COGS-01', 'Cost of Goods Sold A/c', 'EXPENSE', 'Direct Expenses');
             $inventoryAssetAccount = $this->resolveAccount($organizationId, 'INV-01', 'Inventory Asset A/c', 'ASSET', 'Current Assets');
-            $cogsAmount = (float) $totalSubtotal * 0.70;
+
+            $cogsAmount = 0.0;
+            foreach ($stockDeductionTasks as $task) {
+                $variant = $task['variant'];
+                if (!$variant->relationLoaded('currentCommercialPricing')) {
+                    $variant->load('currentCommercialPricing');
+                }
+                $unitCost = (float) ($variant->currentCommercialPricing?->cost_price ?? $variant->pricings->first()?->cost_price ?? 0.0);
+
+                if ($task['behavior'] === 'SLAB') {
+                    $qty = count($task['slabs']);
+                    $cogsAmount += $qty * $unitCost;
+                } else {
+                    $baseQty = (float) $task['base_quantity'];
+                    $cogsAmount += $baseQty * $unitCost;
+                }
+            }
+
+            if ($cogsAmount <= 0) {
+                $cogsAmount = (float) $totalSubtotal * 0.70;
+            }
 
             $this->postingService->postCOGS(
                 $organizationId,
