@@ -287,21 +287,42 @@ Inventory tracking is fully stateful, real-time, and auditable across branches a
 
 ## 8. Sales
 
-The Sales & Invoicing module provides point-of-sale execution, customer tax invoice generation, and real-time inventory deduction.
+The Sales & Invoicing module supports a **Two-Track Sales Architecture** designed for building-material enterprises, handling both walk-in retail customers and structured project/wholesale orders.
 
 ```text
-  New Sale Form ──► Stock Check & Tax Calc ──► Post Invoice ──► Stock Deducted ──► Tax Invoice Modal
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                    TRACK 1: FULL SALES WORKFLOW                         │
+  │  Quotation ──► Sales Order ──► Reservation ──► Picking / Allocation     │
+  │            ──► Dispatch ──► Invoice ──► Payment                         │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                 TRACK 2: DIRECT COUNTER SALE (WALK-IN)                  │
+  │  Counter Sale Entry ──► Invoice + Immediate Dispatch ──► Payment        │
+  └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Sales Workflow
+### Two-Track Sales Workflows
 
+#### 1. Full Sales Workflow (Project & Wholesale Orders)
+Designed for enterprise, project, and deferred delivery orders where quotation, approval, stock allocation, and dispatch occur over multiple stages:
+- **Quotation:** Estimate generated for customer approval.
+- **Sales Order:** Confirmed commercial order locking prices and terms.
+- **Reservation:** Inventory reserved in warehouse to prevent stockouts before fulfillment.
+- **Picking / Allocation:** Specific warehouse bin locations or slab records designated for dispatch.
+- **Dispatch:** Physical release of goods with delivery note/gate pass.
+- **Invoice:** Formal GST Tax Invoice generated on dispatch or milestone billing.
+- **Payment:** Customer payment settlement posted against customer ledger.
+
+#### 2. Direct Counter Sale (Walk-in Retail Customers)
+Streamlined point-of-sale workflow for immediate cash/card counter sales:
 1. **Order Entry (`NewSaleForm.jsx` / `SalesApiController`):**
     - Select Customer, Branch, and Warehouse.
     - Add line items with choice of sale unit (`BOX`, `PCS`, `SQ.FT`, `SLAB`).
     - Auto-calculate item subtotal, discounts, and GST tax breakdown based on customer state vs warehouse state (CGST + SGST for intra-state, IGST for inter-state).
-2. **Invoice Posting (`SalesService`):**
+2. **Invoice Posting & Fulfillment (`SalesService`):**
     - Creates `Invoice` and `InvoiceItem` records.
-    - Reserves and deducts inventory immediately from the designated warehouse.
+    - Reserves and deducts inventory immediately from designated warehouse.
     - Records an `InventoryMovement` entry of type `SALE`.
 3. **Invoice & Billing (`TaxInvoiceModal.jsx`):**
     - Generates GST-compliant Tax Invoices displaying HSN/SAC codes, tax rates, vehicle/dispatch details, and customer billing address.

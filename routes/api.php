@@ -187,11 +187,26 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::post('/purchase-orders/{id}/cancel', [PurchaseOrderApiController::class, 'cancel']);
     Route::post('/purchase-orders/{id}/close', [PurchaseOrderApiController::class, 'close'])->middleware('permission:purchase.orders.create');
 
-    // Core Sales Routes
+    // Core Sales Routes (Two-Track Sales Architecture)
     Route::get('/sales/form-data', [SalesApiController::class, 'getFormData']);
     Route::get('/sales', [SalesApiController::class, 'index']);
     Route::post('/sales/direct', [SalesApiController::class, 'storeDirectSale']);
     Route::get('/sales/{id}', [SalesApiController::class, 'show']);
+
+    // Track 1: Quotations, Sales Orders, Dispatches, Returns
+    Route::get('/quotations', [SalesApiController::class, 'indexQuotations']);
+    Route::post('/quotations', [SalesApiController::class, 'storeQuotation']);
+    Route::post('/quotations/{id}/convert', [SalesApiController::class, 'convertQuotationToSalesOrder']);
+
+    Route::get('/sales-orders', [SalesApiController::class, 'indexSalesOrders']);
+    Route::post('/sales-orders', [SalesApiController::class, 'storeSalesOrder']);
+    Route::post('/sales-orders/{id}/reserve', [SalesApiController::class, 'reserveSalesOrder']);
+
+    Route::get('/dispatches', [SalesApiController::class, 'indexDispatches']);
+    Route::post('/dispatches', [SalesApiController::class, 'storeDispatch']);
+    Route::post('/dispatches/{id}/invoice', [SalesApiController::class, 'storeInvoiceFromDispatch']);
+
+    Route::post('/sales-returns', [SalesApiController::class, 'storeSalesReturn']);
 
     // Master CRUD Routes
     Route::apiResource('branches-crud', BranchApiController::class);

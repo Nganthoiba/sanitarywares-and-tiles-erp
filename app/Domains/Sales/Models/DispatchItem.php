@@ -27,4 +27,10 @@ class DispatchItem extends Model {
     public function inventoryObject(): BelongsTo {
         return $this->belongsTo(InventoryObject::class);
     }
+    public function product(): BelongsTo {
+        return $this->belongsTo(\App\Domains\Product\Models\Product::class, 'product_variant_id');
+    }
+    public function variant(): BelongsTo {
+        return $this->product();
+    }
 }

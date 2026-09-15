@@ -8,6 +8,8 @@ use App\Domains\Sales\Models\Dispatch;
 use App\Domains\Sales\Models\DispatchItem;
 use App\Domains\Sales\Models\SalesOrder;
 use App\Domains\Sales\Models\Quotation;
+use App\Domains\Sales\Models\SalesReturn;
+use App\Domains\Sales\Models\SalesReturnItem;
 use App\Domains\Master\Models\Customer;
 use App\Domains\Master\Models\Warehouse;
 use App\Domains\Master\Models\Unit;
@@ -635,5 +637,675 @@ class SalesService
         return Invoice::where('organization_id', $organizationId)
             ->with(['organization', 'customer', 'warehouse', 'items.unit', 'items.variant.taxProfile', 'dispatches.items'])
             ->findOrFail($invoiceId);
+    }
+
+    // ==========================================
+    // TRACK 1: FULL SALES WORKFLOW METHODS
+    // ==========================================
+
+    /**
+     * Create a Quotation
+     */
+    public function createQuotation(array $data, int $organizationId): Quotation
+    {
+        return DB::transaction(function () use ($data, $organizationId) {
+            $customerId = (int) $data['customer_id'];
+            $branchId = isset($data['branch_id']) ? (int) $data['branch_id'] : null;
+            $quotationDate = $data['quotation_date'] ?? date('Y-m-d');
+            $expiryDate = $data['expiry_date'] ?? date('Y-m-d', strtotime('+30 days'));
+            $remarks = $data['remarks'] ?? null;
+            $items = $data['items'] ?? [];
+
+            if (empty($items)) {
+                throw new Exception("Quotation must contain at least one line item.");
+            }
+
+            $seq = DB::table('quotations')->where('organization_id', $organizationId)->count() + 1;
+            $quotationNumber = 'QTN-' . date('Ymd') . '-' . str_pad($seq, 4, '0', STR_PAD_LEFT);
+
+            $totalAmount = 0.0;
+            $processedItems = [];
+
+            foreach ($items as $item) {
+                $variantId = (int) $item['product_variant_id'];
+                $quantity = (float) $item['quantity'];
+                $unitPrice = (float) $item['unit_price'];
+                $unitId = isset($item['unit_id']) ? (int) $item['unit_id'] : null;
+                $taxAmount = isset($item['tax_amount']) ? (float) $item['tax_amount'] : 0.0;
+                $subtotal = ($quantity * $unitPrice) + $taxAmount;
+
+                $totalAmount += $subtotal;
+                $processedItems[] = [
+                    'organization_id' => $organizationId,
+                    'product_variant_id' => $variantId,
+                    'quantity' => $quantity,
+                    'unit_id' => $unitId,
+                    'unit_price' => $unitPrice,
+                    'tax_amount' => $taxAmount,
+                    'subtotal' => $subtotal,
+                ];
+            }
+
+            $quotation = Quotation::create([
+                'organization_id' => $organizationId,
+                'branch_id' => $branchId,
+                'customer_id' => $customerId,
+                'quotation_number' => $quotationNumber,
+                'quotation_date' => $quotationDate,
+                'expiry_date' => $expiryDate,
+                'total_amount' => $totalAmount,
+                'status' => 'DRAFT',
+                'remarks' => $remarks,
+            ]);
+
+            foreach ($processedItems as $row) {
+                $quotation->items()->create($row);
+            }
+
+            return $quotation->load(['customer', 'items.variant', 'items.unit']);
+        });
+    }
+
+    /**
+     * List Quotations
+     */
+    public function listQuotations(int $organizationId, array $filters = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
+        $query = Quotation::where('organization_id', $organizationId)->with(['customer', 'items.variant']);
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        return $query->orderBy('id', 'desc')->paginate($filters['per_page'] ?? 15);
+    }
+
+    /**
+     * Create a Sales Order
+     */
+    public function createSalesOrder(array $data, int $organizationId): SalesOrder
+    {
+        return DB::transaction(function () use ($data, $organizationId) {
+            $customerId = (int) $data['customer_id'];
+            $branchId = isset($data['branch_id']) ? (int) $data['branch_id'] : null;
+            $quotationId = isset($data['quotation_id']) ? (int) $data['quotation_id'] : null;
+            $soDate = $data['so_date'] ?? date('Y-m-d');
+            $remarks = $data['remarks'] ?? null;
+            $items = $data['items'] ?? [];
+
+            if (empty($items)) {
+                throw new Exception("Sales order must contain at least one line item.");
+            }
+
+            $seq = DB::table('sales_orders')->where('organization_id', $organizationId)->count() + 1;
+            $soNumber = 'SO-' . date('Ymd') . '-' . str_pad($seq, 4, '0', STR_PAD_LEFT);
+
+            $totalAmount = 0.0;
+            $processedItems = [];
+
+            foreach ($items as $item) {
+                $variantId = (int) $item['product_variant_id'];
+                $quantity = (float) $item['quantity'];
+                $unitPrice = (float) $item['unit_price'];
+                $unitId = isset($item['unit_id']) ? (int) $item['unit_id'] : null;
+                $taxAmount = isset($item['tax_amount']) ? (float) $item['tax_amount'] : 0.0;
+                $subtotal = ($quantity * $unitPrice) + $taxAmount;
+
+                $totalAmount += $subtotal;
+                $processedItems[] = [
+                    'organization_id' => $organizationId,
+                    'product_variant_id' => $variantId,
+                    'quantity' => $quantity,
+                    'allocated_quantity' => 0.0,
+                    'dispatched_quantity' => 0.0,
+                    'unit_id' => $unitId,
+                    'unit_price' => $unitPrice,
+                    'tax_amount' => $taxAmount,
+                    'subtotal' => $subtotal,
+                ];
+            }
+
+            $so = SalesOrder::create([
+                'organization_id' => $organizationId,
+                'branch_id' => $branchId,
+                'customer_id' => $customerId,
+                'quotation_id' => $quotationId,
+                'so_number' => $soNumber,
+                'so_date' => $soDate,
+                'total_amount' => $totalAmount,
+                'status' => 'CONFIRMED',
+                'remarks' => $remarks,
+            ]);
+
+            foreach ($processedItems as $row) {
+                $so->items()->create($row);
+            }
+
+            if ($quotationId) {
+                Quotation::where('organization_id', $organizationId)
+                    ->where('id', $quotationId)
+                    ->update(['status' => 'ACCEPTED']);
+            }
+
+            return $so->load(['customer', 'items.variant', 'items.unit']);
+        });
+    }
+
+    /**
+     * Convert Quotation to Sales Order
+     */
+    public function convertQuotationToSalesOrder(int $quotationId, int $organizationId): SalesOrder
+    {
+        $quotation = Quotation::where('organization_id', $organizationId)
+            ->with('items')
+            ->findOrFail($quotationId);
+
+        $soData = [
+            'customer_id' => $quotation->customer_id,
+            'branch_id' => $quotation->branch_id,
+            'quotation_id' => $quotation->id,
+            'so_date' => date('Y-m-d'),
+            'remarks' => "Converted from Quotation #{$quotation->quotation_number}",
+            'items' => $quotation->items->map(function ($item) {
+                return [
+                    'product_variant_id' => $item->product_variant_id,
+                    'quantity' => $item->quantity,
+                    'unit_id' => $item->unit_id,
+                    'unit_price' => $item->unit_price,
+                    'tax_amount' => $item->tax_amount,
+                ];
+            })->toArray(),
+        ];
+
+        return $this->createSalesOrder($soData, $organizationId);
+    }
+
+    /**
+     * List Sales Orders
+     */
+    public function listSalesOrders(int $organizationId, array $filters = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
+        $query = SalesOrder::where('organization_id', $organizationId)->with(['customer', 'items.variant', 'quotation']);
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        return $query->orderBy('id', 'desc')->paginate($filters['per_page'] ?? 15);
+    }
+
+    /**
+     * Reserve Stock for Sales Order
+     */
+    public function reserveStockForSalesOrder(int $salesOrderId, int $warehouseId, int $organizationId): array
+    {
+        $so = SalesOrder::where('organization_id', $organizationId)
+            ->with('items')
+            ->findOrFail($salesOrderId);
+
+        $reservations = [];
+        foreach ($so->items as $item) {
+            $res = $this->reservationService->reserve([
+                'organization_id' => $organizationId,
+                'customer_id' => $so->customer_id,
+                'warehouse_id' => $warehouseId,
+                'product_variant_id' => $item->product_variant_id,
+                'unit_id' => $item->unit_id,
+                'quantity' => $item->quantity,
+                'source_type' => 'SalesOrder',
+                'source_id' => $so->id,
+                'notes' => "Reservation for Sales Order #{$so->so_number}",
+            ]);
+
+            $item->allocated_quantity = $item->quantity;
+            $item->save();
+            $reservations[] = $res;
+        }
+
+        $so->status = 'RESERVED';
+        $so->save();
+
+        return $reservations;
+    }
+
+    /**
+     * Create Dispatch from Sales Order
+     */
+    public function createDispatchFromSalesOrder(array $data, int $organizationId): Dispatch
+    {
+        return DB::transaction(function () use ($data, $organizationId) {
+            $salesOrderId = (int) $data['sales_order_id'];
+            $warehouseId = (int) $data['warehouse_id'];
+            $dispatchDate = $data['dispatch_date'] ?? date('Y-m-d');
+            $remarks = $data['remarks'] ?? null;
+
+            $so = SalesOrder::where('organization_id', $organizationId)
+                ->with('items.variant')
+                ->findOrFail($salesOrderId);
+
+            $seq = DB::table('dispatches')->where('organization_id', $organizationId)->count() + 1;
+            $dispatchNumber = 'DSP-' . date('Ymd') . '-' . str_pad($seq, 4, '0', STR_PAD_LEFT);
+
+            $dispatch = Dispatch::create([
+                'organization_id' => $organizationId,
+                'warehouse_id' => $warehouseId,
+                'sales_order_id' => $so->id,
+                'dispatch_number' => $dispatchNumber,
+                'dispatch_date' => $dispatchDate,
+                'status' => 'DELIVERED',
+                'remarks' => $remarks ?? "Dispatch for Sales Order #{$so->so_number}",
+            ]);
+
+            foreach ($so->items as $soItem) {
+                $variant = $soItem->variant;
+                $qtyToDispatch = (float) ($soItem->quantity - $soItem->dispatched_quantity);
+                if ($qtyToDispatch <= 0) continue;
+
+                if ($variant->inventory_behavior === 'SLAB') {
+                    $slabs = InventoryObject::where('organization_id', $organizationId)
+                        ->where('warehouse_id', $warehouseId)
+                        ->where('product_variant_id', $variant->id)
+                        ->where('status', 'AVAILABLE')
+                        ->take((int) $qtyToDispatch)
+                        ->get();
+
+                    foreach ($slabs as $slab) {
+                        $slab->status = 'DISPATCHED';
+                        $slab->save();
+
+                        DispatchItem::create([
+                            'organization_id' => $organizationId,
+                            'dispatch_id' => $dispatch->id,
+                            'product_variant_id' => $variant->id,
+                            'quantity' => 1.0,
+                            'unit_id' => $soItem->unit_id,
+                        ]);
+
+                        InventoryMovement::create([
+                            'organization_id' => $organizationId,
+                            'inventory_object_id' => $slab->id,
+                            'movement_type' => 'SALE',
+                            'quantity_delta' => -1.0,
+                            'area_delta' => -$slab->area,
+                            'from_warehouse_id' => $warehouseId,
+                            'reference_type' => 'Dispatch',
+                            'reference_id' => $dispatch->id,
+                        ]);
+                    }
+                } else {
+                    $baseQty = $this->inventoryService->convertQuantity($qtyToDispatch, $soItem->unit_id, $variant->base_unit_id, $variant->id, $organizationId);
+                    $remaining = $baseQty;
+
+                    $objects = InventoryObject::where('organization_id', $organizationId)
+                        ->where('product_variant_id', $variant->id)
+                        ->where('warehouse_id', $warehouseId)
+                        ->where('status', 'AVAILABLE')
+                        ->orderBy('id', 'asc')
+                        ->get();
+
+                    foreach ($objects as $obj) {
+                        if ($remaining <= 0) break;
+                        $deduct = min((float) $obj->quantity, $remaining);
+                        $areaDeduct = $this->inventoryService->getAreaForQuantity($deduct, $variant->base_unit_id, $variant->id, $organizationId);
+
+                        $obj->quantity = max(0, (float) $obj->quantity - $deduct);
+                        $obj->area = max(0, (float) $obj->area - $areaDeduct);
+                        if ($obj->quantity <= 0) {
+                            $obj->status = 'DISPATCHED';
+                        }
+                        $obj->save();
+                        $remaining -= $deduct;
+
+                        InventoryMovement::create([
+                            'organization_id' => $organizationId,
+                            'inventory_object_id' => $obj->id,
+                            'movement_type' => 'SALE',
+                            'quantity_delta' => -$deduct,
+                            'area_delta' => -$areaDeduct,
+                            'from_warehouse_id' => $warehouseId,
+                            'reference_type' => 'Dispatch',
+                            'reference_id' => $dispatch->id,
+                        ]);
+                    }
+
+                    DispatchItem::create([
+                        'organization_id' => $organizationId,
+                        'dispatch_id' => $dispatch->id,
+                        'product_variant_id' => $variant->id,
+                        'quantity' => $qtyToDispatch,
+                        'unit_id' => $soItem->unit_id,
+                    ]);
+                }
+
+                $soItem->dispatched_quantity += $qtyToDispatch;
+                $soItem->save();
+
+                // Fulfill active reservations for this sales order item
+                $resQuery = \App\Domains\Inventory\Models\InventoryReservation::where('organization_id', $organizationId)
+                    ->where('source_type', 'SalesOrder')
+                    ->where('source_id', $so->id)
+                    ->where('product_variant_id', $variant->id)
+                    ->whereIn('status', ['ACTIVE', 'PENDING', 'PARTIALLY_FULFILLED']);
+
+                foreach ($resQuery->get() as $res) {
+                    $rem = $res->remaining_quantity;
+                    if ($rem > 0) {
+                        $this->reservationService->fulfill($res->id, min($rem, $qtyToDispatch));
+                    }
+                }
+            }
+
+            $allDispatched = $so->items->every(fn($i) => (float)$i->dispatched_quantity >= (float)$i->quantity);
+            $so->status = $allDispatched ? 'DISPATCHED' : 'PARTIALLY_DISPATCHED';
+            $so->save();
+
+            return $dispatch->load(['warehouse', 'order', 'items.variant']);
+        });
+    }
+
+    /**
+     * List Dispatches
+     */
+    public function listDispatches(int $organizationId, array $filters = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
+        $query = Dispatch::where('organization_id', $organizationId)->with(['warehouse', 'order', 'invoice', 'items.variant']);
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        return $query->orderBy('id', 'desc')->paginate($filters['per_page'] ?? 15);
+    }
+
+    /**
+     * Create Invoice from Dispatch
+     */
+    public function createInvoiceFromDispatch(int $dispatchId, array $invoiceData, int $organizationId): Invoice
+    {
+        return DB::transaction(function () use ($dispatchId, $invoiceData, $organizationId) {
+            $dispatch = Dispatch::where('organization_id', $organizationId)
+                ->with(['order.items.variant.taxProfile', 'order.customer', 'items'])
+                ->findOrFail($dispatchId);
+
+            $so = $dispatch->order;
+            $customer = $so ? $so->customer : Customer::where('organization_id', $organizationId)->findOrFail($invoiceData['customer_id']);
+            $warehouseId = $dispatch->warehouse_id;
+            $organization = Organization::findOrFail($organizationId);
+
+            $customerState = trim(strtolower($customer->state ?? ''));
+            $orgState = trim(strtolower($organization->state ?? ''));
+            $isInterState = (!empty($customerState) && !empty($orgState) && $customerState !== $orgState);
+
+            $invoiceDate = $invoiceData['invoice_date'] ?? date('Y-m-d');
+            $paymentMethod = $invoiceData['payment_method'] ?? 'CASH';
+            $paidAmount = isset($invoiceData['paid_amount']) ? (float) $invoiceData['paid_amount'] : 0.0;
+
+            $totalSubtotal = 0.0;
+            $totalTaxable = 0.0;
+            $totalCGST = 0.0;
+            $totalSGST = 0.0;
+            $totalIGST = 0.0;
+            $totalTax = 0.0;
+            $totalInvoiceAmount = 0.0;
+
+            $processedItems = [];
+
+            foreach ($dispatch->items as $dispItem) {
+                $variant = Product::where('organization_id', $organizationId)->with('taxProfile')->findOrFail($dispItem->product_variant_id);
+                $soItem = $so ? $so->items->firstWhere('product_variant_id', $variant->id) : null;
+                $unitPrice = $soItem ? (float) $soItem->unit_price : (float) ($variant->pricings->first()->selling_price ?? 0);
+                $quantity = (float) $dispItem->quantity;
+                $taxRate = (float) ($variant->taxProfile->rate ?? 18.00);
+
+                $lineGross = $quantity * $unitPrice;
+                $lineTaxable = round($lineGross / (1 + ($taxRate / 100.0)), 4);
+                $lineTax = $lineGross - $lineTaxable;
+
+                if ($isInterState) {
+                    $cgstRate = 0; $cgstAmount = 0; $sgstRate = 0; $sgstAmount = 0;
+                    $igstRate = $taxRate; $igstAmount = round($lineTax, 4);
+                } else {
+                    $cgstRate = round($taxRate / 2.0, 2); $sgstRate = round($taxRate / 2.0, 2);
+                    $cgstAmount = round($lineTax / 2.0, 4); $sgstAmount = round($lineTax / 2.0, 4);
+                    $igstRate = 0; $igstAmount = 0;
+                }
+
+                $totalSubtotal += $lineGross;
+                $totalTaxable += $lineTaxable;
+                $totalCGST += $cgstAmount;
+                $totalSGST += $sgstAmount;
+                $totalIGST += $igstAmount;
+                $totalTax += $lineTax;
+                $totalInvoiceAmount += $lineGross;
+
+                $processedItems[] = [
+                    'product_variant_id' => $variant->id,
+                    'unit_id' => $dispItem->unit_id,
+                    'price_basis' => 'PCS',
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'discount_amount' => 0.0,
+                    'taxable_amount' => $lineTaxable,
+                    'tax_rate' => $taxRate,
+                    'cgst_rate' => $cgstRate,
+                    'cgst_amount' => $cgstAmount,
+                    'sgst_rate' => $sgstRate,
+                    'sgst_amount' => $sgstAmount,
+                    'igst_rate' => $igstRate,
+                    'igst_amount' => $igstAmount,
+                    'tax_amount' => $lineTax,
+                    'subtotal' => $lineGross,
+                    'product_name_snapshot' => $variant->name,
+                    'sku_snapshot' => $variant->sku,
+                ];
+            }
+
+            $seq = DB::table('invoices')->where('organization_id', $organizationId)->count() + 1;
+            $invoiceNumber = 'INV-' . date('Ymd') . '-' . str_pad($seq, 4, '0', STR_PAD_LEFT);
+
+            $dueAmount = max(0, $totalInvoiceAmount - $paidAmount);
+            $paymentStatus = 'UNPAID';
+            if ($paidAmount >= $totalInvoiceAmount) {
+                $paymentStatus = 'PAID';
+                $dueAmount = 0.0;
+            } elseif ($paidAmount > 0) {
+                $paymentStatus = 'PARTIALLY_PAID';
+            }
+
+            $invoice = Invoice::create([
+                'organization_id' => $organizationId,
+                'customer_id' => $customer->id,
+                'warehouse_id' => $warehouseId,
+                'invoice_number' => $invoiceNumber,
+                'invoice_date' => $invoiceDate,
+                'subtotal' => $totalSubtotal,
+                'discount_amount' => 0.0,
+                'taxable_amount' => $totalTaxable,
+                'tax_amount' => $totalTax,
+                'cgst_amount' => $totalCGST,
+                'sgst_amount' => $totalSGST,
+                'igst_amount' => $totalIGST,
+                'total_amount' => $totalInvoiceAmount,
+                'paid_amount' => $paidAmount,
+                'due_amount' => $dueAmount,
+                'status' => 'APPROVED',
+                'payment_status' => $paymentStatus,
+                'payment_method' => $paymentMethod,
+                'billing_address' => $customer->address,
+                'shipping_address' => $customer->address,
+                'is_direct_sale' => false,
+            ]);
+
+            foreach ($processedItems as $row) {
+                $row['organization_id'] = $organizationId;
+                $invoice->items()->create($row);
+            }
+
+            $dispatch->invoice_id = $invoice->id;
+            $dispatch->save();
+
+            if ($so) {
+                $so->status = 'INVOICED';
+                $so->save();
+            }
+
+            // Post Sales GL Entry
+            $customerAccount = $this->resolveAccount($organizationId, 'CUST-' . $customer->id, $customer->name, 'ASSET', 'Accounts Receivable');
+            $salesAccount = $this->resolveAccount($organizationId, 'REV-SALES-01', 'Sales Income A/c', 'INCOME', 'Direct Income');
+            $gstOutputAccount = $this->resolveAccount($organizationId, 'DUTY-GST-OUT-01', 'Output GST A/c', 'LIABILITY', 'Duties and Taxes');
+
+            $this->postingService->postSales(
+                $organizationId,
+                1,
+                (float) $totalInvoiceAmount,
+                $customerAccount->id,
+                $salesAccount->id,
+                $gstOutputAccount->id,
+                (float) $totalTax,
+                $invoiceNumber,
+                $invoiceDate
+            );
+
+            // Post Receipt if paid
+            if ($paidAmount > 0) {
+                $paymentAccCode = ($paymentMethod === 'CASH') ? 'CASH-01' : 'BANK-01';
+                $paymentAccName = ($paymentMethod === 'CASH') ? 'Cash in Hand' : 'Main Bank Account';
+                $paymentAccount = $this->resolveAccount($organizationId, $paymentAccCode, $paymentAccName, 'ASSET', 'Bank Accounts');
+
+                $this->postingService->postReceipt(
+                    $organizationId,
+                    1,
+                    $paidAmount,
+                    $paymentAccount->id,
+                    $customerAccount->id,
+                    'RCP-' . $invoiceNumber,
+                    $invoiceDate
+                );
+            }
+
+            // Post COGS Entry
+            $cogsAccount = $this->resolveAccount($organizationId, 'EXP-COGS-01', 'Cost of Goods Sold A/c', 'EXPENSE', 'Direct Expenses');
+            $inventoryAssetAccount = $this->resolveAccount($organizationId, 'INV-01', 'Inventory Asset A/c', 'ASSET', 'Current Assets');
+            $cogsAmount = (float) $totalSubtotal * 0.70;
+
+            $this->postingService->postCOGS(
+                $organizationId,
+                $cogsAmount,
+                $cogsAccount->id,
+                $inventoryAssetAccount->id,
+                $invoiceNumber,
+                $invoiceDate,
+                $invoice->id
+            );
+
+            return $invoice->load(['organization', 'customer', 'warehouse', 'items.unit', 'items.variant']);
+        });
+    }
+
+    /**
+     * Create Sales Return
+     */
+    public function createSalesReturn(array $data, int $organizationId): SalesReturn
+    {
+        return DB::transaction(function () use ($data, $organizationId) {
+            $invoiceId = (int) $data['invoice_id'];
+            $returnDate = $data['return_date'] ?? date('Y-m-d');
+            $remarks = $data['remarks'] ?? null;
+
+            $invoice = Invoice::where('organization_id', $organizationId)
+                ->with(['items.variant', 'customer'])
+                ->findOrFail($invoiceId);
+
+            $seq = DB::table('sales_returns')->where('organization_id', $organizationId)->count() + 1;
+            $returnNumber = 'RET-' . date('Ymd') . '-' . str_pad($seq, 4, '0', STR_PAD_LEFT);
+
+            $totalReturnAmount = 0.0;
+            $processedReturnItems = [];
+
+            foreach ($data['items'] ?? [] as $retItem) {
+                $invoiceItemId = (int) $retItem['invoice_item_id'];
+                $qty = (float) $retItem['quantity'];
+
+                $invItem = $invoice->items->firstWhere('id', $invoiceItemId);
+                if (!$invItem) continue;
+
+                $itemSubtotal = $qty * (float) $invItem->unit_price;
+                $totalReturnAmount += $itemSubtotal;
+
+                $objId = $retItem['inventory_object_id'] ?? null;
+                if (!$objId && $invItem) {
+                    $invObj = InventoryObject::where('organization_id', $organizationId)
+                        ->where('warehouse_id', $invoice->warehouse_id)
+                        ->where('product_variant_id', $invItem->product_variant_id)
+                        ->first();
+                    if ($invObj) {
+                        $objId = $invObj->id;
+                        $invObj->quantity = (float) $invObj->quantity + $qty;
+                        $invObj->status = 'AVAILABLE';
+                        $invObj->save();
+                    }
+                } elseif ($objId) {
+                    $obj = InventoryObject::find($objId);
+                    if ($obj) {
+                        $obj->status = 'AVAILABLE';
+                        $obj->save();
+                    }
+                }
+
+                $processedReturnItems[] = [
+                    'organization_id' => $organizationId,
+                    'invoice_item_id' => $invoiceItemId,
+                    'inventory_object_id' => $objId,
+                    'quantity' => $qty,
+                ];
+
+                if ($objId) {
+                    InventoryMovement::create([
+                        'organization_id' => $organizationId,
+                        'inventory_object_id' => $objId,
+                        'movement_type' => 'ADJUSTMENT',
+                        'quantity_delta' => $qty,
+                        'to_warehouse_id' => $invoice->warehouse_id,
+                        'reference_type' => 'SalesReturn',
+                        'reference_id' => $invoice->id,
+                        'reason' => 'Sales Return',
+                    ]);
+                }
+            }
+
+            $salesReturn = SalesReturn::create([
+                'organization_id' => $organizationId,
+                'customer_id' => $invoice->customer_id,
+                'invoice_id' => $invoice->id,
+                'return_number' => $returnNumber,
+                'return_date' => $returnDate,
+                'total_amount' => $totalReturnAmount,
+                'status' => 'APPROVED',
+            ]);
+
+            foreach ($processedReturnItems as $row) {
+                $salesReturn->items()->create($row);
+            }
+
+            // Post Accounting Sales Return Entry & COGS Restoration Entry
+            $salesReturnAccount = $this->resolveAccount($organizationId, 'SRET-01', 'Sales Return A/c', 'INCOME', 'Direct Income');
+            $customerAccount = $this->resolveAccount($organizationId, 'CUST-' . $invoice->customer_id, $invoice->customer->name, 'ASSET', 'Accounts Receivable');
+            $gstOutputAccount = $this->resolveAccount($organizationId, 'DUTY-GST-OUT-01', 'Output GST A/c', 'LIABILITY', 'Duties and Taxes');
+            $cogsAccount = $this->resolveAccount($organizationId, 'EXP-COGS-01', 'Cost of Goods Sold A/c', 'EXPENSE', 'Direct Expenses');
+            $inventoryAssetAccount = $this->resolveAccount($organizationId, 'INV-01', 'Inventory Asset A/c', 'ASSET', 'Current Assets');
+
+            $cogsRestoration = $totalReturnAmount * 0.70;
+
+            $this->postingService->postSalesReturn(
+                $organizationId,
+                $totalReturnAmount,
+                $cogsRestoration,
+                $customerAccount->id,
+                $salesReturnAccount->id,
+                $gstOutputAccount->id,
+                0.0,
+                $inventoryAssetAccount->id,
+                $cogsAccount->id,
+                $returnNumber,
+                $returnDate,
+                $salesReturn->id
+            );
+
+            return $salesReturn->load(['customer', 'invoice', 'items']);
+        });
     }
 }
