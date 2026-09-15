@@ -204,10 +204,20 @@ class SalesService
             $warehouse = Warehouse::where('organization_id', $organizationId)->findOrFail($warehouseId);
             $organization = Organization::findOrFail($organizationId);
 
-            // Determine Tax Split (Intra-state vs Inter-state)
+            // Determine Tax & GST Parameters
+            $placeOfSupplyState = $data['place_of_supply_state'] ?? $customer->state ?? $organization->state ?? 'Manipur';
+            $supplierGstin = $data['supplier_gstin'] ?? $organization->gstin ?? null;
+            $customerGstin = $data['customer_gstin'] ?? $customer->gstin ?? null;
+            $gstRegistrationType = $data['gst_registration_type'] ?? $customer->gst_registration_type ?? (!empty($customerGstin) ? 'REGISTERED_REGULAR' : 'UNREGISTERED');
+            $invoiceType = $data['invoice_type'] ?? 'REGULAR';
+            $isReverseCharge = (bool) ($data['is_reverse_charge'] ?? false);
+            $isTaxInclusive = (bool) ($data['is_tax_inclusive'] ?? true);
+
             $customerState = trim(strtolower($customer->state ?? ''));
+            $posState = trim(strtolower($placeOfSupplyState));
             $orgState = trim(strtolower($organization->state ?? ''));
-            $isInterState = (!empty($customerState) && !empty($orgState) && $customerState !== $orgState);
+            $isInterState = isset($data['is_inter_state']) ? (bool) $data['is_inter_state'] : (!empty($posState) && !empty($orgState) && $posState !== $orgState);
+            $supplyType = $isInterState ? 'INTER_STATE' : 'INTRA_STATE';
 
             // Calculate Item Level Details & Validate Stock
             $totalSubtotal = 0.0;
@@ -230,7 +240,16 @@ class SalesService
                 $quantity = (float) $item['quantity'];
                 $unitPrice = (float) $item['unit_price'];
                 $discountAmount = isset($item['discount_amount']) ? (float) $item['discount_amount'] : 0.0;
-                $taxRate = isset($item['tax_rate']) ? (float) $item['tax_rate'] : (float) ($variant->taxProfile->rate ?? 18.00);
+
+                $taxCategory = $item['tax_category'] ?? 'TAXABLE';
+                $itemTaxInclusive = isset($item['is_tax_inclusive']) ? (bool) $item['is_tax_inclusive'] : $isTaxInclusive;
+                $hsnSacCode = $item['hsn_sac_code'] ?? $variant->taxProfile->hsn_code ?? $variant->sku;
+
+                if (in_array($taxCategory, ['EXEMPT', 'NIL_RATED', 'NON_GST'])) {
+                    $taxRate = 0.0;
+                } else {
+                    $taxRate = isset($item['tax_rate']) ? (float) $item['tax_rate'] : (float) ($variant->taxProfile->rate ?? 18.00);
+                }
 
                 if ($quantity <= 0) {
                     throw new Exception("Quantity must be greater than zero for product: {$variant->name}");
@@ -251,7 +270,7 @@ class SalesService
                         ->get();
 
                     if ($slabs->count() !== count($slabIds)) {
-                        throw new Exception("One or more selected slabs for {$variant->name} are no longer available in the selected warehouse.");
+                        throw new Exception("One or more selected slabs are no longer available in warehouse.");
                     }
 
                     $stockDeductionTasks[] = [
@@ -260,8 +279,17 @@ class SalesService
                         'slabs' => $slabs,
                     ];
                 } else {
-                    // Convert selling qty to base unit for stock deduction
-                    $baseUnitQty = $this->inventoryService->convertQuantity($quantity, $unitId, $variant->base_unit_id, $variant->id, $organizationId);
+                    $convFactor = 1.0;
+                    if ($unitId !== $variant->base_unit_id) {
+                        $conversion = \App\Domains\Master\Models\UnitConversion::where('product_variant_id', $variant->id)
+                            ->where('from_unit_id', $unitId)
+                            ->where('to_unit_id', $variant->base_unit_id)
+                            ->first();
+                        if ($conversion) {
+                            $convFactor = (float) $conversion->factor;
+                        }
+                    }
+                    $baseUnitQty = $quantity * $convFactor;
 
                     // Lock & calculate total available bulk stock in warehouse atomically
                     $availableObjects = InventoryObject::where('organization_id', $organizationId)
@@ -289,7 +317,7 @@ class SalesService
                     ];
                 }
 
-                // Amount calculations (Tax Inclusive)
+                // Amount & GST Tax Calculations
                 $lineGross = $quantity * $unitPrice;
                 $lineGrossAfterDiscount = max(0, $lineGross - $discountAmount);
 
@@ -303,8 +331,15 @@ class SalesService
                 $lineTax = 0.0;
 
                 if ($taxRate > 0) {
-                    $lineTaxable = round($lineGrossAfterDiscount / (1 + ($taxRate / 100.0)), 4);
-                    $lineTax = $lineGrossAfterDiscount - $lineTaxable;
+                    if ($itemTaxInclusive) {
+                        $lineTaxable = round($lineGrossAfterDiscount / (1 + ($taxRate / 100.0)), 4);
+                        $lineTax = $lineGrossAfterDiscount - $lineTaxable;
+                        $lineSubtotal = $lineGrossAfterDiscount;
+                    } else {
+                        $lineTaxable = $lineGrossAfterDiscount;
+                        $lineTax = round($lineTaxable * ($taxRate / 100.0), 4);
+                        $lineSubtotal = $lineTaxable + $lineTax;
+                    }
 
                     if ($isInterState) {
                         $igstRate = $taxRate;
@@ -315,9 +350,9 @@ class SalesService
                         $cgstAmount = round($lineTax / 2.0, 4);
                         $sgstAmount = round($lineTax / 2.0, 4);
                     }
+                } else {
+                    $lineSubtotal = $lineGrossAfterDiscount;
                 }
-
-                $lineSubtotal = $lineGrossAfterDiscount;
 
                 $totalSubtotal += $lineGross;
                 $totalDiscount += $discountAmount;
@@ -345,6 +380,9 @@ class SalesService
                     'igst_amount' => $igstAmount,
                     'tax_amount' => $lineTax,
                     'subtotal' => $lineSubtotal,
+                    'hsn_sac_code' => $hsnSacCode,
+                    'tax_category' => $taxCategory,
+                    'is_tax_inclusive' => $itemTaxInclusive,
                     'product_name_snapshot' => $variant->name,
                     'sku_snapshot' => $variant->sku,
                     'variant_specs_snapshot' => [
@@ -357,15 +395,19 @@ class SalesService
 
             $overallDiscount = isset($data['total_discount_amount']) ? (float) $data['total_discount_amount'] : (isset($data['discount_amount']) ? (float) $data['discount_amount'] : 0.0);
             $finalDiscount = $totalDiscount + $overallDiscount;
-            $totalInvoiceAmount = max(0, $totalInvoiceAmount - $overallDiscount);
+            $unroundedTotal = max(0, $totalInvoiceAmount - $overallDiscount);
 
-            if (round($paidAmount, 2) > round($totalInvoiceAmount, 2)) {
-                throw new Exception("Amount paid (₹" . number_format($paidAmount, 2) . ") cannot be greater than the grand total amount (₹" . number_format($totalInvoiceAmount, 2) . ").");
+            $roundedTotal = round($unroundedTotal);
+            $roundOffAmount = round($roundedTotal - $unroundedTotal, 4);
+            $finalGrandTotal = $roundedTotal;
+
+            if (round($paidAmount, 2) > round($finalGrandTotal, 2)) {
+                throw new Exception("Amount paid (₹" . number_format($paidAmount, 2) . ") cannot be greater than the grand total amount (₹" . number_format($finalGrandTotal, 2) . ").");
             }
 
-            $dueAmount = max(0, $totalInvoiceAmount - $paidAmount);
+            $dueAmount = max(0, $finalGrandTotal - $paidAmount);
             $paymentStatus = 'UNPAID';
-            if ($paidAmount >= $totalInvoiceAmount) {
+            if ($paidAmount >= $finalGrandTotal) {
                 $paymentStatus = 'PAID';
                 $dueAmount = 0.0;
             } elseif ($paidAmount > 0) {
@@ -390,7 +432,8 @@ class SalesService
                 'cgst_amount' => $totalCGST,
                 'sgst_amount' => $totalSGST,
                 'igst_amount' => $totalIGST,
-                'total_amount' => $totalInvoiceAmount,
+                'total_amount' => $finalGrandTotal,
+                'round_off_amount' => $roundOffAmount,
                 'paid_amount' => $paidAmount,
                 'due_amount' => $dueAmount,
                 'status' => 'APPROVED',
@@ -399,6 +442,14 @@ class SalesService
                 'notes' => $data['notes'] ?? null,
                 'billing_address' => $data['billing_address'] ?? $customer->address,
                 'shipping_address' => $data['shipping_address'] ?? $customer->address,
+                'supplier_gstin' => $supplierGstin,
+                'customer_gstin' => $customerGstin,
+                'place_of_supply_state' => $placeOfSupplyState,
+                'gst_registration_type' => $gstRegistrationType,
+                'supply_type' => $supplyType,
+                'invoice_type' => $invoiceType,
+                'is_reverse_charge' => $isReverseCharge,
+                'is_tax_inclusive' => $isTaxInclusive,
                 'is_direct_sale' => true,
             ]);
 
@@ -1048,9 +1099,18 @@ class SalesService
             $warehouseId = $dispatch->warehouse_id;
             $organization = Organization::findOrFail($organizationId);
 
-            $customerState = trim(strtolower($customer->state ?? ''));
+            $placeOfSupplyState = $invoiceData['place_of_supply_state'] ?? $customer->state ?? $organization->state ?? 'Manipur';
+            $supplierGstin = $invoiceData['supplier_gstin'] ?? $organization->gstin ?? null;
+            $customerGstin = $invoiceData['customer_gstin'] ?? $customer->gstin ?? null;
+            $gstRegistrationType = $invoiceData['gst_registration_type'] ?? $customer->gst_registration_type ?? (!empty($customerGstin) ? 'REGISTERED_REGULAR' : 'UNREGISTERED');
+            $invoiceType = $invoiceData['invoice_type'] ?? 'REGULAR';
+            $isReverseCharge = (bool) ($invoiceData['is_reverse_charge'] ?? false);
+            $isTaxInclusive = (bool) ($invoiceData['is_tax_inclusive'] ?? true);
+
+            $posState = trim(strtolower($placeOfSupplyState));
             $orgState = trim(strtolower($organization->state ?? ''));
-            $isInterState = (!empty($customerState) && !empty($orgState) && $customerState !== $orgState);
+            $isInterState = isset($invoiceData['is_inter_state']) ? (bool) $invoiceData['is_inter_state'] : (!empty($posState) && !empty($orgState) && $posState !== $orgState);
+            $supplyType = $isInterState ? 'INTER_STATE' : 'INTRA_STATE';
 
             $invoiceDate = $invoiceData['invoice_date'] ?? date('Y-m-d');
             $paymentMethod = $invoiceData['payment_method'] ?? 'CASH';
@@ -1071,7 +1131,9 @@ class SalesService
                 $soItem = $so ? $so->items->firstWhere('product_variant_id', $variant->id) : null;
                 $unitPrice = $soItem ? (float) $soItem->unit_price : (float) ($variant->pricings->first()->selling_price ?? 0);
                 $quantity = (float) $dispItem->quantity;
+                $taxCategory = 'TAXABLE';
                 $taxRate = (float) ($variant->taxProfile->rate ?? 18.00);
+                $hsnSacCode = $variant->taxProfile->hsn_code ?? $variant->sku;
 
                 $lineGross = $quantity * $unitPrice;
                 $lineTaxable = round($lineGross / (1 + ($taxRate / 100.0)), 4);
@@ -1111,6 +1173,9 @@ class SalesService
                     'igst_amount' => $igstAmount,
                     'tax_amount' => $lineTax,
                     'subtotal' => $lineGross,
+                    'hsn_sac_code' => $hsnSacCode,
+                    'tax_category' => $taxCategory,
+                    'is_tax_inclusive' => $isTaxInclusive,
                     'product_name_snapshot' => $variant->name,
                     'sku_snapshot' => $variant->sku,
                 ];
@@ -1118,9 +1183,14 @@ class SalesService
 
             $invoiceNumber = $this->documentNumberService->generateNextNumber($organizationId, 'INV', $invoiceDate);
 
-            $dueAmount = max(0, $totalInvoiceAmount - $paidAmount);
+            $unroundedTotal = $totalInvoiceAmount;
+            $roundedTotal = round($unroundedTotal);
+            $roundOffAmount = round($roundedTotal - $unroundedTotal, 4);
+            $finalGrandTotal = $roundedTotal;
+
+            $dueAmount = max(0, $finalGrandTotal - $paidAmount);
             $paymentStatus = 'UNPAID';
-            if ($paidAmount >= $totalInvoiceAmount) {
+            if ($paidAmount >= $finalGrandTotal) {
                 $paymentStatus = 'PAID';
                 $dueAmount = 0.0;
             } elseif ($paidAmount > 0) {
@@ -1140,7 +1210,8 @@ class SalesService
                 'cgst_amount' => $totalCGST,
                 'sgst_amount' => $totalSGST,
                 'igst_amount' => $totalIGST,
-                'total_amount' => $totalInvoiceAmount,
+                'total_amount' => $finalGrandTotal,
+                'round_off_amount' => $roundOffAmount,
                 'paid_amount' => $paidAmount,
                 'due_amount' => $dueAmount,
                 'status' => 'APPROVED',
@@ -1148,6 +1219,14 @@ class SalesService
                 'payment_method' => $paymentMethod,
                 'billing_address' => $customer->address,
                 'shipping_address' => $customer->address,
+                'supplier_gstin' => $supplierGstin,
+                'customer_gstin' => $customerGstin,
+                'place_of_supply_state' => $placeOfSupplyState,
+                'gst_registration_type' => $gstRegistrationType,
+                'supply_type' => $supplyType,
+                'invoice_type' => $invoiceType,
+                'is_reverse_charge' => $isReverseCharge,
+                'is_tax_inclusive' => $isTaxInclusive,
                 'is_direct_sale' => false,
             ]);
 

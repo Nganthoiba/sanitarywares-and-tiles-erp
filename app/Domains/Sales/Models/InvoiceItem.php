@@ -17,7 +17,8 @@ class InvoiceItem extends Model {
         'unit_id', 'price_basis', 'quantity', 'unit_price', 'discount_amount',
         'taxable_amount', 'tax_rate', 'cgst_rate', 'cgst_amount', 'sgst_rate',
         'sgst_amount', 'igst_rate', 'igst_amount', 'tax_amount', 'subtotal',
-        'product_name_snapshot', 'sku_snapshot', 'variant_specs_snapshot'
+        'product_name_snapshot', 'sku_snapshot', 'variant_specs_snapshot',
+        'hsn_sac_code', 'tax_category', 'is_tax_inclusive'
     ];
     protected $casts = [
         'quantity' => 'decimal:4',
@@ -33,6 +34,7 @@ class InvoiceItem extends Model {
         'igst_amount' => 'decimal:4',
         'tax_amount' => 'decimal:4',
         'subtotal' => 'decimal:4',
+        'is_tax_inclusive' => 'boolean',
         'variant_specs_snapshot' => 'array'
     ];
 

@@ -18,11 +18,17 @@ class Invoice extends Model {
         'invoice_number', 'invoice_date', 'subtotal', 'discount_amount',
         'taxable_amount', 'tax_amount', 'cgst_amount', 'sgst_amount',
         'igst_amount', 'total_amount', 'paid_amount', 'due_amount',
-        'status', 'payment_status', 'payment_method', 'notes',
-        'billing_address', 'shipping_address', 'is_direct_sale'
+        'round_off_amount', 'status', 'payment_status', 'payment_method', 'notes',
+        'billing_address', 'shipping_address', 'is_direct_sale',
+        'supplier_gstin', 'customer_gstin', 'place_of_supply_state',
+        'gst_registration_type', 'supply_type', 'invoice_type',
+        'is_reverse_charge', 'is_tax_inclusive', 'irn', 'ack_no',
+        'ack_date', 'eway_bill_no', 'eway_bill_date'
     ];
     protected $casts = [
         'invoice_date' => 'date',
+        'ack_date' => 'datetime',
+        'eway_bill_date' => 'datetime',
         'subtotal' => 'decimal:4',
         'discount_amount' => 'decimal:4',
         'taxable_amount' => 'decimal:4',
@@ -33,7 +39,10 @@ class Invoice extends Model {
         'total_amount' => 'decimal:4',
         'paid_amount' => 'decimal:4',
         'due_amount' => 'decimal:4',
-        'is_direct_sale' => 'boolean'
+        'round_off_amount' => 'decimal:4',
+        'is_direct_sale' => 'boolean',
+        'is_reverse_charge' => 'boolean',
+        'is_tax_inclusive' => 'boolean'
     ];
 
     public function organization(): BelongsTo {
