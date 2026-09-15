@@ -321,7 +321,6 @@ class DatabaseSeeder extends Seeder {
         ]);
 
         $kajaria = Brand::create([
-            'organization_id' => $org->id,
             'name' => 'Kajaria',
             'slug' => 'kajaria',
         ]);

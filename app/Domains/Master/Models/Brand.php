@@ -1,18 +1,13 @@
 <?php
-namespace App\Domains\Master\Models;
 
-use App\Domains\Master\Traits\BelongsToOrganization;
+namespace App\Domains\Master\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Brand extends Model {
-    use BelongsToOrganization;
+class Brand extends Model
+{
     use SoftDeletes;
-    protected $fillable = ['organization_id', 'name', 'slug', 'description', 'is_active'];
 
-    public function organization(): BelongsTo {
-        return $this->belongsTo(Organization::class);
-    }
+    protected $fillable = ['name', 'slug', 'description', 'is_active'];
 }

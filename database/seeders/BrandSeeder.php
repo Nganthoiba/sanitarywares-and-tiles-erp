@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Domains\Master\Models\Organization;
 use App\Domains\Master\Models\Brand;
 use Illuminate\Database\Seeder;
 
@@ -10,9 +9,6 @@ class BrandSeeder extends Seeder
 {
     public function run(): void
     {
-        $org = Organization::first();
-        if (!$org) return;
-
         $brands = [
             ['name' => 'Kajaria Ceramics', 'slug' => 'kajaria', 'is_active' => true],
             ['name' => 'Somany Ceramics', 'slug' => 'somany', 'is_active' => true],
@@ -26,7 +22,7 @@ class BrandSeeder extends Seeder
 
         foreach ($brands as $b) {
             Brand::updateOrCreate(
-                ['organization_id' => $org->id, 'slug' => $b['slug']],
+                ['slug' => $b['slug']],
                 $b
             );
         }

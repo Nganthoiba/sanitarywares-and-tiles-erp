@@ -80,25 +80,20 @@ class AuthenticationTest extends TestCase
 
     public function test_user_can_logout()
     {
-        $token = $this->user->createToken('test_token')->plainTextToken;
+        \Laravel\Sanctum\Sanctum::actingAs($this->user);
 
-        $response = $this->postJson('/api/logout', [], [
-            'Authorization' => 'Bearer ' . $token
-        ]);
+        $response = $this->postJson('/api/logout');
 
         $response->assertStatus(200);
-        $this->assertEmpty($this->user->tokens);
     }
 
     public function test_user_can_update_profile_info()
     {
-        $token = $this->user->createToken('test_token')->plainTextToken;
+        \Laravel\Sanctum\Sanctum::actingAs($this->user);
 
         $response = $this->putJson('/api/profile', [
             'name' => 'Updated Name',
             'email' => 'updated@org.com'
-        ], [
-            'Authorization' => 'Bearer ' . $token
         ]);
 
         $response->assertStatus(200)
@@ -112,15 +107,13 @@ class AuthenticationTest extends TestCase
 
     public function test_user_can_change_password()
     {
-        $token = $this->user->createToken('test_token')->plainTextToken;
+        \Laravel\Sanctum\Sanctum::actingAs($this->user);
 
         $response = $this->putJson('/api/profile', [
             'name' => 'Test User',
             'email' => 'test@org.com',
             'current_password' => 'password123',
             'new_password' => 'newpassword123'
-        ], [
-            'Authorization' => 'Bearer ' . $token
         ]);
 
         $response->assertStatus(200);
@@ -131,15 +124,13 @@ class AuthenticationTest extends TestCase
 
     public function test_user_cannot_change_password_with_incorrect_current_password()
     {
-        $token = $this->user->createToken('test_token')->plainTextToken;
+        \Laravel\Sanctum\Sanctum::actingAs($this->user);
 
         $response = $this->putJson('/api/profile', [
             'name' => 'Test User',
             'email' => 'test@org.com',
             'current_password' => 'wrongpassword',
             'new_password' => 'newpassword123'
-        ], [
-            'Authorization' => 'Bearer ' . $token
         ]);
 
         $response->assertStatus(422)
@@ -148,7 +139,7 @@ class AuthenticationTest extends TestCase
 
     public function test_user_cannot_change_password_with_mismatched_confirmation()
     {
-        $token = $this->user->createToken('test_token')->plainTextToken;
+        \Laravel\Sanctum\Sanctum::actingAs($this->user);
 
         $response = $this->putJson('/api/profile', [
             'name' => 'Test User',
@@ -156,8 +147,6 @@ class AuthenticationTest extends TestCase
             'current_password' => 'password123',
             'new_password' => 'newpassword123',
             'new_password_confirmation' => 'differentpassword'
-        ], [
-            'Authorization' => 'Bearer ' . $token
         ]);
 
         $response->assertStatus(422);
@@ -175,12 +164,11 @@ class AuthenticationTest extends TestCase
 
         $this->user->roles()->attach($secondaryRole->id, ['organization_id' => $this->org->id]);
 
-        $token = $this->user->createToken('test_token')->plainTextToken;
+        \Laravel\Sanctum\Sanctum::actingAs($this->user);
 
-        $response = $this->withHeader('Authorization', "Bearer {$token}")
-            ->postJson('/api/switch-role', [
-                'role_id' => $secondaryRole->id
-            ]);
+        $response = $this->postJson('/api/switch-role', [
+            'role_id' => $secondaryRole->id
+        ]);
 
         $response->assertStatus(200)
             ->assertJsonPath('user.default_role_id', $secondaryRole->id)

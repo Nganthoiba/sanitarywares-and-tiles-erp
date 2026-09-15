@@ -26,6 +26,7 @@ echo "--- Bootstrapping Laravel for Inventory & Slab Optimization Engine Verific
 \Illuminate\Support\Facades\DB::transaction(function () {
     // 1. Setup multi-tenant workspace seed records
     $org = Organization::firstOrCreate(['id' => 1]);
+    app(\App\Shared\Context\TenantContext::class)->setOrganization($org);
     $branch = Branch::firstOrCreate([
         'organization_id' => $org->id,
         'code' => 'INV-BR-1',
@@ -55,7 +56,6 @@ echo "--- Bootstrapping Laravel for Inventory & Slab Optimization Engine Verific
     ]);
 
     $unit = Unit::firstOrCreate([
-        'organization_id' => $org->id,
         'symbol' => 'SQFT'
     ], [
         'name' => 'Square Feet',
@@ -64,7 +64,6 @@ echo "--- Bootstrapping Laravel for Inventory & Slab Optimization Engine Verific
     ]);
 
     $brand = \App\Domains\Master\Models\Brand::firstOrCreate([
-        'organization_id' => $org->id,
         'name' => 'Italian Marble Brand'
     ], [
         'code' => 'IT-MARB',
@@ -73,7 +72,6 @@ echo "--- Bootstrapping Laravel for Inventory & Slab Optimization Engine Verific
     ]);
 
     $gst18 = \App\Domains\Master\Models\TaxProfile::firstOrCreate([
-        'organization_id' => $org->id,
         'name' => 'GST 18%'
     ], [
         'hsn_code' => '6907',
@@ -92,8 +90,7 @@ echo "--- Bootstrapping Laravel for Inventory & Slab Optimization Engine Verific
         'sku' => 'GRAN-ONYX-01',
         'inventory_behavior' => 'SLAB',
         'tax_profile_id' => $gst18->id,
-        'brand_id' => $brand->id,
-        'cost_price' => 140.0000
+        'brand_id' => $brand->id
     ]);
 
     echo "1. Seed database state components initialized.\n";

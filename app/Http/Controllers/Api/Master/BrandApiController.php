@@ -24,8 +24,6 @@ class BrandApiController extends Controller
      */
     public function store(Request $request)
     {
-        $orgId = $request->user()->organization_id;
-
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255',
@@ -36,14 +34,13 @@ class BrandApiController extends Controller
         $name = $validated['name'];
         $slug = empty($validated['slug']) ? Str::slug($name) : Str::slug($validated['slug']);
 
-        // Check unique slug scoped to organization
-        $existingSlugCount = Brand::where('organization_id', $orgId)->where('slug', $slug)->count();
+        // Check unique global slug
+        $existingSlugCount = Brand::where('slug', $slug)->count();
         if ($existingSlugCount > 0) {
             $slug = $slug . '-' . time();
         }
 
         $brand = Brand::create(array_merge($validated, [
-            'organization_id' => $orgId,
             'slug' => $slug,
             'is_active' => $request->input('is_active', true)
         ]));
@@ -69,7 +66,6 @@ class BrandApiController extends Controller
     public function update(Request $request, $id)
     {
         $brand = Brand::findOrFail($id);
-        $orgId = $request->user()->organization_id;
 
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
@@ -82,9 +78,8 @@ class BrandApiController extends Controller
             $name = $validated['name'];
             $slug = empty($validated['slug']) ? Str::slug($name) : Str::slug($validated['slug']);
 
-            // Check uniqueness of slug ignoring current id
-            $existingSlug = Brand::where('organization_id', $orgId)
-                ->where('slug', $slug)
+            // Check uniqueness of global slug ignoring current id
+            $existingSlug = Brand::where('slug', $slug)
                 ->where('id', '!=', $brand->id)
                 ->first();
             if ($existingSlug) {

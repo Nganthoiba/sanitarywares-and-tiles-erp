@@ -9,17 +9,24 @@ This document defines the formal data classification and tenant isolation model 
 
 | Classification Category | Description | Scope Rule | Models / Tables |
 | :--- | :--- | :--- | :--- |
-| **GLOBAL MASTER** | System-wide reference data shared across all tenant organizations. | Bypasses `OrganizationScope`. Unfiltered for all authenticated tenant contexts. | `Unit` (`units`), `Manufacturer` (`manufacturers`), `TaxProfile` (`tax_profiles`), `Permission` (`permissions`), `PermissionGroup` (`permission_groups`), `Menu` (`menus`) |
-| **TENANT MASTER** | Core master registers owned exclusively by a specific organization. | Enforces strict `organization_id = X`. Absence of tenant context returns **DENY** (`1 = 0`). | `Product` (`product_variants`), `Brand` (`brands`), `Supplier` (`suppliers`), `Customer` (`customers`), `Warehouse` (`warehouses`), `Branch` (`branches`), `StorageLocation` (`storage_locations`), `OrganizationProductPricing` (`organization_product_pricings`) |
+| **GLOBAL MASTER** | System-wide reference data shared across all tenant organizations. | Bypasses `OrganizationScope`. Unfiltered for all authenticated tenant contexts. | `Unit` (`units`), `Brand` (`brands`), `Manufacturer` (`manufacturers`), `TaxProfile` (`tax_profiles`), `Permission` (`permissions`), `PermissionGroup` (`permission_groups`), `Menu` (`menus`) |
+| **TENANT MASTER** | Core master registers owned exclusively by a specific organization. | Enforces strict `organization_id = X`. Absence of tenant context returns **DENY** (`1 = 0`). | `Product` (`product_variants`), `Supplier` (`suppliers`), `Customer` (`customers`), `Warehouse` (`warehouses`), `Branch` (`branches`), `StorageLocation` (`storage_locations`), `OrganizationProductPricing` (`organization_product_pricings`) |
 | **TENANT TRANSACTION** | High-volume operational sub-ledgers, vouchers, documents, and movements. | Enforces strict `organization_id = X`. Absence of tenant context returns **DENY** (`1 = 0`). | `InventoryObject`, `InventoryMovement`, `InventoryReservation`, `InventoryTransfer`, `InventoryTransferItem`, `InventoryAdjustment`, `InventoryAdjustmentItem`, `InventoryCount`, `InventoryCountItem`, `InventoryAllocation`, `GraniteSlabDetail`, `Quotation`, `QuotationItem`, `SalesOrder`, `SalesOrderItem`, `Invoice`, `InvoiceItem`, `Dispatch`, `DispatchItem`, `SalesReturn`, `SalesReturnItem`, `PurchaseRequisition`, `PurchaseRequisitionItem`, `PurchaseOrder`, `PurchaseOrderItem`, `GoodsReceiptNote`, `GoodsReceiptItem`, `GoodsReceiptItemSlab`, `SupplierInvoice`, `SupplierInvoiceItem`, `PurchaseReturn`, `PurchaseReturnItem`, `Account`, `AccountGroup`, `Journal`, `JournalEntry`, `JournalBatch`, `FinancialYear`, `BankAccount`, `BankTransaction`, `Payment`, `Receipt`, `OpeningBalance`, `ClosingEntry`, `DailyLedgerSnapshot`, `DocumentSequence` |
 | **PLATFORM CONFIGURATION** | Platform-level tenancy boundaries, user accounts, and system audit logs. | Scoped via explicit user association or Super Admin privileges. | `Organization` (`organizations`), `User` (`users`), `Role` (`roles`), `ReportAuditLog` (`report_audit_logs`) |
 | **HYBRID / SPECIAL** | Base global reference entries with optional tenant-specific overrides. | Query pattern: `organization_id = X OR organization_id IS NULL`. | `Category` (`categories`), `ProductAttribute` (`product_attributes`), `ProductAttributeValue` (`product_attribute_values`) |
 
 ---
 
-## 2. Tenant Scoping Architecture (`OrganizationScope`)
+## 2. Rationale for Global Masters (`Brand` & `Manufacturer`)
 
-1. **Global Master Bypass**: Models categorized under `GLOBAL MASTER` bypass tenant filtering.
+- **Brand Global Scoping**: Brands (e.g., Kajaria, Somany, Kohler, Jaquar, Hindware, Cera) represent universal industry brand entities. Making `Brand` a Global Master prevents duplicate brand entity records across tenant organizations, maintains clean multi-tenant product cataloging, and simplifies global product searches and inventory reporting.
+- **Manufacturer Global Scoping**: Manufacturers (e.g., Morbi Tile Industries, Kohler India) represent corporate manufacturing entities that span multiple distribution channels and multi-tenant dealerships.
+
+---
+
+## 3. Tenant Scoping Architecture (`OrganizationScope`)
+
+1. **Global Master Bypass**: Models categorized under `GLOBAL MASTER` (`Unit`, `Brand`, `Manufacturer`, `TaxProfile`) bypass tenant filtering.
 2. **Context Resolution Order**:
    - `TenantContext` service container binding
    - `Auth::user()` session / token state
@@ -29,7 +36,7 @@ This document defines the formal data classification and tenant isolation model 
 
 ---
 
-## 3. Context Requirement Rules for Domain Services & Reporting
+## 4. Context Requirement Rules for Domain Services & Reporting
 
 - **No Silent Fallbacks**: Domain services and reporting query classes MUST NOT fall back to arbitrary default organization IDs (e.g., `?? 1`).
 - **Explicit Context Validation**: Methods requiring tenant context must receive `$organizationId` explicitly or resolve it from authenticated session state. If missing, an `InvalidArgumentException` is thrown immediately.
