@@ -40,6 +40,7 @@ class OrganizationScope implements Scope
             $model instanceof \App\Domains\Security\Models\Permission ||
             $model instanceof \App\Domains\Security\Models\PermissionGroup ||
             $model instanceof \App\Domains\Master\Models\Manufacturer ||
+            $model instanceof \App\Domains\Master\Models\Brand ||
             $model instanceof \App\Domains\Master\Models\Unit ||
             $model instanceof \App\Domains\Master\Models\TaxProfile ||
             $model instanceof \App\Domains\Security\Models\Menu
@@ -99,7 +100,16 @@ class OrganizationScope implements Scope
             return;
         }
 
-        // 5. Strict Default Fallback: DENY query for tenant-owned entities if context is completely missing
+        // 5. Allow User model resolution when unauthenticated / context is missing (e.g. Sanctum token auth)
+        if ($model instanceof \App\Models\User) {
+            return;
+        }
+
+        // 6. Strict Default Fallback: DENY query for tenant-owned entities if context is completely missing
         $builder->whereRaw('1 = 0');
     }
 }
+
+
+
+

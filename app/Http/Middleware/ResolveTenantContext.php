@@ -16,11 +16,12 @@ class ResolveTenantContext
      */
     public function handle(Request $request, Closure $next)
     {
+        $context = App::make(TenantContext::class);
+
         if (Auth::check()) {
             $user = Auth::user();
             $org = $user->organization;
 
-            $context = App::make(TenantContext::class);
             $context->setUser($user);
             $context->setOrganization($org);
 
@@ -53,8 +54,14 @@ class ResolveTenantContext
 
             $context->setPermissions(collect($permissions));
             $request->attributes->set('user_permissions', $permissions);
+        } else {
+            $context->setUser(null);
+            $context->setOrganization(null);
+            $context->setBranch(null);
+            $context->setPermissions(null);
         }
 
         return $next($request);
     }
+
 }
